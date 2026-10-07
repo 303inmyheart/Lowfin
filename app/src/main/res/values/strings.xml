@@ -1,0 +1,301 @@
+<resources>
+    <string name="text_000" formatted="false">"Your library"</string>
+    <string name="text_001" formatted="false">"Please sign in again"</string>
+    <string name="text_002" formatted="false">"Server unavailable. Your cached library is still available."</string>
+    <string name="text_003" formatted="false">"Your media. Right on your TV."</string>
+    <string name="text_004" formatted="false">"Enter a complete server address without credentials or URL parameters."</string>
+    <string name="text_005" formatted="false">"Enter your username"</string>
+    <string name="text_006" formatted="false">"Connecting …"</string>
+    <string name="text_007" formatted="false">"Could not securely save your session."</string>
+    <string name="text_008" formatted="false">"Connection failed. Check the address and network."</string>
+    <string name="text_009" formatted="false">"Session expired"</string>
+    <string name="text_010" formatted="false">"Access denied"</string>
+    <string name="text_011" formatted="false">"Server error HTTP "</string>
+    <string name="text_012" formatted="false">"Random movie"</string>
+    <string name="text_013" formatted="false">"Pin genres"</string>
+    <string name="text_014" formatted="false">"Unpin from home"</string>
+    <string name="text_015" formatted="false">"Pin to home"</string>
+    <string name="text_016" formatted="false">"Could not update libraries: "</string>
+    <string name="text_017" formatted="false">"No items"</string>
+    <string name="text_018" formatted="false">"Loading failed: "</string>
+    <string name="text_019" formatted="false">"Cached data · Server currently unavailable"</string>
+    <string name="text_020" formatted="false">"Next up"</string>
+    <string name="text_021" formatted="false">"No movies in this row"</string>
+    <string name="text_022" formatted="false">"No description available"</string>
+    <string name="text_023" formatted="false">"Loading …"</string>
+    <string name="text_024" formatted="false">"Loading genres …"</string>
+    <string name="text_025" formatted="false">"No genres found"</string>
+    <string name="text_026" formatted="false">"No cached genres · Server unavailable"</string>
+    <string name="text_027" formatted="false">"Cached genres"</string>
+    <string name="text_028" formatted="false">"Loading titles …"</string>
+    <string name="text_029" formatted="false">"Loading libraries. Please try again shortly."</string>
+    <string name="text_030" formatted="false">" row · Libraries"</string>
+    <string name="text_031" formatted="false">"All libraries"</string>
+    <string name="text_032" formatted="false">"No movies found in this library"</string>
+    <string name="text_033" formatted="false">"← Previous page"</string>
+    <string name="text_034" formatted="false">"Page "</string>
+    <string name="text_035" formatted="false">"  ·  60 items  "</string>
+    <string name="text_036" formatted="false">"Next page →"</string>
+    <string name="text_037" formatted="false">"Go to season"</string>
+    <string name="text_038" formatted="false">"Season not found"</string>
+    <string name="text_039" formatted="false">" seasons"</string>
+    <string name="text_040" formatted="false">"Could not load seasons"</string>
+    <string name="text_041" formatted="false">"Loading episodes …"</string>
+    <string name="text_042" formatted="false">"ABOUT THIS TITLE"</string>
+    <string name="text_043" formatted="false">"Season "</string>
+    <string name="text_044" formatted="false">" · Episode "</string>
+    <string name="text_045" formatted="false">"View seasons"</string>
+    <string name="text_046" formatted="false">"▶ Resume"</string>
+    <string name="text_047" formatted="false">"Start over"</string>
+    <string name="text_048" formatted="false">"▶ Play"</string>
+    <string name="text_049" formatted="false">"★ Saved"</string>
+    <string name="text_050" formatted="false">"☆ Save"</string>
+    <string name="text_051" formatted="false">"✓ Watched · Change"</string>
+    <string name="text_052" formatted="false">"Mark watched"</string>
+    <string name="text_053" formatted="false">"Choose trailer"</string>
+    <string name="text_054" formatted="false">"Loading recordings …"</string>
+    <string name="text_055" formatted="false">"Search titles"</string>
+    <string name="text_056" formatted="false">"Search library"</string>
+    <string name="text_057" formatted="false">"Ratings · Providers and API keys"</string>
+    <string name="text_058" formatted="false">"Resolution: "</string>
+    <string name="text_059" formatted="false">"Maximum resolution"</string>
+    <string name="text_060" formatted="false">"720p · HD, recommended"</string>
+    <string name="text_061" formatted="false">"Maximum bitrate"</string>
+    <string name="text_062" formatted="false">"Downmix audio to stereo (2.0)"</string>
+    <string name="text_063" formatted="false">"Allow server transcoding when needed"</string>
+    <string name="text_064" formatted="false">"Video cache: "</string>
+    <string name="text_065" formatted="false">"RAM buffer: adaptive · up to 48 MB, live TV up to 32 MB · with memory reserve"</string>
+    <string name="text_066" formatted="false">"Automatically play next episode"</string>
+    <string name="text_067" formatted="false">"Automatically skip intros and outros"</string>
+    <string name="text_068" formatted="false">"Start live TV when opening the app"</string>
+    <string name="text_069" formatted="false">"Subtle focus animations"</string>
+    <string name="text_070" formatted="false">"Android TV home screen"</string>
+    <string name="text_071" formatted="false">"Movies and shows on TV home screen: "</string>
+    <string name="text_072" formatted="false">"TV movie row · Choose libraries"</string>
+    <string name="text_073" formatted="false">"TV show row · Choose libraries"</string>
+    <string name="text_074" formatted="false">"Enable TV channel · "</string>
+    <string name="text_075" formatted="false">"Enable TV channel · Movie recommendations "</string>
+    <string name="text_076" formatted="false">"The first channel may appear automatically. Enable other rows here or under Customize channels on the TV home screen.\nVisibility depends on your launcher; Google TV may use its own rules."</string>
+    <string name="text_077" formatted="false">"Library cache · Separate for each account and server"</string>
+    <string name="text_078" formatted="false">"Preload entire library and artwork"</string>
+    <string name="text_079" formatted="false">"Stop preloading"</string>
+    <string name="text_080" formatted="false">"Stopping cache preload"</string>
+    <string name="text_081" formatted="false">"Artwork storage: "</string>
+    <string name="text_082" formatted="false">"all available storage"</string>
+    <string name="text_083" formatted="false">"Storage budget · Keeps 64 MB free"</string>
+    <string name="text_084" formatted="false">"No fixed limit"</string>
+    <string name="text_085" formatted="false">"Clear artwork cache"</string>
+    <string name="text_086" formatted="false">"Artwork cache cleared"</string>
+    <string name="text_087" formatted="false">"Signed in as "</string>
+    <string name="text_088" formatted="false">"Sign out / Switch account"</string>
+    <string name="text_089" formatted="false">" · Edit API key"</string>
+    <string name="text_090" formatted="false">"OMDb provides IMDb, Rotten Tomatoes and Metacritic. MDBList adds more sources. TMDB provides its own user rating. Missing values are hidden."</string>
+    <string name="text_091" formatted="false">"Visible ratings"</string>
+    <string name="text_092" formatted="false">"API key or Read Access Token"</string>
+    <string name="text_093" formatted="false">"Your API key is encrypted on this device. Leave the field empty to remove it."</string>
+    <string name="text_094" formatted="false">" connection"</string>
+    <string name="text_095" formatted="false">"API key saved"</string>
+    <string name="text_096" formatted="false">"Could not securely save the API key."</string>
+    <string name="text_097" formatted="false">"Video cache on device storage"</string>
+    <string name="text_098" formatted="false">"Custom value …"</string>
+    <string name="text_099" formatted="false">"Size in MB"</string>
+    <string name="text_100" formatted="false">"Video cache in MB"</string>
+    <string name="text_101" formatted="false">"Enter a value between 16 and 16384 MB"</string>
+    <string name="text_102" formatted="false">"Enter a size in MB"</string>
+    <string name="text_103" formatted="false">"Preloading library in the background"</string>
+    <string name="text_104" formatted="false">"This TV card belongs to another account or one that is signed out."</string>
+    <string name="text_105" formatted="false">"Could not open TV card: "</string>
+    <string name="text_106" formatted="false">"Exit Lowfin?"</string>
+    <string name="text_107" formatted="false">"Are you sure you want to exit?"</string>
+    <string name="text_108" formatted="false">"Keep watching"</string>
+    <string name="text_109" formatted="false">"Lowfin · Library cache"</string>
+    <string name="text_110" formatted="false">"Loading metadata"</string>
+    <string name="text_111" formatted="false">"Metadata: "</string>
+    <string name="text_112" formatted="false">"Library: "</string>
+    <string name="text_113" formatted="false">" titles"</string>
+    <string name="text_114" formatted="false">"Artwork: "</string>
+    <string name="text_115" formatted="false">" metadata · "</string>
+    <string name="text_116" formatted="false">" artwork"</string>
+    <string name="text_117" formatted="false">" artwork pending (storage/connection)"</string>
+    <string name="text_118" formatted="false">" · fully cached"</string>
+    <string name="text_119" formatted="false">"Cache paused; existing data remains available"</string>
+    <string name="text_120" formatted="false">"Cache incomplete: "</string>
+    <string name="text_121" formatted="false">"Android TV channels updated"</string>
+    <string name="text_122" formatted="false">"TV launcher does not fully support channel publishing"</string>
+    <string name="text_123" formatted="false">"Could not create TV channel"</string>
+    <string name="text_124" formatted="false">"Android TV channels will update after loading"</string>
+    <string name="text_125" formatted="false">"This launcher does not provide Android TV channels"</string>
+    <string name="text_126" formatted="false">"Preparing channels. Please select again shortly."</string>
+    <string name="text_127" formatted="false">"Enable Lowfin under Customize channels on the TV home screen."</string>
+    <string name="text_128" formatted="false">"Artwork unavailable"</string>
+    <string name="text_129" formatted="false">"Artwork too large"</string>
+    <string name="text_130" formatted="false">"Rotten Tomatoes · Critics"</string>
+    <string name="text_131" formatted="false">"Rotten Tomatoes · Audience"</string>
+    <string name="text_132" formatted="false">"Add API keys to load external ratings."</string>
+    <string name="text_133" formatted="false">"A provider was unavailable or rejected the API key. Cached ratings remain available."</string>
+    <string name="text_134" formatted="false">"Ratings saved permanently on this device"</string>
+    <string name="text_135" formatted="false">"Provider paused"</string>
+    <string name="text_136" formatted="false">"Ratings provider HTTP "</string>
+    <string name="text_137" formatted="false">"Provider returned an error"</string>
+    <string name="text_138" formatted="false">"Because you watched “"</string>
+    <string name="text_139" formatted="false">"”"</string>
+    <string name="text_140" formatted="false">" episodes"</string>
+    <string name="text_141" formatted="false">"Press Play to start"</string>
+    <string name="text_142" formatted="false">"Ⅱ Pause"</string>
+    <string name="text_143" formatted="false">"▶ Play"</string>
+    <string name="text_144" formatted="false">"Buffering trailer …"</string>
+    <string name="text_145" formatted="false">"Trailer ended"</string>
+    <string name="text_146" formatted="false">"YouTube is not loading · Check your connection and Android System WebView"</string>
+    <string name="text_147" formatted="false">"Back"</string>
+    <string name="text_148" formatted="false">"Loading trailer …"</string>
+    <string name="text_149" formatted="false">"Could not load YouTube"</string>
+    <string name="text_150" formatted="false">"Android System WebView is missing or could not start"</string>
+    <string name="text_151" formatted="false">"This trailer is no longer available"</string>
+    <string name="text_152" formatted="false">"This trailer cannot be played in apps"</string>
+    <string name="text_153" formatted="false">"YouTube could not verify the app player"</string>
+    <string name="text_154" formatted="false">"YouTube playback failed ("</string>
+    <string name="text_155" formatted="false">"Reconnecting live stream …"</string>
+    <string name="text_156" formatted="false">"This channel is not providing playable data.\nOptions → Reconnect stream, or select another channel."</string>
+    <string name="text_157" formatted="false">"Opening stream …"</string>
+    <string name="text_158" formatted="false">"Skip"</string>
+    <string name="text_159" formatted="false">"Change channel"</string>
+    <string name="text_160" formatted="false">"Current program"</string>
+    <string name="text_161" formatted="false">"Reconnect stream"</string>
+    <string name="text_162" formatted="false">"Play through server"</string>
+    <string name="text_163" formatted="false">"Close"</string>
+    <string name="text_164" formatted="false">"Cannot play: "</string>
+    <string name="text_165" formatted="false">"No playable media source"</string>
+    <string name="text_166" formatted="false">"No direct live stream URL available. You can allow server transcoding in Settings."</string>
+    <string name="text_167" formatted="false">"No directly playable stream. You can select Play through server."</string>
+    <string name="text_168" formatted="false">"Could not start stream.\n"</string>
+    <string name="text_169" formatted="false">"\nSelect Back or Play through server."</string>
+    <string name="text_170" formatted="false">"Stream address is outside the Jellyfin server"</string>
+    <string name="text_171" formatted="false">"Check your connection to the server"</string>
+    <string name="text_172" formatted="false">"Buffering …"</string>
+    <string name="text_173" formatted="false">"Playback ended"</string>
+    <string name="text_174" formatted="false">"Trying a compatible server stream …"</string>
+    <string name="text_175" formatted="false">"Playback error: "</string>
+    <string name="text_176" formatted="false">"\nSelect Back or try Play through server again."</string>
+    <string name="text_177" formatted="false">"Recap"</string>
+    <string name="text_178" formatted="false">" skip"</string>
+    <string name="text_179" formatted="false">"Track "</string>
+    <string name="text_180" formatted="false">"No other tracks"</string>
+    <string name="text_181" formatted="false">"One media version available"</string>
+    <string name="text_182" formatted="false">"Version "</string>
+    <string name="text_183" formatted="false">"No chapters"</string>
+    <string name="text_184" formatted="false">"Chapter "</string>
+    <string name="text_185" formatted="false">"No next episode"</string>
+    <string name="text_186" formatted="false">"Could not load next episode"</string>
+    <string name="text_187" formatted="false">"Channel list unavailable"</string>
+    <string name="text_188" formatted="false">"Program · "</string>
+    <string name="text_189" formatted="false">"Program unavailable"</string>
+    <string name="text_190" formatted="false">"No description"</string>
+    <string name="text_191" formatted="false">"Recording scheduled"</string>
+    <string name="text_192" formatted="false">"Could not schedule recording"</string>
+    <string name="text_193" formatted="false">"⋯  Options"</string>
+    <string name="text_194" formatted="false">"Next episode  ›"</string>
+    <string name="text_195" formatted="false">"Cache not created yet"</string>
+    <string name="text_196" formatted="false">"A new movie from your library"</string>
+    <string name="text_197" formatted="false">"Loading movie titles …"</string>
+    <string name="text_198" formatted="false">"Your movies are spinning …"</string>
+    <string name="text_199" formatted="false">"✦  YOUR MOVIE  ✦"</string>
+    <string name="text_200" formatted="false">"Your "</string>
+    <string name="text_201" formatted="false">"in-progress movies and episodes appear here"</string>
+    <string name="text_202" formatted="false">"next episodes appear here"</string>
+    <string name="text_203" formatted="false">"new movies and shows appear here"</string>
+    <string name="text_204" formatted="false">"Show more"</string>
+    <string name="text_205" formatted="false">"All titles"</string>
+    <string name="text_206" formatted="false">" movies and shows"</string>
+    <string name="text_207" formatted="false">"Movies and shows"</string>
+    <string name="text_208" formatted="false">"Jellyfin did not open the live stream"</string>
+    <string name="text_209" formatted="false">"Invalid live stream URL"</string>
+    <string name="text_210" formatted="false">"Cancel"</string>
+    <string name="text_211" formatted="false">"Play"</string>
+    <string name="text_212" formatted="false">"Sign in"</string>
+    <string name="text_213" formatted="false">"Recordings"</string>
+    <string name="text_214" formatted="false">"Record"</string>
+    <string name="text_215" formatted="false">"Off"</string>
+    <string name="text_216" formatted="false">"LIBRARIES"</string>
+    <string name="text_217" formatted="false">"Exit"</string>
+    <string name="text_218" formatted="false">"Username"</string>
+    <string name="text_219" formatted="false">"Ratings"</string>
+    <string name="text_220" formatted="false">"Rating providers"</string>
+    <string name="text_221" formatted="false">"Library cache"</string>
+    <string name="text_222" formatted="false">"On"</string>
+    <string name="text_223" formatted="false">"Settings"</string>
+    <string name="text_224" formatted="false">"Recommendations"</string>
+    <string name="text_225" formatted="false">"Favorites"</string>
+    <string name="text_226" formatted="false">"Movie"</string>
+    <string name="text_227" formatted="false">"Movies"</string>
+    <string name="text_228" formatted="false">"Continue watching"</string>
+    <string name="text_229" formatted="false">"Chapters"</string>
+    <string name="text_230" formatted="false">"Media version"</string>
+    <string name="text_231" formatted="false">"Password"</string>
+    <string name="text_232" formatted="false">"Audience"</string>
+    <string name="text_233" formatted="false">"SHOW"</string>
+    <string name="text_234" formatted="false">"MOVIE"</string>
+    <string name="text_235" formatted="false">"EPISODE"</string>
+    <string name="text_236" formatted="false">"Channels"</string>
+    <string name="text_237" formatted="false">"Shows"</string>
+    <string name="text_238" formatted="false">"Show details"</string>
+    <string name="text_239" formatted="false">"Save"</string>
+    <string name="text_240" formatted="false">"Seasons"</string>
+    <string name="text_241" formatted="false">"Home"</string>
+    <string name="text_242" formatted="false">"Search"</string>
+    <string name="text_243" formatted="false">"Search"</string>
+    <string name="text_244" formatted="false">"Audio track"</string>
+    <string name="text_245" formatted="false">"Untitled"</string>
+    <string name="text_246" formatted="false">"Subtitles"</string>
+    <string name="text_247" formatted="false">"Preview"</string>
+    <string name="text_248" formatted="false">"Continue watching"</string>
+    <string name="text_249" formatted="false">"Advertisement"</string>
+    <string name="text_250" formatted="false">"Playback"</string>
+    <string name="text_251" formatted="false">"Playback options"</string>
+    <string name="text_252" formatted="false">"Playback position"</string>
+    <string name="text_253" formatted="false">"Server · https://jellyfin.example"</string>
+    <string name="text_254" formatted="false">"This product uses the TMDB API but is not endorsed or certified by TMDB.\nOMDb · www.omdbapi.com · Data: CC BY-NC 4.0\nMDBList · mdblist.com"</string>
+    <string name="text_255" formatted="false">"Lowfin 0.7.0 · Intro Skipper via Jellyfin MediaSegments (10.10+)\nOther segment types offer a Skip button. Media plays from your server.\nThe first library preload can take a while; cached data is available immediately."</string>
+    <string name="option_000" formatted="false">"Language"</string>
+    <string name="option_001" formatted="false">"Genre rows"</string>
+    <string name="option_002" formatted="false">"Home screen and appearance"</string>
+    <string name="option_003" formatted="false">"Advanced playback"</string>
+    <string name="option_004" formatted="false">"Show genre rows"</string>
+    <string name="option_005" formatted="false">"Show only the focused row"</string>
+    <string name="option_006" formatted="false">"Enable or disable individual genres. Your selection is saved for this account."</string>
+    <string name="option_007" formatted="false">"Show Continue watching row"</string>
+    <string name="option_008" formatted="false">"Show Next up row"</string>
+    <string name="option_009" formatted="false">"Recommendation rows"</string>
+    <string name="option_010" formatted="false">"Poster columns"</string>
+    <string name="option_011" formatted="false">"Random animation · Seconds"</string>
+    <string name="option_012" formatted="false">"Random accent on startup"</string>
+    <string name="option_013" formatted="false">"Periodically change accent color"</string>
+    <string name="option_014" formatted="false">"Accent interval · Active minutes"</string>
+    <string name="option_015" formatted="false">"Fixed accent color"</string>
+    <string name="option_016" formatted="false">"Lilac"</string>
+    <string name="option_017" formatted="false">"Blue gray"</string>
+    <string name="option_018" formatted="false">"Sage"</string>
+    <string name="option_019" formatted="false">"Moss"</string>
+    <string name="option_020" formatted="false">"Sand"</string>
+    <string name="option_021" formatted="false">"Champagne"</string>
+    <string name="option_022" formatted="false">"Clay"</string>
+    <string name="option_023" formatted="false">"Rose"</string>
+    <string name="option_024" formatted="false">"Lavender"</string>
+    <string name="option_025" formatted="false">"Slate"</string>
+    <string name="option_026" formatted="false">"Eucalyptus"</string>
+    <string name="option_027" formatted="false">"Taupe"</string>
+    <string name="option_028" formatted="false">"Automatically preload library"</string>
+    <string name="option_029" formatted="false">"Cache refresh · Hours"</string>
+    <string name="option_030" formatted="false">"Automatically skip intros"</string>
+    <string name="option_031" formatted="false">"Automatically skip outros"</string>
+    <string name="option_032" formatted="false">"Seek step · Seconds"</string>
+    <string name="option_033" formatted="false">"Hide player controls · Seconds"</string>
+    <string name="option_034" formatted="false">"RAM buffer · Maximum MB"</string>
+    <string name="option_035" formatted="false">"Live TV buffer · Maximum MB"</string>
+    <string name="option_036" formatted="false">"The actual buffer remains adaptive to available RAM and memory reserve."</string>
+    <string name="option_037" formatted="false">"Preferred audio language"</string>
+    <string name="option_038" formatted="false">"Original / Automatic"</string>
+    <string name="option_039" formatted="false">"Movie recommendations"</string>
+    <string name="option_040" formatted="false">" movies"</string>
+    <string name="buffer_settings">RAM buffer · See advanced playback settings</string>
+    <string name="default_subtitles">Enable subtitles by default</string>
+</resources>
