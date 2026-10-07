@@ -114,7 +114,8 @@ public final class MainActivity extends Activity {
     private String focusedHomeId="";
     private Runnable homeBackdropUpdate;
     private void shell(String title) {
-        root=new FrameLayout(this); root.setBackgroundColor(Ui.BG); root.setPadding(Ui.dp(this,20),Ui.dp(this,18),Ui.dp(this,20),Ui.dp(this,18));
+        root=new FrameLayout(this); root.setBackgroundColor(Ui.BG); boolean artworkScreen=screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"));
+        if(!artworkScreen) root.setPadding(Ui.dp(this,20),Ui.dp(this,18),Ui.dp(this,20),Ui.dp(this,18));
         drawerOpen=false; drawerReturnFocus=null; lastContentFocus=null;
         FrameLayout stage=new FrameLayout(this); contentStage=stage; root.addView(stage,new FrameLayout.LayoutParams(-1,-1)); detailBackdrop=null;
         if(screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"))) {
@@ -122,7 +123,7 @@ public final class MainActivity extends Activity {
             View shade=new View(this); shade.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,new int[]{0xbd0c0c0d,0x660c0c0d})); stage.addView(shade,new FrameLayout.LayoutParams(-1,-1));
             View fade=new View(this); fade.setBackground(new android.graphics.drawable.GradientDrawable(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,new int[]{0xef0c0c0d,0x200c0c0d})); stage.addView(fade,new FrameLayout.LayoutParams(-1,-1));
         }
-        LinearLayout content=Ui.column(this); content.setPadding(Ui.dp(this,10),Ui.dp(this,4),Ui.dp(this,10),0); stage.addView(content,new FrameLayout.LayoutParams(-1,-1));
+        LinearLayout content=Ui.column(this); content.setPadding(Ui.dp(this,artworkScreen?30:10),Ui.dp(this,artworkScreen?22:4),Ui.dp(this,artworkScreen?30:10),Ui.dp(this,artworkScreen?18:0)); stage.addView(content,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout heading=Ui.row(this); menuButton=null; heading.addView(Ui.title(this,title,22)); content.addView(heading); Ui.space(content,8);
         body=Ui.column(this); content.addView(body,new LinearLayout.LayoutParams(-1,0,1));
         drawerShade=new View(this); drawerShade.setBackgroundColor(0x99000000); drawerShade.setVisibility(View.GONE); drawerShade.setOnClickListener(v->setDrawer(false)); root.addView(drawerShade,new FrameLayout.LayoutParams(-1,-1));
@@ -169,6 +170,16 @@ public final class MainActivity extends Activity {
         }
     }
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if(!drawerOpen&&screen!=null&&screen.kind.equals("detail")&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) {
+            if(event.getAction()==KeyEvent.ACTION_DOWN) {
+                View focused=root.findFocus();
+                if(focused instanceof Button&&focused.getParent() instanceof LinearLayout) {
+                    LinearLayout actions=(LinearLayout)focused.getParent(); int index=actions.indexOfChild(focused);
+                    if(index>0) actions.getChildAt(index-1).requestFocus(); else setDrawer(true);
+                } else setDrawer(true);
+            }
+            return true;
+        }
         if(app.account!=null&&!drawerOpen&&grid==null&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) { if(event.getAction()==KeyEvent.ACTION_DOWN) setDrawer(true); return true; }
         if(!drawerOpen&&grid!=null&&grid.getLayoutManager() instanceof GridLayoutManager&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) {
             View focused=root.findFocus(); View card=focused==null?null:grid.findContainingItemView(focused); int position=card==null?RecyclerView.NO_POSITION:grid.getChildAdapterPosition(card);
