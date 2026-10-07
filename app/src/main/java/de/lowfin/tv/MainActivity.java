@@ -503,8 +503,10 @@ public final class MainActivity extends Activity {
         TextView meta=Ui.text(this,"",13,Ui.MUTED); content.addView(meta); Ui.space(content,8);
         TextView genres=Ui.text(this,"",12,Ui.MUTED); content.addView(genres); Ui.space(content,8);
         RatingsRow ratings=new RatingsRow(this); content.addView(ratings); Ui.space(content,12);
-        LinearLayout playActions=Ui.row(this); content.addView(playActions); Ui.space(content,8);
-        LinearLayout stateActions=Ui.row(this); content.addView(stateActions);
+        Ui.space(detail,16);
+        HorizontalScrollView actionScroll=new HorizontalScrollView(this); actionScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout playActions=Ui.row(this); actionScroll.addView(playActions); detail.addView(actionScroll,new LinearLayout.LayoutParams(-1,-2));
+        final AudioTracks.Choice[] selectedAudio={null};
         Ui.space(detail,24); View divider=new View(this); divider.setBackgroundColor(0xff28282c); detail.addView(divider,new LinearLayout.LayoutParams(-1,Ui.dp(this,1))); Ui.space(detail,18);
         detail.addView(Ui.text(this,I18n.text("ÜBER DIESEN TITEL"),11,Ui.MUTED)); Ui.space(detail,8);
         TextView overview=Ui.text(this,"",14,0xffccccd1); overview.setLineSpacing(Ui.dp(this,3),1); detail.addView(overview);
@@ -517,19 +519,28 @@ public final class MainActivity extends Activity {
             meta.setText(String.join("  ·  ",facts)); java.util.List<String> names=new ArrayList<>(); JSONArray genre=Json.array(j,"Genres"); for(int i=0;i<Math.min(genre.length(),3);i++) names.add(genre.optString(i)); genres.setText(String.join("  /  ",names)); genres.setVisibility(names.isEmpty()?View.GONE:View.VISIBLE);
             if(detailBackdrop!=null) app.images.backdrop(detailBackdrop,j);
             overview.setText(j.optString("Overview",I18n.text("Keine Beschreibung vorhanden"))); image.ratio(Artwork.ratio(j,false)); image.crop(Artwork.crop(j,false)); image.getLayoutParams().width=Ui.dp(this,Artwork.ratio(j,false)>1?224:126); app.images.show(image,j);
-            int focusPlay=-1,focusState=-1; for(int i=0;i<playActions.getChildCount();i++) if(playActions.getChildAt(i).hasFocus()) focusPlay=i; for(int i=0;i<stateActions.getChildCount();i++) if(stateActions.getChildAt(i).hasFocus()) focusState=i;
-            playActions.removeAllViews(); stateActions.removeAllViews();
+            int focusPlay=-1; for(int i=0;i<playActions.getChildCount();i++) if(playActions.getChildAt(i).hasFocus()) focusPlay=i;
+            playActions.removeAllViews();
             if(series) Ui.addButton(playActions,Ui.primary(this,I18n.text("Staffeln ansehen"),()->show(new Screen("seasons",j.optString("Name"),null,j.optString("Id"),j),true)));
-            else if(Json.position(j)>0) { Ui.addButton(playActions,Ui.primary(this,I18n.text("▶ Fortsetzen"),()->play(j,Json.position(j)))); Ui.addButton(playActions,Ui.button(this,I18n.text("Von vorn"),()->play(j,0))); }
-            else Ui.addButton(playActions,Ui.primary(this,I18n.text("▶ Abspielen"),()->play(j,0)));
+            else if(Json.position(j)>0) { Ui.addButton(playActions,Ui.primary(this,I18n.text("▶ Fortsetzen"),()->play(j,Json.position(j),selectedAudio[0]))); Ui.addButton(playActions,Ui.button(this,I18n.text("Von vorn"),()->play(j,0,selectedAudio[0]))); }
+            else Ui.addButton(playActions,Ui.primary(this,I18n.text("▶ Abspielen"),()->play(j,0,selectedAudio[0])));
             List<JSONObject> trailers=Trailers.youtube(j);
             if(!trailers.isEmpty()) Ui.addButton(playActions,Ui.button(this,"▶ Trailer",()->showTrailers(j,trailers)));
+            if(!series&&!AudioTracks.embedded(j).isEmpty()) {
+                Ui.addButton(playActions,Ui.button(this,I18n.text("Tonspur")+(selectedAudio[0]==null?"":" · "+selectedAudio[0].label),()-> {
+                    List<AudioTracks.Choice> tracks=AudioTracks.embedded(item[0]);
+                    String[] labels=new String[tracks.size()+1]; labels[0]=I18n.text("Automatisch");
+                    for(int n=0;n<tracks.size();n++) labels[n+1]=tracks.get(n).label;
+                    int checked=0; for(int n=0;n<tracks.size();n++) if(selectedAudio[0]!=null&&tracks.get(n).index==selectedAudio[0].index&&tracks.get(n).sourceId.equals(selectedAudio[0].sourceId)) checked=n+1;
+                    new AlertDialog.Builder(this).setTitle(I18n.text("Tonspur")).setSingleChoiceItems(labels,checked,(dialog,which)-> { selectedAudio[0]=which==0?null:tracks.get(which-1); dialog.dismiss(); redraw[0].run(); }).setNegativeButton(I18n.text("Abbrechen"),null).show();
+                }));
+            }
             boolean favorite=Json.object(j,"UserData").optBoolean("IsFavorite");
-            Ui.addButton(stateActions,Ui.button(this,favorite?I18n.text("★ Gespeichert"):I18n.text("☆ Merken"),()->mutate(j,"/Users/"+app.account.user+"/FavoriteItems/"+j.optString("Id"),favorite?"DELETE":"POST",()->refreshItem(item,redraw[0]))));
+            Ui.addButton(playActions,Ui.button(this,favorite?I18n.text("★ Gespeichert"):I18n.text("☆ Merken"),()->mutate(j,"/Users/"+app.account.user+"/FavoriteItems/"+j.optString("Id"),favorite?"DELETE":"POST",()->refreshItem(item,redraw[0]))));
             boolean played=Json.object(j,"UserData").optBoolean("Played");
-            Ui.addButton(stateActions,Ui.button(this,played?I18n.text("✓ Gesehen · ändern"):I18n.text("Als gesehen"),()->mutate(j,"/Users/"+app.account.user+"/PlayedItems/"+j.optString("Id"),played?"DELETE":"POST",()->refreshItem(item,redraw[0]))));
+            Ui.addButton(playActions,Ui.button(this,played?I18n.text("✓ Gesehen · ändern"):I18n.text("Als gesehen"),()->mutate(j,"/Users/"+app.account.user+"/PlayedItems/"+j.optString("Id"),played?"DELETE":"POST",()->refreshItem(item,redraw[0]))));
+            for(int n=0;n<playActions.getChildCount();n++) { Button button=(Button)playActions.getChildAt(n); button.setSingleLine(true); button.setMaxWidth(Ui.dp(this,210)); button.setEllipsize(android.text.TextUtils.TruncateAt.END); button.getLayoutParams().height=Ui.dp(this,40); }
             if(focusPlay>=0) playActions.getChildAt(Math.min(focusPlay,playActions.getChildCount()-1)).requestFocus();
-            if(focusState>=0) stateActions.getChildAt(Math.min(focusState,stateActions.getChildCount()-1)).requestFocus();
         };
         redraw[0].run(); refreshItem(item,redraw[0]); playActions.getChildAt(0).requestFocus();
     }
@@ -547,9 +558,12 @@ public final class MainActivity extends Activity {
         app.io.execute(()-> { try { api.call(method,path,null); runOnUiThread(()-> { if(g==generation) after.run(); }); }
             catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(e.getMessage()); }); } });
     }
-    private void play(JSONObject item,long position) {
+    private void play(JSONObject item,long position) { play(item,position,null); }
+    private void play(JSONObject item,long position,AudioTracks.Choice audio) {
         if(app.account==null) return;
-        startActivity(new Intent(this,PlayerActivity.class).putExtra("item",item.toString()).putExtra("position",position));
+        Intent intent=new Intent(this,PlayerActivity.class).putExtra("item",item.toString()).putExtra("position",position);
+        if(audio!=null) intent.putExtra("audioStreamIndex",audio.index).putExtra("mediaSourceId",audio.sourceId);
+        startActivity(intent);
     }
     private void live() {
         TextView n=note(""); MediaAdapter adapter=cards(true);

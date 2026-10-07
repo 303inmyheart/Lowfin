@@ -9,6 +9,11 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.1
+
+- Detail actions share a compact horizontal row with consistent button sizing and remote scrolling.
+- Embedded audio can be selected before playback, including the correct media version and file stream index. Direct playback applies the selection locally after tracks are discovered.
+
 ## 0.7.0
 
 - English UI by default regardless of TV language, with a persistent German option in Settings and before sign-in. Includes navigation, dialogs, player, trailers, errors and TV channel names.
