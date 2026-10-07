@@ -9,6 +9,10 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.3
+
+- Animated slim buffering bar with a softly bouncing accent gradient. Animation stops when hidden, detached or the player leaves the foreground. Error messages remain readable.
+
 ## 0.7.2
 
 - Left navigation moves between detail actions; the sidebar opens only at the first action.
