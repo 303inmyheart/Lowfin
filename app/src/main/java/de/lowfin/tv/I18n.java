@@ -7,6 +7,7 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("Automatisch",R.string.audio_automatic);
         IDS.put("Untertitel standardmäßig aktivieren",R.string.default_subtitles);
         IDS.put("RAM-Puffer · siehe erweiterte Wiedergabeeinstellungen",R.string.buffer_settings);
         IDS.put("Deine Bibliothek",R.string.text_000);

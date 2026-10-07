@@ -33,6 +33,7 @@ public final class PlayerActivity extends Activity {
     private Button skip;
     private long skipTarget,requestedPosition;
     private int audio=-1,subtitle=-1;
+    private boolean initialAudioApplied;
     private volatile int generation;
     private String sourceId,sessionId,liveId,method="DirectPlay";
     private boolean live,started,forceHls,released,subtitleChosen;
@@ -64,6 +65,8 @@ public final class PlayerActivity extends Activity {
         api=new Api(app.account);
         try { item=new JSONObject(getIntent().getStringExtra("item")); } catch(Exception e) { finish(); return; }
         requestedPosition=saved!=null?saved.getLong("position"):getIntent().getLongExtra("position",0);
+        audio=saved!=null?saved.getInt("audioStreamIndex",-1):getIntent().getIntExtra("audioStreamIndex",-1);
+        sourceId=saved!=null?saved.getString("mediaSourceId",""):getIntent().getStringExtra("mediaSourceId");
         live="TvChannel".equals(item.optString("Type"));
         app.playing=true; getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); Ui.immersive(this);
         layout(); load(requestedPosition,false);
@@ -126,7 +129,7 @@ public final class PlayerActivity extends Activity {
                     JSONArray sources=Json.array(detailed,"MediaSources");
                     JSONObject first=sources.optJSONObject(0);
                     for(int i=0;i<sources.length();i++) { JSONObject s=sources.optJSONObject(i); if(s!=null&&Json.str(s,"Id").equals(requestedSource)) first=s; }
-                    if(first!=null) { audioIndex=first.optInt("DefaultAudioStreamIndex",-1); subtitleIndex=-1; }
+                    if(first!=null) { if(requestedAudio<0) audioIndex=first.optInt("DefaultAudioStreamIndex",-1); subtitleIndex=-1; }
                 }
                 if(g!=generation||released) return;
                 JSONObject request=PlaybackPolicy.request(api.account.user,app.settings.getInt("height",720),app.settings.getInt("bitrate",4000000),isLive,force,position,audioIndex,subtitleIndex,requestedSource,app.settings.getBoolean("stereo",true));
@@ -207,7 +210,13 @@ public final class PlayerActivity extends Activity {
                 }
             }
         }
+        initialAudioApplied=false;
         player.addListener(new Player.Listener() {
+            @Override public void onTracksChanged(Tracks tracks) {
+                if(g!=generation||released||initialAudioApplied||audio<0||!method.equals("DirectPlay")) return;
+                initialAudioApplied=true;
+                if(!selectLocalAudio(audio)) initialAudioApplied=false;
+            }
             @Override public void onPlaybackStateChanged(int state) {
                 if(g!=generation||released) return;
                 if(state==Player.STATE_BUFFERING) { if(live) liveBuffer.begin(SystemClock.elapsedRealtime()); message.setText(I18n.text("Puffer wird gefüllt …")); message.setVisibility(View.VISIBLE); }
@@ -311,7 +320,7 @@ public final class PlayerActivity extends Activity {
     private boolean selectLocalAudio(int streamIndex) {
         if(player==null||source==null) return false;
         int ordinal=0,target=-1; JSONArray streams=Json.array(source,"MediaStreams");
-        for(int i=0;i<streams.length();i++) { JSONObject stream=streams.optJSONObject(i); if(stream==null||!"Audio".equals(stream.optString("Type"))) continue; if(stream.optInt("Index",-1)==streamIndex) target=ordinal; ordinal++; }
+        for(int i=0;i<streams.length();i++) { JSONObject stream=streams.optJSONObject(i); if(stream==null||!"Audio".equals(stream.optString("Type"))||stream.optBoolean("IsExternal")) continue; if(stream.optInt("Index",-1)==streamIndex) target=ordinal; ordinal++; }
         if(target<0) return false; ordinal=0;
         for(Tracks.Group group:player.getCurrentTracks().getGroups()) if(group.getType()==C.TRACK_TYPE_AUDIO) for(int track=0;track<group.length;track++) {
             if(ordinal++==target) { if(!group.isTrackSupported(track)) return false;
@@ -323,7 +332,7 @@ public final class PlayerActivity extends Activity {
     private void versions() {
         JSONArray sources=Json.array(item,"MediaSources"); if(sources.length()<2) { toast(I18n.text("Eine Medienversion vorhanden")); return; }
         String[] labels=new String[sources.length()]; for(int i=0;i<sources.length();i++) labels[i]=sources.optJSONObject(i).optString("Name",I18n.text("Version ")+(i+1));
-        new AlertDialog.Builder(this).setTitle(I18n.text("Medienversion")).setItems(labels,(d,w)-> { sourceId=sources.optJSONObject(w).optString("Id"); forceHls=false; load(position(),false); }).show();
+        new AlertDialog.Builder(this).setTitle(I18n.text("Medienversion")).setItems(labels,(d,w)-> { sourceId=sources.optJSONObject(w).optString("Id"); audio=-1; forceHls=false; load(position(),false); }).show();
     }
     private void chapters() {
         JSONArray chapters=Json.array(item,"Chapters"); if(chapters.length()==0) { toast(I18n.text("Keine Kapitel")); return; }
@@ -341,7 +350,7 @@ public final class PlayerActivity extends Activity {
             else if(episodes.length()==1&&id.equals(episodes.optJSONObject(0).optString("Id"))) next=null;
             JSONObject chosen=next;
             runOnUiThread(()-> { if(g!=generation||released) return; if(chosen==null) { toast(I18n.text("Keine weitere Folge")); if(automatic) finish(); return; }
-                cleanupSession(); item=chosen; sourceId=null; forceHls=false; load(0,false);
+                cleanupSession(); item=chosen; audio=-1; sourceId=null; forceHls=false; load(0,false);
             });
         } catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(I18n.text("Nächste Folge konnte nicht geladen werden")); }); } });
     }
@@ -352,7 +361,7 @@ public final class PlayerActivity extends Activity {
             runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Sender wechseln")).setItems(labels,(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
         } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Senderliste nicht verfügbar"))); } });
     }
-    private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; live=true; sourceId=null; forceHls=false; load(0,false); }
+    private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; live=true; audio=-1; sourceId=null; forceHls=false; load(0,false); }
     private void zap(int direction) {
         int g=generation; String id=item.optString("Id");
         network.execute(()-> { try {
@@ -390,7 +399,7 @@ public final class PlayerActivity extends Activity {
         return super.dispatchKeyEvent(e);
     }
     @Override public void onBackPressed() { if(chrome!=null&&chrome.getVisibility()==View.VISIBLE) hideChrome(); else finish(); }
-    @Override protected void onSaveInstanceState(Bundle state) { state.putLong("position",position()); super.onSaveInstanceState(state); }
+    @Override protected void onSaveInstanceState(Bundle state) { state.putLong("position",position()); state.putInt("audioStreamIndex",audio); state.putString("mediaSourceId",sourceId); super.onSaveInstanceState(state); }
     @Override protected void onStop() { super.onStop(); release(); finish(); }
     private void release() {
         if(released) return; released=true; generation++; handler.removeCallbacksAndMessages(null); cleanupSession();

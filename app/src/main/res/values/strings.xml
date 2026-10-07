@@ -298,4 +298,5 @@
     <string name="option_040" formatted="false">" movies"</string>
     <string name="buffer_settings">RAM buffer · See advanced playback settings</string>
     <string name="default_subtitles">Enable subtitles by default</string>
+    <string name="audio_automatic">Automatic</string>
 </resources>

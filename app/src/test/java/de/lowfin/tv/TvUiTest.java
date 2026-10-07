@@ -145,6 +145,7 @@ public class TvUiTest {
         screenshot("live-channels-hd.png");
     }
     @Test public void movieDetailUsesPortraitPosterAndCompactActions() throws Exception {
+        movie.put("MediaSources",Json.arr(Json.obj("Id","file-de","MediaStreams",Json.arr(Json.obj("Type","Audio","Index",3,"DisplayTitle","Deutsch 5.1")))));
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup(); layout();
         await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null);
@@ -157,6 +158,13 @@ public class TvUiTest {
         assertTrue(findButton(root,"▶ Abspielen").getHeight()<65); assertNotNull(findButton(root,"Als gesehen"));
         BackdropView backdrop=(BackdropView)find(root,v->v instanceof BackdropView); assertNotNull(backdrop);
         await(()->cover.getDrawable()!=null&&backdrop.getDrawable()!=null); screenshot("movie-detail-hd.png");
+        Button play=findButton(root,"▶ Abspielen"),audio=findButton(root,"Tonspur"),watched=findButton(root,"Als gesehen");
+        assertNotNull(audio); assertSame(play.getParent(),audio.getParent()); assertSame(play.getParent(),watched.getParent());
+        audio.performClick(); android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        dialog.getListView().performItemClick(dialog.getListView().getChildAt(1),1,1);
+        assertNotNull(findButton(root,"Tonspur · Deutsch 5.1"));
+        findButton(root,"▶ Abspielen").performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity();
+        assertEquals(3,intent.getIntExtra("audioStreamIndex",-1)); assertEquals("file-de",intent.getStringExtra("mediaSourceId"));
     }
     @Test public void episodeThumbnailsKeepTheirLandscapeRatio() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());

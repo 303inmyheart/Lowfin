@@ -2,7 +2,7 @@ plugins { id 'com.android.application' }
 android {
     namespace 'de.lowfin.tv'
     compileSdk 35
-    defaultConfig { applicationId 'de.lowfin.tv'; minSdk 26; targetSdk 35; versionCode 13; versionName '0.7.0' }
+    defaultConfig { applicationId 'de.lowfin.tv'; minSdk 26; targetSdk 35; versionCode 14; versionName '0.7.1' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildTypes {
         release { signingConfig signingConfigs.debug; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
