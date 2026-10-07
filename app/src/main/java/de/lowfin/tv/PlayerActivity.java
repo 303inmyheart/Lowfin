@@ -30,6 +30,7 @@ public final class PlayerActivity extends Activity {
     private ExoPlayer player;
     private PlayerChrome chrome;
     private TextView message;
+    private BufferBar bufferBar;
     private Button skip;
     private long skipTarget,requestedPosition;
     private int audio=-1,subtitle=-1;
@@ -50,7 +51,7 @@ public final class PlayerActivity extends Activity {
         if(live&&player.getPlaybackState()==Player.STATE_BUFFERING) {
             int action=liveBuffer.poll(SystemClock.elapsedRealtime());
             if(action==LiveBufferWatchdog.RECONNECT) { retryLiveTransport(); message.setText(I18n.text("Live-Stream wird erneut verbunden …")); }
-            else if(action==LiveBufferWatchdog.FAIL) { player.stop(); message.setText(I18n.text("Der Sender liefert keine abspielbaren Daten.\nOptionen → Stream erneut verbinden oder einen anderen Sender wählen.")); message.setVisibility(View.VISIBLE); showChrome(true); }
+            else if(action==LiveBufferWatchdog.FAIL) { player.stop(); message.setText(I18n.text("Der Sender liefert keine abspielbaren Daten.\nOptionen → Stream erneut verbinden oder einen anderen Sender wählen.")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
         }
         if(player.getPlaybackState()==Player.STATE_READY) {
             long position=player.getCurrentPosition();
@@ -86,6 +87,7 @@ public final class PlayerActivity extends Activity {
         FrameLayout.LayoutParams bottom=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(chrome,bottom); updateChromeTitle();
         message=Ui.text(this,I18n.text("Stream wird geöffnet …"),14,Color.WHITE); message.setGravity(Gravity.CENTER); message.setPadding(Ui.dp(this,20),Ui.dp(this,12),Ui.dp(this,20),Ui.dp(this,12)); message.setBackground(Ui.background(0xe619191c,0));
         FrameLayout.LayoutParams center=new FrameLayout.LayoutParams(Ui.dp(this,420),-2,Gravity.CENTER); root.addView(message,center);
+        bufferBar=new BufferBar(this); bufferBar.setVisibility(View.GONE); root.addView(bufferBar,new FrameLayout.LayoutParams(Ui.dp(this,240),Ui.dp(this,20),Gravity.CENTER));
         skip=Ui.quiet(this,I18n.text("Überspringen"),()-> { if(player!=null) { player.seekTo(skipTarget); skip.setVisibility(View.GONE); view.requestFocus(); } }); skip.setVisibility(View.GONE);
         FrameLayout.LayoutParams skipLayout=new FrameLayout.LayoutParams(-2,Ui.dp(this,36),Gravity.END|Gravity.BOTTOM); skipLayout.setMargins(0,0,Ui.dp(this,32),Ui.dp(this,192)); root.addView(skip,skipLayout);
         setContentView(root); view.setOnClickListener(v->{ if(chrome.getVisibility()==View.VISIBLE) hideChrome(); else showChrome(true); }); view.requestFocus();
@@ -113,9 +115,9 @@ public final class PlayerActivity extends Activity {
         }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
     private void load(long position,boolean keepSelections) {
-        cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
+        bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
-        message.setVisibility(View.VISIBLE); message.setText(I18n.text("Stream wird geöffnet …")); updateChromeTitle(); showChrome(false);
+        bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); message.setText(I18n.text("Stream wird geöffnet …")); updateChromeTitle(); showChrome(false);
         final String id=item.optString("Id"); final boolean isLive=live;
         final String requestedSource=sourceId; final int requestedAudio=audio,requestedSubtitle=subtitle; final boolean force=forceHls;
         if(isLive) app.settings.edit().putString("lastChannel",id).apply();
@@ -176,7 +178,7 @@ public final class PlayerActivity extends Activity {
                 }}
             } catch(Exception e) {
                 closeNegotiated(negotiatedLive,negotiatedSession);
-                runOnUiThread(()-> { if(g==generation&&!released) { message.setVisibility(View.VISIBLE); message.setText(I18n.text("Stream konnte nicht gestartet werden.\n")+friendly(e)+I18n.text("\nZurück oder ‚Über Server abspielen‘ wählen.")); showChrome(true); } });
+                runOnUiThread(()-> { if(g==generation&&!released) { bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); message.setText(I18n.text("Stream konnte nicht gestartet werden.\n")+friendly(e)+I18n.text("\nZurück oder ‚Über Server abspielen‘ wählen.")); showChrome(true); } });
             }
         });
     }
@@ -219,23 +221,24 @@ public final class PlayerActivity extends Activity {
             }
             @Override public void onPlaybackStateChanged(int state) {
                 if(g!=generation||released) return;
-                if(state==Player.STATE_BUFFERING) { if(live) liveBuffer.begin(SystemClock.elapsedRealtime()); message.setText(I18n.text("Puffer wird gefüllt …")); message.setVisibility(View.VISIBLE); }
+                if(state==Player.STATE_BUFFERING) { if(live) liveBuffer.begin(SystemClock.elapsedRealtime()); message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); }
                 if(state==Player.STATE_READY) {
                     liveBuffer.reset();
-                    message.setVisibility(View.GONE);
+                    bufferBar.setVisibility(View.GONE); message.setVisibility(View.GONE);
                     showChrome(false);
                     if(!started) { started=true; report("",player.getCurrentPosition()); lastReport=SystemClock.elapsedRealtime(); }
                 }
                 if(state==Player.STATE_ENDED&&!live) {
                     if(app.settings.getBoolean("nextEpisode",true)&&"Episode".equals(item.optString("Type"))) nextEpisode(true);
-                    else { message.setText(I18n.text("Wiedergabe beendet")); message.setVisibility(View.VISIBLE); showChrome(true); }
+                    else { message.setText(I18n.text("Wiedergabe beendet")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
                 }
             }
             @Override public void onPlayerError(PlaybackException error) {
+                bufferBar.setVisibility(View.GONE);
                 if(g!=generation||released) return;
                 if(live&&liveCandidate+1<liveCandidates.size()) { retryLiveTransport(); return; }
                 if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true); }
-                else { message.setText(I18n.text("Wiedergabefehler: ")+error.getErrorCodeName()+I18n.text("\nZurück oder erneut ‚Über Server abspielen‘ wählen.")); message.setVisibility(View.VISIBLE); showChrome(true); }
+                else { message.setText(I18n.text("Wiedergabefehler: ")+error.getErrorCodeName()+I18n.text("\nZurück oder erneut ‚Über Server abspielen‘ wählen.")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
             }
         });
         player.setMediaItem(media.build(),position); player.prepare(); player.setPlayWhenReady(true);
@@ -402,7 +405,7 @@ public final class PlayerActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) { state.putLong("position",position()); state.putInt("audioStreamIndex",audio); state.putString("mediaSourceId",sourceId); super.onSaveInstanceState(state); }
     @Override protected void onStop() { super.onStop(); release(); finish(); }
     private void release() {
-        if(released) return; released=true; generation++; handler.removeCallbacksAndMessages(null); cleanupSession();
+        if(released) return; released=true; if(bufferBar!=null) bufferBar.setVisibility(View.GONE); generation++; handler.removeCallbacksAndMessages(null); cleanupSession();
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
         api.http.dispatcher().cancelAll(); network.shutdownNow(); app.playing=false; getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         app.reports.execute(()->app.channels.refresh(null));
