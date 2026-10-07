@@ -9,7 +9,7 @@ import java.util.function.BiConsumer;
 /** Muted, curated hues; only foreground time advances the hourly timer. */
 final class Accent implements Application.ActivityLifecycleCallbacks {
     static final long HOUR=3600000;
-    static final int[] POOL={0xffc6b7c9,0xffb5c4d3,0xffb3cbc9,0xffb8c9b6,0xffc9c6aa,0xffd0bea8,0xffcdb6af,0xffcbb2bc,0xffb9b4d0,0xffaebfca,0xffbecbbf,0xffc8bdc6};
+    static final int[] POOL={0xffc9a4cf,0xff9bbbdc,0xff92cdc7,0xffa0cb9c,0xffd1ca92,0xffdcb98c,0xffd69f91,0xffd397ae,0xffaca1dc,0xff91b9d0,0xffa0cda2,0xffd0a6c8};
     static int color=POOL[0];
     private final android.content.SharedPreferences settings;
     private final Random random=new Random();

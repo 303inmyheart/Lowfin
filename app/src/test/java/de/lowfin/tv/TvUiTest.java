@@ -159,7 +159,11 @@ public class TvUiTest {
         BackdropView backdrop=(BackdropView)find(root,v->v instanceof BackdropView); assertNotNull(backdrop);
         await(()->cover.getDrawable()!=null&&backdrop.getDrawable()!=null); screenshot("movie-detail-hd.png");
         Button play=findButton(root,"▶ Abspielen"),audio=findButton(root,"Tonspur"),watched=findButton(root,"Als gesehen");
-        assertNotNull(audio); assertSame(play.getParent(),audio.getParent()); assertSame(play.getParent(),watched.getParent());
+        assertNotNull(audio);
+        watched.requestFocus(); activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_LEFT)); activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_LEFT));
+        assertTrue(findButton(root,"☆ Merken").hasFocus());
+        assertEquals(0,((View)backdrop.getParent()).getLeft()); assertEquals(0,((View)backdrop.getParent()).getTop());
+        assertSame(play.getParent(),audio.getParent()); assertSame(play.getParent(),watched.getParent());
         audio.performClick(); android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
         dialog.getListView().performItemClick(dialog.getListView().getChildAt(1),1,1);
         assertNotNull(findButton(root,"Tonspur · Deutsch 5.1"));

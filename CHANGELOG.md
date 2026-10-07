@@ -9,6 +9,12 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.2
+
+- Left navigation moves between detail actions; the sidebar opens only at the first action.
+- Slightly richer curated accent colors and backdrop saturation.
+- Backdrop artwork and gradients fill the screen, with padding applied to foreground content.
+
 ## 0.7.1
 
 - Detail actions share a compact horizontal row with consistent button sizing and remote scrolling.
