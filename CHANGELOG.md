@@ -4,9 +4,10 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 
 ## Unreleased
 
-- GitHub Actions builds on `main` pushes and manual runs: Android 11 unit/UI tests, Android Lint, an optimized signed APK, checksums and build metadata.
+- GitHub Actions builds on `main` pushes and manual runs: Android 11 unit/UI tests, Android Lint, a signed release APK (R8 and resource shrinking, debug disabled), checksums and build metadata.
 - Downloadable APK and diagnostic artifacts, with the existing signing certificate when the repository signing secret is configured.
 - Dedicated complete version history linked from both documentation languages.
+- Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
 ## 0.7.0
 

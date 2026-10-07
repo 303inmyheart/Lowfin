@@ -154,10 +154,10 @@ Java, Gradle und Android-SDK liegen projektlokal in `.tools/`. `tools/bootstrap.
 
 ```bash
 bash tools/bootstrap.sh
-bash tools/build.sh testDebugUnitTest lintDebug assembleOptimized
+bash tools/build.sh testDebugUnitTest lintDebug lintRelease assembleRelease
 ```
 
-Die optimierte APK liegt anschließend unter `app/build/outputs/apk/optimized/app-optimized.apk`. Sie ist mit dem lokalen Entwicklungsschlüssel signiert und für Sideload-Tests vorgesehen. Für eine spätere Store-Veröffentlichung muss eine eigene Release-Signierung eingerichtet werden.
+Die Release-APK liegt anschließend unter `app/build/outputs/apk/release/app-release.apk`. Sie ist mit dem lokalen Entwicklungsschlüssel signiert und für Sideload-Tests vorgesehen. Für eine spätere Store-Veröffentlichung muss eine eigene Release-Signierung eingerichtet werden.
 
 ## Prüfung und verbleibender Gerätetest
 
