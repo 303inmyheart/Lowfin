@@ -1,0 +1,22 @@
+{
+  "version": "0.4.0",
+  "tests": 77,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1392759,
+  "apk_sha256": "f028db92a9621da36bb1e1c9b0d7a2165748e34ec744697696cbf93c95eec8f2",
+  "signature_verified": true,
+  "same_signing_certificate": true,
+  "physical_tv_tested": false,
+  "youtube_playback_tested_on_device": false,
+  "features": [
+    "default closed sidebar; menu opens; right and back close with focus return",
+    "random button on home and sidebar",
+    "account scoped pinned genres with random movie rows; Horror and Thriller defaults",
+    "exactly one visible genre shelf on focus with description and backdrop",
+    "right boundary retains focus; up and down switch genre shelves",
+    "2:3 movies and series; 16:9 episodes",
+    "Jellyfin RemoteTrailers played via official embedded YouTube player inside Lowfin"
+  ],
+  "signature": "Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198\nSigner #1 certificate SHA-1 digest: e22593b5abed3ee09019ad11a5f1bef20fb28caa\nSigner #1 certificate MD5 digest: c34533ec8aad1223ede689e160071963"
+}

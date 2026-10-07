@@ -1,0 +1,20 @@
+{
+  "version": "0.4.1",
+  "tests": 81,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1393475,
+  "apk_sha256": "9596b06e23bf20cc7a9be7b56be6ef08cca40d0676406c6d6821b5cd57ae7c0d",
+  "signature_verified": true,
+  "same_signing_certificate": true,
+  "physical_tv_tested": false,
+  "features": [
+    "Back returns to Home before exiting; closes drawer first; collapses focused genre shelf before exiting",
+    "drawer opens at current section, has bounded vertical navigation and returns to previous content focus",
+    "left on first card opens menu",
+    "home row changes retain horizontal position",
+    "eight-column compact movie/series/season grids",
+    "fixed 2:3 poster and 16:9 thumbnail frames with center crop"
+  ],
+  "signature": "Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198\nSigner #1 certificate SHA-1 digest: e22593b5abed3ee09019ad11a5f1bef20fb28caa\nSigner #1 certificate MD5 digest: c34533ec8aad1223ede689e160071963"
+}

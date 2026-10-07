@@ -1,0 +1,24 @@
+{
+  "version": "0.5.1",
+  "tests": 111,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 7357785,
+  "apk_sha256": "f31e58c0af0c4011a07763bbcce2b367d0a2ba4d5752738b94fb7e7ee3c9b2c6",
+  "signature_certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "physical_tv_tested": false,
+  "live_server_tested": false,
+  "real_rating_keys_tested": false,
+  "ffmpeg_native_libraries": [
+    "lib/arm64-v8a/libffmpegJNI.so",
+    "lib/armeabi-v7a/libffmpegJNI.so",
+    "lib/x86/libffmpegJNI.so",
+    "lib/x86_64/libffmpegJNI.so"
+  ],
+  "fixes": [
+    "HD genre description bounds and ellipsis",
+    "offscreen poster and last shelf focus navigation",
+    "subtitles disabled by default; native live subtitle/audio switching",
+    "adaptive RAM refill target; single watchdog timer"
+  ]
+}

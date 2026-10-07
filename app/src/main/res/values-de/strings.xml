@@ -1,0 +1,301 @@
+<resources>
+    <string name="text_000" formatted="false">"Deine Bibliothek"</string>
+    <string name="text_001" formatted="false">"Bitte erneut anmelden"</string>
+    <string name="text_002" formatted="false">"Server nicht erreichbar. Gespeicherte Bibliothek bleibt verfügbar."</string>
+    <string name="text_003" formatted="false">"Deine Medien. Direkt auf deinem TV."</string>
+    <string name="text_004" formatted="false">"Bitte eine vollständige Serveradresse ohne Zugangsdaten oder URL-Parameter angeben."</string>
+    <string name="text_005" formatted="false">"Benutzername fehlt"</string>
+    <string name="text_006" formatted="false">"Verbindung wird hergestellt …"</string>
+    <string name="text_007" formatted="false">"Sitzung konnte nicht sicher gespeichert werden."</string>
+    <string name="text_008" formatted="false">"Verbindung fehlgeschlagen. Adresse und Netzwerk prüfen."</string>
+    <string name="text_009" formatted="false">"Anmeldung abgelaufen"</string>
+    <string name="text_010" formatted="false">"Keine Berechtigung"</string>
+    <string name="text_011" formatted="false">"Serverfehler HTTP "</string>
+    <string name="text_012" formatted="false">"Zufälliger Film"</string>
+    <string name="text_013" formatted="false">"Genres anheften"</string>
+    <string name="text_014" formatted="false">"Von Startseite lösen"</string>
+    <string name="text_015" formatted="false">"Auf Startseite anheften"</string>
+    <string name="text_016" formatted="false">"Bibliotheken konnten nicht aktualisiert werden: "</string>
+    <string name="text_017" formatted="false">"Keine Einträge"</string>
+    <string name="text_018" formatted="false">"Laden fehlgeschlagen: "</string>
+    <string name="text_019" formatted="false">"Gespeicherte Daten · Server aktuell nicht erreichbar"</string>
+    <string name="text_020" formatted="false">"Als Nächstes"</string>
+    <string name="text_021" formatted="false">"Keine Filme in dieser Reihe"</string>
+    <string name="text_022" formatted="false">"Keine Beschreibung vorhanden"</string>
+    <string name="text_023" formatted="false">"Wird geladen …"</string>
+    <string name="text_024" formatted="false">"Genres werden geladen …"</string>
+    <string name="text_025" formatted="false">"Keine Genres gefunden"</string>
+    <string name="text_026" formatted="false">"Keine gespeicherten Genres · Server nicht erreichbar"</string>
+    <string name="text_027" formatted="false">"Gespeicherte Genres"</string>
+    <string name="text_028" formatted="false">"Titel werden geladen …"</string>
+    <string name="text_029" formatted="false">"Bibliotheken werden geladen. Bitte gleich erneut öffnen."</string>
+    <string name="text_030" formatted="false">"-Zeile · Bibliotheken"</string>
+    <string name="text_031" formatted="false">"Alle Bibliotheken"</string>
+    <string name="text_032" formatted="false">"Keine Filme in dieser Bibliothek gefunden"</string>
+    <string name="text_033" formatted="false">"← Vorherige Seite"</string>
+    <string name="text_034" formatted="false">"Seite "</string>
+    <string name="text_035" formatted="false">"  ·  60 Einträge  "</string>
+    <string name="text_036" formatted="false">"Nächste Seite →"</string>
+    <string name="text_037" formatted="false">"Zur Staffel"</string>
+    <string name="text_038" formatted="false">"Staffel nicht gefunden"</string>
+    <string name="text_039" formatted="false">" Staffeln"</string>
+    <string name="text_040" formatted="false">"Staffeln konnten nicht geladen werden"</string>
+    <string name="text_041" formatted="false">"Folgen werden geladen …"</string>
+    <string name="text_042" formatted="false">"ÜBER DIESEN TITEL"</string>
+    <string name="text_043" formatted="false">"Staffel "</string>
+    <string name="text_044" formatted="false">" · Folge "</string>
+    <string name="text_045" formatted="false">"Staffeln ansehen"</string>
+    <string name="text_046" formatted="false">"▶ Fortsetzen"</string>
+    <string name="text_047" formatted="false">"Von vorn"</string>
+    <string name="text_048" formatted="false">"▶ Abspielen"</string>
+    <string name="text_049" formatted="false">"★ Gespeichert"</string>
+    <string name="text_050" formatted="false">"☆ Merken"</string>
+    <string name="text_051" formatted="false">"✓ Gesehen · ändern"</string>
+    <string name="text_052" formatted="false">"Als gesehen"</string>
+    <string name="text_053" formatted="false">"Trailer wählen"</string>
+    <string name="text_054" formatted="false">"Aufnahmen werden geladen …"</string>
+    <string name="text_055" formatted="false">"Titel suchen"</string>
+    <string name="text_056" formatted="false">"Bibliothek durchsuchen"</string>
+    <string name="text_057" formatted="false">"Bewertungen · Anbieter und API-Keys"</string>
+    <string name="text_058" formatted="false">"Auflösung: "</string>
+    <string name="text_059" formatted="false">"Maximale Auflösung"</string>
+    <string name="text_060" formatted="false">"720p · HD, empfohlen"</string>
+    <string name="text_061" formatted="false">"Maximale Bitrate"</string>
+    <string name="text_062" formatted="false">"Audio auf Stereo (2.0) heruntermischen"</string>
+    <string name="text_063" formatted="false">"Server-Transcoding bei Bedarf zulassen"</string>
+    <string name="text_064" formatted="false">"Videocache: "</string>
+    <string name="text_065" formatted="false">"RAM-Puffer: automatisch · bis 48 MB, Live-TV bis 32 MB · mit Speicherreserve"</string>
+    <string name="text_066" formatted="false">"Nächste Folge automatisch"</string>
+    <string name="text_067" formatted="false">"Intros und Outros automatisch überspringen"</string>
+    <string name="text_068" formatted="false">"Live TV beim Öffnen des Clients starten"</string>
+    <string name="text_069" formatted="false">"Kleine Fokusanimationen"</string>
+    <string name="text_070" formatted="false">"Android-TV-Hauptmenü"</string>
+    <string name="text_071" formatted="false">"Filme und Serien im TV-Hauptmenü: "</string>
+    <string name="text_072" formatted="false">"TV-Filmzeile · Bibliotheken wählen"</string>
+    <string name="text_073" formatted="false">"TV-Serienzeile · Bibliotheken wählen"</string>
+    <string name="text_074" formatted="false">"TV-Kanal aktivieren · "</string>
+    <string name="text_075" formatted="false">"TV-Kanal aktivieren · Film-Empfehlungen "</string>
+    <string name="text_076" formatted="false">"Der erste Kanal kann automatisch erscheinen. Weitere Reihen aktivierst du hier oder unter ‚Kanäle anpassen‘ im TV-Hauptmenü.\nDie Anzeige hängt vom Launcher ab; Google TV kann eigene Regeln verwenden."</string>
+    <string name="text_077" formatted="false">"Bibliothekscache · Konto und Server getrennt"</string>
+    <string name="text_078" formatted="false">"Bibliothek und Cover vollständig vorladen"</string>
+    <string name="text_079" formatted="false">"Vorladen stoppen"</string>
+    <string name="text_080" formatted="false">"Cache wird gestoppt"</string>
+    <string name="text_081" formatted="false">"Cover-Speicher: "</string>
+    <string name="text_082" formatted="false">"gesamter freier Speicher"</string>
+    <string name="text_083" formatted="false">"Speicherbudget · 64 MB bleiben frei"</string>
+    <string name="text_084" formatted="false">"Ohne feste Grenze"</string>
+    <string name="text_085" formatted="false">"Covercache löschen"</string>
+    <string name="text_086" formatted="false">"Covercache gelöscht"</string>
+    <string name="text_087" formatted="false">"Angemeldet als "</string>
+    <string name="text_088" formatted="false">"Abmelden / Konto wechseln"</string>
+    <string name="text_089" formatted="false">" · API-Key bearbeiten"</string>
+    <string name="text_090" formatted="false">"OMDb liefert IMDb, Rotten Tomatoes und Metacritic. MDBList ergänzt weitere Quellen. TMDB liefert die eigene Nutzerbewertung. Fehlende Werte werden ausgeblendet."</string>
+    <string name="text_091" formatted="false">"Sichtbare Bewertungen"</string>
+    <string name="text_092" formatted="false">"API-Key oder Read Access Token"</string>
+    <string name="text_093" formatted="false">"API-Key wird verschlüsselt auf diesem Gerät gespeichert. Leeres Feld entfernt den Key."</string>
+    <string name="text_094" formatted="false">" verbinden"</string>
+    <string name="text_095" formatted="false">"API-Key gespeichert"</string>
+    <string name="text_096" formatted="false">"API-Key konnte nicht sicher gespeichert werden."</string>
+    <string name="text_097" formatted="false">"Videocache auf dem Gerätespeicher"</string>
+    <string name="text_098" formatted="false">"Eigener Wert …"</string>
+    <string name="text_099" formatted="false">"Größe in MB"</string>
+    <string name="text_100" formatted="false">"Videocache in MB"</string>
+    <string name="text_101" formatted="false">"16 bis 16384 MB eingeben"</string>
+    <string name="text_102" formatted="false">"Eine Größe in MB eingeben"</string>
+    <string name="text_103" formatted="false">"Bibliothek wird im Hintergrund vorgeladen"</string>
+    <string name="text_104" formatted="false">"Diese TV-Karte gehört zu einem anderen oder abgemeldeten Konto."</string>
+    <string name="text_105" formatted="false">"TV-Karte konnte nicht geöffnet werden: "</string>
+    <string name="text_106" formatted="false">"Lowfin beenden?"</string>
+    <string name="text_107" formatted="false">"Möchtest du die App wirklich beenden?"</string>
+    <string name="text_108" formatted="false">"Weiter ansehen"</string>
+    <string name="text_109" formatted="false">"Lowfin · Bibliothek speichern"</string>
+    <string name="text_110" formatted="false">"Metadaten werden geladen"</string>
+    <string name="text_111" formatted="false">"Metadaten: "</string>
+    <string name="text_112" formatted="false">"Bibliothek: "</string>
+    <string name="text_113" formatted="false">" Titel"</string>
+    <string name="text_114" formatted="false">"Cover: "</string>
+    <string name="text_115" formatted="false">" Metadaten · "</string>
+    <string name="text_116" formatted="false">" Cover"</string>
+    <string name="text_117" formatted="false">" Cover offen (Speicher/Verbindung)"</string>
+    <string name="text_118" formatted="false">" · vollständig gespeichert"</string>
+    <string name="text_119" formatted="false">"Cache pausiert; vorhandene Daten bleiben verfügbar"</string>
+    <string name="text_120" formatted="false">"Cache unvollständig: "</string>
+    <string name="text_121" formatted="false">"Android-TV-Kanäle aktualisiert"</string>
+    <string name="text_122" formatted="false">"TV-Launcher unterstützt die Veröffentlichung nicht vollständig"</string>
+    <string name="text_123" formatted="false">"TV-Kanal konnte nicht angelegt werden"</string>
+    <string name="text_124" formatted="false">"Android-TV-Kanäle werden nach dem Laden aktualisiert"</string>
+    <string name="text_125" formatted="false">"Dieser Launcher stellt keine Android-TV-Kanäle bereit"</string>
+    <string name="text_126" formatted="false">"Kanäle werden vorbereitet. Danach erneut auswählen."</string>
+    <string name="text_127" formatted="false">"Im TV-Hauptmenü unter ‚Kanäle anpassen‘ Lowfin aktivieren."</string>
+    <string name="text_128" formatted="false">"Cover nicht verfügbar"</string>
+    <string name="text_129" formatted="false">"Cover zu groß"</string>
+    <string name="text_130" formatted="false">"Rotten Tomatoes · Kritiker"</string>
+    <string name="text_131" formatted="false">"Rotten Tomatoes · Publikum"</string>
+    <string name="text_132" formatted="false">"API-Keys hinterlegen, um externe Bewertungen zu laden."</string>
+    <string name="text_133" formatted="false">"Ein Anbieter war nicht erreichbar oder hat den API-Key abgelehnt. Gespeicherte Werte bleiben verfügbar."</string>
+    <string name="text_134" formatted="false">"Bewertungen dauerhaft lokal gespeichert"</string>
+    <string name="text_135" formatted="false">"Anbieter pausiert"</string>
+    <string name="text_136" formatted="false">"Bewertungsanbieter HTTP "</string>
+    <string name="text_137" formatted="false">"Anbieter antwortet mit Fehler"</string>
+    <string name="text_138" formatted="false">"Weil du „"</string>
+    <string name="text_139" formatted="false">"“ gesehen hast"</string>
+    <string name="text_140" formatted="false">" Folgen"</string>
+    <string name="text_141" formatted="false">"Zum Starten Wiedergabe drücken"</string>
+    <string name="text_142" formatted="false">"Ⅱ Pause"</string>
+    <string name="text_143" formatted="false">"▶ Wiedergabe"</string>
+    <string name="text_144" formatted="false">"Trailer wird gepuffert …"</string>
+    <string name="text_145" formatted="false">"Trailer beendet"</string>
+    <string name="text_146" formatted="false">"YouTube lädt nicht · Verbindung und Android System WebView prüfen"</string>
+    <string name="text_147" formatted="false">"Zurück"</string>
+    <string name="text_148" formatted="false">"Trailer wird geladen …"</string>
+    <string name="text_149" formatted="false">"YouTube konnte nicht geladen werden"</string>
+    <string name="text_150" formatted="false">"Android System WebView fehlt oder kann nicht gestartet werden"</string>
+    <string name="text_151" formatted="false">"Dieser Trailer ist nicht mehr verfügbar"</string>
+    <string name="text_152" formatted="false">"Dieser Trailer erlaubt keine Wiedergabe in Apps"</string>
+    <string name="text_153" formatted="false">"YouTube konnte den App-Player nicht verifizieren"</string>
+    <string name="text_154" formatted="false">"YouTube-Wiedergabe fehlgeschlagen ("</string>
+    <string name="text_155" formatted="false">"Live-Stream wird erneut verbunden …"</string>
+    <string name="text_156" formatted="false">"Der Sender liefert keine abspielbaren Daten.\nOptionen → Stream erneut verbinden oder einen anderen Sender wählen."</string>
+    <string name="text_157" formatted="false">"Stream wird geöffnet …"</string>
+    <string name="text_158" formatted="false">"Überspringen"</string>
+    <string name="text_159" formatted="false">"Sender wechseln"</string>
+    <string name="text_160" formatted="false">"Aktuelles Programm"</string>
+    <string name="text_161" formatted="false">"Stream erneut verbinden"</string>
+    <string name="text_162" formatted="false">"Über Server abspielen"</string>
+    <string name="text_163" formatted="false">"Schließen"</string>
+    <string name="text_164" formatted="false">"Wiedergabe nicht möglich: "</string>
+    <string name="text_165" formatted="false">"Keine abspielbare Medienquelle"</string>
+    <string name="text_166" formatted="false">"Keine direkte Live-Stream-Adresse verfügbar. Optional Server-Transcoding in den Einstellungen zulassen."</string>
+    <string name="text_167" formatted="false">"Kein direkt abspielbarer Stream. Optional ‚Über Server abspielen‘ wählen."</string>
+    <string name="text_168" formatted="false">"Stream konnte nicht gestartet werden.\n"</string>
+    <string name="text_169" formatted="false">"\nZurück oder ‚Über Server abspielen‘ wählen."</string>
+    <string name="text_170" formatted="false">"Streamadresse außerhalb des Jellyfin-Servers"</string>
+    <string name="text_171" formatted="false">"Verbindung zum Server prüfen"</string>
+    <string name="text_172" formatted="false">"Puffer wird gefüllt …"</string>
+    <string name="text_173" formatted="false">"Wiedergabe beendet"</string>
+    <string name="text_174" formatted="false">"Kompatibler Serverstream wird versucht …"</string>
+    <string name="text_175" formatted="false">"Wiedergabefehler: "</string>
+    <string name="text_176" formatted="false">"\nZurück oder erneut ‚Über Server abspielen‘ wählen."</string>
+    <string name="text_177" formatted="false">"Rückblick"</string>
+    <string name="text_178" formatted="false">" überspringen"</string>
+    <string name="text_179" formatted="false">"Spur "</string>
+    <string name="text_180" formatted="false">"Keine weiteren Spuren"</string>
+    <string name="text_181" formatted="false">"Eine Medienversion vorhanden"</string>
+    <string name="text_182" formatted="false">"Version "</string>
+    <string name="text_183" formatted="false">"Keine Kapitel"</string>
+    <string name="text_184" formatted="false">"Kapitel "</string>
+    <string name="text_185" formatted="false">"Keine weitere Folge"</string>
+    <string name="text_186" formatted="false">"Nächste Folge konnte nicht geladen werden"</string>
+    <string name="text_187" formatted="false">"Senderliste nicht verfügbar"</string>
+    <string name="text_188" formatted="false">"Programm · "</string>
+    <string name="text_189" formatted="false">"Programm nicht verfügbar"</string>
+    <string name="text_190" formatted="false">"Keine Beschreibung"</string>
+    <string name="text_191" formatted="false">"Aufnahme geplant"</string>
+    <string name="text_192" formatted="false">"Aufnahme konnte nicht geplant werden"</string>
+    <string name="text_193" formatted="false">"⋯  Optionen"</string>
+    <string name="text_194" formatted="false">"Nächste Folge  ›"</string>
+    <string name="text_195" formatted="false">"Cache noch nicht erstellt"</string>
+    <string name="text_196" formatted="false">"Ein neuer Film aus deiner Bibliothek"</string>
+    <string name="text_197" formatted="false">"Filmtitel werden geladen …"</string>
+    <string name="text_198" formatted="false">"Deine Filmtitel laufen durch …"</string>
+    <string name="text_199" formatted="false">"✦  DEIN FILM  ✦"</string>
+    <string name="text_200" formatted="false">"Hier erscheinen deine "</string>
+    <string name="text_201" formatted="false">"angefangenen Filme und Folgen"</string>
+    <string name="text_202" formatted="false">"nächsten Folgen"</string>
+    <string name="text_203" formatted="false">"neuen Filme und Serien"</string>
+    <string name="text_204" formatted="false">"Mehr anzeigen"</string>
+    <string name="text_205" formatted="false">"Alle Titel"</string>
+    <string name="text_206" formatted="false">" Filme und Serien"</string>
+    <string name="text_207" formatted="false">"Filme und Serien"</string>
+    <string name="text_208" formatted="false">"Jellyfin hat den Live-Stream nicht geöffnet"</string>
+    <string name="text_209" formatted="false">"Ungültige Live-Stream-Adresse"</string>
+    <string name="text_210" formatted="false">"Abbrechen"</string>
+    <string name="text_211" formatted="false">"Abspielen"</string>
+    <string name="text_212" formatted="false">"Anmelden"</string>
+    <string name="text_213" formatted="false">"Aufnahmen"</string>
+    <string name="text_214" formatted="false">"Aufnehmen"</string>
+    <string name="text_215" formatted="false">"Aus"</string>
+    <string name="text_216" formatted="false">"BIBLIOTHEKEN"</string>
+    <string name="text_217" formatted="false">"Beenden"</string>
+    <string name="text_218" formatted="false">"Benutzername"</string>
+    <string name="text_219" formatted="false">"Bewertungen"</string>
+    <string name="text_220" formatted="false">"Bewertungsanbieter"</string>
+    <string name="text_221" formatted="false">"Bibliothekscache"</string>
+    <string name="text_222" formatted="false">"Ein"</string>
+    <string name="text_223" formatted="false">"Einstellungen"</string>
+    <string name="text_224" formatted="false">"Empfehlungen"</string>
+    <string name="text_225" formatted="false">"Favoriten"</string>
+    <string name="text_226" formatted="false">"Film"</string>
+    <string name="text_227" formatted="false">"Filme"</string>
+    <string name="text_228" formatted="false">"Fortsetzen"</string>
+    <string name="text_229" formatted="false">"Kapitel"</string>
+    <string name="text_230" formatted="false">"Medienversion"</string>
+    <string name="text_231" formatted="false">"Passwort"</string>
+    <string name="text_232" formatted="false">"Publikum"</string>
+    <string name="text_233" formatted="false">"SERIE"</string>
+    <string name="text_234" formatted="false">"FILM"</string>
+    <string name="text_235" formatted="false">"FOLGE"</string>
+    <string name="text_236" formatted="false">"Sender"</string>
+    <string name="text_237" formatted="false">"Serien"</string>
+    <string name="text_238" formatted="false">"Seriendetails"</string>
+    <string name="text_239" formatted="false">"Speichern"</string>
+    <string name="text_240" formatted="false">"Staffeln"</string>
+    <string name="text_241" formatted="false">"Start"</string>
+    <string name="text_242" formatted="false">"Suche"</string>
+    <string name="text_243" formatted="false">"Suchen"</string>
+    <string name="text_244" formatted="false">"Tonspur"</string>
+    <string name="text_245" formatted="false">"Unbenannt"</string>
+    <string name="text_246" formatted="false">"Untertitel"</string>
+    <string name="text_247" formatted="false">"Vorschau"</string>
+    <string name="text_248" formatted="false">"Weiterschauen"</string>
+    <string name="text_249" formatted="false">"Werbung"</string>
+    <string name="text_250" formatted="false">"Wiedergabe"</string>
+    <string name="text_251" formatted="false">"Wiedergabeoptionen"</string>
+    <string name="text_252" formatted="false">"Wiedergabeposition"</string>
+    <string name="text_253" formatted="false">"Server · https://jellyfin.example"</string>
+    <string name="text_254" formatted="false">"This product uses the TMDB API but is not endorsed or certified by TMDB.\nOMDb · www.omdbapi.com · Daten: CC BY-NC 4.0\nMDBList · mdblist.com"</string>
+    <string name="text_255" formatted="false">"Lowfin 0.7.0 · Intro Skipper über Jellyfin MediaSegments (10.10+)\nAndere Segmenttypen erscheinen als Skip-Taste. Medien werden vom Server abgespielt.\nDer erste Bibliothekslauf kann länger dauern; vorhandene Daten sind sofort nutzbar."</string>
+    <string name="option_000" formatted="false">"Sprache"</string>
+    <string name="option_001" formatted="false">"Genre-Reihen"</string>
+    <string name="option_002" formatted="false">"Startseite und Darstellung"</string>
+    <string name="option_003" formatted="false">"Erweiterte Wiedergabe"</string>
+    <string name="option_004" formatted="false">"Genre-Reihen anzeigen"</string>
+    <string name="option_005" formatted="false">"Nur die fokussierte Reihe anzeigen"</string>
+    <string name="option_006" formatted="false">"Genres einzeln an- und ausschalten. Die Auswahl gilt für dieses Konto."</string>
+    <string name="option_007" formatted="false">"Fortsetzen-Reihe anzeigen"</string>
+    <string name="option_008" formatted="false">"Next-Up-Reihe anzeigen"</string>
+    <string name="option_009" formatted="false">"Empfehlungsreihen"</string>
+    <string name="option_010" formatted="false">"Posterspalten"</string>
+    <string name="option_011" formatted="false">"Zufallsanimation · Sekunden"</string>
+    <string name="option_012" formatted="false">"Zufällige Akzentfarbe beim Start"</string>
+    <string name="option_013" formatted="false">"Akzentfarbe regelmäßig wechseln"</string>
+    <string name="option_014" formatted="false">"Akzentwechsel · aktive Minuten"</string>
+    <string name="option_015" formatted="false">"Feste Akzentfarbe"</string>
+    <string name="option_016" formatted="false">"Flieder"</string>
+    <string name="option_017" formatted="false">"Blaugrau"</string>
+    <string name="option_018" formatted="false">"Salbei"</string>
+    <string name="option_019" formatted="false">"Moos"</string>
+    <string name="option_020" formatted="false">"Sand"</string>
+    <string name="option_021" formatted="false">"Champagner"</string>
+    <string name="option_022" formatted="false">"Ton"</string>
+    <string name="option_023" formatted="false">"Rosé"</string>
+    <string name="option_024" formatted="false">"Lavendel"</string>
+    <string name="option_025" formatted="false">"Schiefer"</string>
+    <string name="option_026" formatted="false">"Eukalyptus"</string>
+    <string name="option_027" formatted="false">"Taupe"</string>
+    <string name="option_028" formatted="false">"Bibliothek automatisch vorladen"</string>
+    <string name="option_029" formatted="false">"Cache-Aktualisierung · Stunden"</string>
+    <string name="option_030" formatted="false">"Intros automatisch überspringen"</string>
+    <string name="option_031" formatted="false">"Outros automatisch überspringen"</string>
+    <string name="option_032" formatted="false">"Sprungweite · Sekunden"</string>
+    <string name="option_033" formatted="false">"Player-Menü ausblenden · Sekunden"</string>
+    <string name="option_034" formatted="false">"RAM-Puffer · Maximum MB"</string>
+    <string name="option_035" formatted="false">"Live-TV-Puffer · Maximum MB"</string>
+    <string name="option_036" formatted="false">"Der tatsächliche Puffer bleibt automatisch an freien RAM und Speicherreserve angepasst."</string>
+    <string name="option_037" formatted="false">"Bevorzugte Audiosprache"</string>
+    <string name="option_038" formatted="false">"Original / automatisch"</string>
+    <string name="option_039" formatted="false">"Film-Empfehlungen"</string>
+    <string name="option_040" formatted="false">"-Filme"</string>
+    <string name="buffer_settings">RAM-Puffer · siehe erweiterte Wiedergabeeinstellungen</string>
+    <string name="default_subtitles">Untertitel standardmäßig aktivieren</string>
+</resources>

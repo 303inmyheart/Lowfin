@@ -1,0 +1,21 @@
+{
+  "version": "0.4.2",
+  "tests": 88,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1394795,
+  "apk_sha256": "02fb0b6ee6dfc744ed8299f9b6fbf083ee1822ace7c672b44741394352474b47",
+  "signature_verified": true,
+  "same_signing_certificate": true,
+  "physical_tv_tested": false,
+  "live_server_tested": false,
+  "features": [
+    "Live startup buffer reserve fix; lower live startup and rebuffer thresholds",
+    "Continuous live transport hides finite lengths to prevent file-end probing",
+    "20-second bounded reconnect followed by failure; manual same-session reconnect without enabling transcoding",
+    "Poster-sized More tile at shelf end; recent shelf removed",
+    "Random movie and genre pin actions only in drawer",
+    "Four-second minimum roulette with short monochrome jackpot effect and automatic detail opening"
+  ],
+  "signature": "Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198\nSigner #1 certificate SHA-1 digest: e22593b5abed3ee09019ad11a5f1bef20fb28caa\nSigner #1 certificate MD5 digest: c34533ec8aad1223ede689e160071963"
+}

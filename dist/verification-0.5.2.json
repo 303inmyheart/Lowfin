@@ -1,0 +1,27 @@
+{
+  "version": "0.5.2",
+  "tests": 121,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 7382329,
+  "apk_sha256": "a74e8448fd72753334323df407eac3ed9e76dc5f3221754090c5cf73f3353e04",
+  "signature_certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "physical_tv_tested": false,
+  "live_server_tested": false,
+  "real_rating_keys_tested": false,
+  "real_recommendations_server_tested": false,
+  "ffmpeg_native_libraries": [
+    "lib/arm64-v8a/libffmpegJNI.so",
+    "lib/armeabi-v7a/libffmpegJNI.so",
+    "lib/x86/libffmpegJNI.so",
+    "lib/x86_64/libffmpegJNI.so"
+  ],
+  "features": [
+    "Five distinct watched-film recommendation shelves below Next Up and above pinned genres",
+    "Jellyfin recommendation array API and played-film similar-item fallback",
+    "Persistent account-scoped recommendations with offline cache preservation",
+    "Empty recommendation shelves skipped by D-pad",
+    "2:3 recommendation posters and more cards open details and full recommendation view",
+    "LowFin wordmark with large understated L; square and adaptive icons and 16:9 TV banner"
+  ]
+}

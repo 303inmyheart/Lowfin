@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0",
+  "tests": 45,
+  "failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1356667,
+  "apk_sha256": "1c8ef34dbf7265b84648a047bff57a0b8cdda8ca2b492d56ec2bb11a274f8863",
+  "apk_signature_verified": true,
+  "ui_verified_on_hd_android_11": true,
+  "physical_tv_tested_for_0.2.0": false,
+  "playback_user_tested_for_0.1.0": true,
+  "server_transcoding_default": false,
+  "stereo_mix": "local PCM"
+}

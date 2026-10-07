@@ -1,0 +1,27 @@
+{
+  "version": "0.5.3",
+  "tests": 130,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 7382329,
+  "apk_sha256": "6d3ce86f7fd8dea7b52db6a6ed1e485640737d5c6aaab9963ca8a3207ad5ef2a",
+  "signature_certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "physical_tv_tested": false,
+  "live_server_tested": false,
+  "real_rating_keys_tested": false,
+  "real_recommendations_server_tested": false,
+  "ffmpeg_native_libraries": [
+    "lib/arm64-v8a/libffmpegJNI.so",
+    "lib/armeabi-v7a/libffmpegJNI.so",
+    "lib/x86/libffmpegJNI.so",
+    "lib/x86_64/libffmpegJNI.so"
+  ],
+  "features": [
+    "Recommendations use single-shelf genre presentation with backdrop description and ratings",
+    "Strict movie recommendations exclude actor and director categories including old cached rows",
+    "Five Android-TV recommendation channels with detail links and activation buttons",
+    "Continue channel is created first; reversed legacy resume/next roles migrate without deleting channels",
+    "Explicit vertical navigation prevents native scroll drift and handles rapid remote input",
+    "Focused shelf updates preserve and clamp card selection; stress tested with five recommendations six genres and forty cards each"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "version": "0.7.0",
+  "version_code": 13,
+  "tests": {
+    "tests": 143,
+    "failures": 0,
+    "errors": 0
+  },
+  "lint_errors": 0,
+  "apk_bytes": 7535849,
+  "apk_sha256": "9853b3166cff3ff4d20fc465833122d1bcca182b76ae7203e95c12b6546656d6",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "ffmpeg_abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "physical_tv_tested": false,
+  "live_server_tested": false,
+  "external_ratings_keys_tested": false,
+  "features": [
+    "English default with full German language option",
+    "account-scoped individual genre toggles",
+    "configurable home rows, appearance, accents, caching and advanced playback",
+    "prefix-free TV channels",
+    "account-scoped movie and series library multiselect",
+    "real movie title slot animation",
+    "curated muted foreground hourly accent palette",
+    "permanent on-demand provider ratings cache"
+  ]
+}

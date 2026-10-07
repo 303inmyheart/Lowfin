@@ -1,0 +1,17 @@
+{
+  "version": "0.3.0",
+  "tests": 65,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1382787,
+  "apk_sha256": "7f2485de31512f846e415d266308eed10e1112cbed32471b12f9cb0a208daab0",
+  "signature_verified": true,
+  "physical_tv_tested": false,
+  "video_cache_default_mb": 500,
+  "video_cache_configurable": true,
+  "ram_buffer_ceiling_vod_mb": 48,
+  "ram_buffer_ceiling_live_mb": 32,
+  "random_movie_auto_opens_details": true,
+  "sidebar_genres": true,
+  "signature": "Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198\nSigner #1 certificate SHA-1 digest: e22593b5abed3ee09019ad11a5f1bef20fb28caa\nSigner #1 certificate MD5 digest: c34533ec8aad1223ede689e160071963"
+}

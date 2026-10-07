@@ -1,0 +1,19 @@
+{
+  "version": "0.3.1",
+  "tests": 68,
+  "test_failures": 0,
+  "lint_errors": 0,
+  "apk_bytes": 1383947,
+  "apk_sha256": "191c195f35f83e6a0cfed45a9e2580e07c612ddf450040c01b8a52876315e55f",
+  "signature_verified": true,
+  "same_signing_certificate": true,
+  "physical_tv_tested": false,
+  "database_schema": 4,
+  "genre_backfill_batch_limit": 50,
+  "regressions_tested": [
+    "settings responsive with SQLite opening lock held",
+    "sidebar loads with all content workers occupied",
+    "database upgrade avoids full scan and backfills in batches"
+  ],
+  "signature": "Signer #1 certificate DN: C=US, O=Android, CN=Android Debug\nSigner #1 certificate SHA-256 digest: dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198\nSigner #1 certificate SHA-1 digest: e22593b5abed3ee09019ad11a5f1bef20fb28caa\nSigner #1 certificate MD5 digest: c34533ec8aad1223ede689e160071963"
+}
