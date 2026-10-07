@@ -45,8 +45,8 @@ jobs:
             echo '::warning::Signing secret missing; this build will use a new debug certificate and cannot update the supplied APK.'
           fi
           printf 'ANDROID_USER_HOME=%s\n' "$key_dir" >> "$GITHUB_ENV"
-      - name: Run tests, lint and optimized build
-        run: ./gradlew --no-daemon testDebugUnitTest lintDebug assembleOptimized
+      - name: Run tests, lint and release build
+        run: ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease assembleRelease
       - name: Verify and package APK
         id: package
         run: python3 tools/ci_artifacts.py

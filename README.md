@@ -44,18 +44,18 @@ English is the default language regardless of the device language. Select **Lang
 With JDK 17 and Android SDK platform/build-tools 35 installed, set your local SDK path and use the Gradle wrapper:
 
 ```sh
-./gradlew testDebugUnitTest lintDebug assembleOptimized
+./gradlew testDebugUnitTest lintDebug lintRelease assembleRelease
 ```
 
-On Linux, `bash tools/bootstrap.sh` installs project-local build tools under `.tools/`; then `bash tools/build.sh testDebugUnitTest lintDebug assembleOptimized` runs the same checks. Bootstrapping accepts Android SDK licenses. Tools, SDK paths, build directories and private signing keys are excluded from Git.
+On Linux, `bash tools/bootstrap.sh` installs project-local build tools under `.tools/`; then `bash tools/build.sh testDebugUnitTest lintDebug lintRelease assembleRelease` runs the same checks. Bootstrapping accepts Android SDK licenses. Tools, SDK paths, build directories and private signing keys are excluded from Git.
 
-The `optimized` APK uses R8/resource shrinking and the local Android debug signing configuration. An existing installation can only be updated using the same signing certificate. The supplied APK preserves the certificate used by earlier Lowfin builds.
+The `release` APK uses R8/resource shrinking and the local Android debug signing configuration. An existing installation can only be updated using the same signing certificate. The supplied APK preserves the certificate used by earlier Lowfin builds.
 
 Automated tests use JUnit, Robolectric on Android 11, mock HTTP servers and a fake Android TV provider. See `dist/verification.json` for the exact test count, APK checksum and certificate. HD UI renderings are under `design/screenshots/`. Physical TV/live-server behavior is not validated by these simulated tests.
 
 ## GitHub builds
 
-[Android build](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml) runs on pushes to `main` and can be started manually. It checks tests and lint, builds an optimized APK and publishes `Lowfin-<version>-build-<run>` containing the APK, SHA256SUMS and BUILD.json. Test/lint reports and HD screenshots are uploaded separately. APK artifacts are retained for 30 days; reports for 14 days.
+[Android build](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml) runs on pushes to `main` and can be started manually. It checks tests and lint, builds a signed release APK and publishes `Lowfin-<version>-build-<run>` containing the APK, SHA256SUMS and BUILD.json. Test/lint reports and HD screenshots are uploaded separately. APK artifacts are retained for 30 days; reports for 14 days.
 
 The private repository uses the encrypted `LOWFIN_SIGNING_KEYSTORE` Actions secret for the existing Android debug signing key. The job checks that the APK retains the supplied release's certificate, so it can update an existing installation. If the secret is absent in another repository, a new debug key is used and compatibility is reported in BUILD.json. Private keys are never committed or included in build artifacts. All actions are pinned to specific upstream commits; the workflow has read-only repository permissions.
 

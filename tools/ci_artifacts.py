@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 import zipfile
 
 root = Path(__file__).resolve().parents[1]
-apk_dir = root / 'app/build/outputs/apk/optimized'
+apk_dir = root / 'app/build/outputs/apk/release'
 metadata = json.loads((apk_dir / 'output-metadata.json').read_text())['elements'][0]
 version = metadata['versionName']
 if not re.fullmatch(r'[0-9]+(?:\.[0-9]+)+(?:-[a-zA-Z0-9.-]+)?', version):
@@ -22,9 +22,10 @@ counts = {key: sum(int(ET.parse(p).getroot().get(key, 0)) for p in results)
           for key in ('tests', 'failures', 'errors', 'skipped')}
 if not counts['tests'] or counts['failures'] or counts['errors']:
     raise SystemExit(f'Tests not successful: {counts}')
-lint = ET.parse(root / 'app/build/reports/lint-results-debug.xml').getroot()
-if any(issue.get('severity') in ('Error', 'Fatal') for issue in lint):
-    raise SystemExit('Lint errors present')
+for variant in ('debug', 'release'):
+    lint = ET.parse(root / f'app/build/reports/lint-results-{variant}.xml').getroot()
+    if any(issue.get('severity') in ('Error', 'Fatal') for issue in lint):
+        raise SystemExit(f'Lint errors present in {variant}')
 sdk = Path(os.environ.get('ANDROID_HOME') or os.environ.get('ANDROID_SDK_ROOT') or root / '.tools/android')
 java_home = Path(os.environ.get('JAVA_HOME') or root / '.tools/jdk')
 verified = subprocess.check_output([
@@ -50,7 +51,7 @@ digest = hashlib.sha256(apk.read_bytes()).hexdigest()
 (output / 'SHA256SUMS').write_text(f'{digest}  {filename}\n')
 report = {'version': version, 'version_code': metadata['versionCode'],
           'source_commit': os.environ.get('GITHUB_SHA') or subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
-          'tests': counts, 'lint_errors': 0, 'apk_bytes': apk.stat().st_size,
+          'build_type': 'release', 'tests': counts, 'lint_errors': 0, 'apk_bytes': apk.stat().st_size,
           'apk_sha256': digest, 'certificate_sha256': signer,
           'compatible_with_current_release': compatible, 'ffmpeg_abis': abis,
           'physical_tv_tested': False}
