@@ -2,16 +2,16 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.7.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.8.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
 ## Install
 
-Download `dist/Lowfin-0.7.0.apk`, transfer it to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
+Download the APK from [the latest GitHub release](https://github.com/303inmyheart/Lowfin/releases/latest), transfer it to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r dist/Lowfin-0.7.0.apk
+adb install -r Lowfin-0.7.8.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -19,6 +19,8 @@ Sign in with your Jellyfin server URL, username and password. The encrypted sess
 ## Features
 
 - Lightweight native UI, muted accent palette, optional small animations, compact 2:3 movie/show/season posters and 16:9 episode thumbnails.
+- Hold remote **OK/Enter** on home/library cards for Continue, Restart, watched/unwatched, Watch later, favorites and series details. **Watch later** is a persistent device-local list scoped to each account, separate from Jellyfin favorites.
+- Optional smooth screen, shelf and drawer transitions, focus scaling and action feedback; disable them under **Settings → Home screen and appearance → Smooth navigation and action animations**, or disable **UI animations** entirely.
 - Movies, shows, large season collections, global search, favorites, watched/unwatched controls and movie roulette using real library titles.
 - Continue watching, Next up, up to five **Because you watched** movie recommendation rows and individually pinned genre rows. Focused rows can show the selected movie's backdrop, description and ratings.
 - Collapsible remote-controlled sidebar, bounded row navigation, return-to-home behavior and exit confirmation.

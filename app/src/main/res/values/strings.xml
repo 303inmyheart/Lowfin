@@ -303,4 +303,19 @@
     <string name="started_episodes">Continue episodes</string>
     <string name="dynamic_seek_help">Seeking starts at 5 seconds and accelerates while held.</string>
     <string name="ends_at">"Ends at "</string>
+    <string name="ui_animations">UI animations</string>
+    <string name="smooth_navigation">Smooth navigation and action animations</string>
+    <string name="watch_later">Watch later</string>
+    <string name="mark_unwatched">Mark as unwatched</string>
+    <string name="mark_watched">Mark as watched</string>
+    <string name="remove_watch_later">Remove from Watch later</string>
+    <string name="add_watch_later">Add to Watch later</string>
+    <string name="remove_favorite">Remove from favorites</string>
+    <string name="add_favorite">Add to favorites</string>
+    <string name="series_page">Go to series details</string>
+    <string name="removed_watch_later">Removed from Watch later</string>
+    <string name="added_watch_later">Added to Watch later</string>
+    <string name="action_saved">Saved</string>
+    <string name="action_failed">Action failed</string>
+    <string name="no_playable_episode">No playable episode found</string>
 </resources>

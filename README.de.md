@@ -4,7 +4,7 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.0, Sprachwahl und eigene Einstellungsmenüs**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.8**.
 
 ## Installieren
 
@@ -143,6 +143,9 @@ Welche Reihen angezeigt werden, entscheidet der Launcher. Google TV und Herstell
 ## Fernbedienung
 
 - Pfeile + OK: navigieren / auswählen; Zurück: vorheriger Bildschirm.
+- **OK/Enter auf einer Startseiten- oder Bibliothekskarte halten:** Fortsetzen, Von vorn, Gesehen/Ungesehen, Später ansehen, Favorit sowie Zur Serienseite bei Serien/Folgen. Beim Loslassen nach langem Drücken wird kein normaler Klick ausgelöst.
+- **Später ansehen** ist eine dauerhafte lokale Liste pro Konto/Server, unabhängig von Jellyfin-Favoriten; erreichbar über die Seitenleiste.
+- **Einstellungen → Startseite und Darstellung:** „Flüssige Navigation und Aktionsanimationen“ steuert Seiten-/Reihenwechsel, Fokus-Vergrößerung und Speicherrückmeldungen. „UI-Animationen“ schaltet alle optionalen UI-Effekte gemeinsam ab.
 - Staffelansicht: Staffelnummer eingeben und „Zur Staffel“ wählen.
 - Player: OK blendet die Steuerung ein; dort Pause/Abspielen und ±10 Sekunden. Bei ausgeblendeter Steuerung springen Links/Rechts um 10 Sekunden. Oben oder Menü führt zu Optionen beziehungsweise zur angebotenen Skip-Taste.
 - Zurück im Player: Steuerung schließen, nochmals Zurück: Wiedergabe verlassen.

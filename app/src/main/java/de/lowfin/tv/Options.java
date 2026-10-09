@@ -21,6 +21,8 @@ final class Options {
         Api api=app.api; app.navigationIo.execute(()-> { try { JSONArray items=Json.array(api.get("/Genres","UserId",account.user,"Recursive",true,"IncludeItemTypes","Movie"),"Items"); activity.runOnUiThread(()-> { if(!choices.isAttachedToWindow()) return; for(int i=0;i<items.length();i++) { JSONObject genre=items.optJSONObject(i); if(genre!=null&&!genre.optString("Name").isEmpty()) names.add(genre.optString("Name")); } render.run(); }); } catch(Exception ignored) {} });
     }
     void appearance() {
+        toggle("UI-Animationen","animations",true);
+        toggle("Flüssige Navigation und Aktionsanimationen","smoothNavigation",true);
         toggle("Fortsetzen-Reihe anzeigen","homeResume",true); toggle("Next-Up-Reihe anzeigen","homeNext",true);
         number("Empfehlungsreihen","recommendationRows",5,new int[]{0,1,2,3,4,5},numbers(new int[]{0,1,2,3,4,5}));
         number("Posterspalten","gridColumns",8,new int[]{4,6,8,10},numbers(new int[]{4,6,8,10}));

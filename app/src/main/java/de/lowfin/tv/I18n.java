@@ -7,6 +7,22 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("UI-Animationen",R.string.ui_animations);
+        IDS.put("Flüssige Navigation und Aktionsanimationen",R.string.smooth_navigation);
+        IDS.put("Später ansehen",R.string.watch_later);
+        IDS.put("Als ungesehen markieren",R.string.mark_unwatched);
+        IDS.put("Als gesehen markieren",R.string.mark_watched);
+        IDS.put("Aus Später ansehen entfernen",R.string.remove_watch_later);
+        IDS.put("Zu Später ansehen hinzufügen",R.string.add_watch_later);
+        IDS.put("Aus Favoriten entfernen",R.string.remove_favorite);
+        IDS.put("Zu Favoriten hinzufügen",R.string.add_favorite);
+        IDS.put("Zur Serienseite",R.string.series_page);
+        IDS.put("Aus Später ansehen entfernt",R.string.removed_watch_later);
+        IDS.put("Zu Später ansehen hinzugefügt",R.string.added_watch_later);
+        IDS.put("Gespeichert",R.string.action_saved);
+        IDS.put("Aktion fehlgeschlagen",R.string.action_failed);
+        IDS.put("Keine abspielbare Folge gefunden",R.string.no_playable_episode);
+
         IDS.put("Ende um ",R.string.ends_at);
         IDS.put("Seeken startet bei 5 Sekunden und beschleunigt beim Halten.",R.string.dynamic_seek_help);
         IDS.put("Alle Serien",R.string.all_series); IDS.put("Begonnene Folgen",R.string.started_episodes);

@@ -28,7 +28,7 @@ public class TvUiTest {
     private LowfinApp app;
     private JSONObject series,movie;
     private byte[] posterImage,thumbImage;
-    private volatile JSONArray recommendations=new JSONArray();
+    private volatile JSONArray recommendations=new JSONArray(),firstEpisodes=new JSONArray();
     private volatile boolean recommendationsOffline;
     @Before public void setup() throws Exception { RuntimeEnvironment.getApplication().getSharedPreferences("settings",0).edit().putString("language","de").commit(); I18n.init(RuntimeEnvironment.getApplication());
         app=(LowfinApp)RuntimeEnvironment.getApplication(); series=Json.obj("Id","show","Type","Series","Name","Die lange Serie","Overview","45 Staffeln. Direkt zu deiner Lieblingsfolge.","ImageTags",Json.obj("Primary","poster"),"PrimaryImageAspectRatio",2.0/3);
@@ -53,7 +53,7 @@ public class TvUiTest {
                 if(path.equals("/Users/user/Items/show")) return new MockResponse().setBody(series.toString());
                 if(path.endsWith("/Items/Resume")) return new MockResponse().setBody(Json.obj("Items",Json.arr(episode("ep5",5,6000000000L)),"TotalRecordCount",1).toString());
                 if(path.equals("/Shows/NextUp")) return new MockResponse().setBody(Json.obj("Items",Json.arr(episode("ep6",6,0)),"TotalRecordCount",1).toString());
-                if(path.endsWith("/Episodes")) return new MockResponse().setBody("{\"Items\":[],\"TotalRecordCount\":0}");
+                if(path.endsWith("/Episodes")) return new MockResponse().setBody(Json.obj("Items",firstEpisodes,"TotalRecordCount",firstEpisodes.length()).toString());
                 return new MockResponse().setBody("{}");
             }
         }); server.start();
@@ -108,6 +108,53 @@ public class TvUiTest {
         ArtworkView cover=(ArtworkView)find(row,v->v instanceof ArtworkView); assertNotNull(cover); assertEquals(2.0/3,(double)cover.getMeasuredWidth()/cover.getMeasuredHeight(),.01); assertTrue(row.isFocusable()); row.requestFocus();
         await(()->cover.getDrawable()!=null); screenshot("seasons-40-hd.png"); row.performClick(); layout();
         assertNotNull(findText(activity.get().findViewById(android.R.id.content),"Staffel 40"));
+    }
+    @Test public void holdingRemoteConfirmOnHomeOpensActionsWithoutLaunchingPlayback() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&((HomeAdapter)recycler().getAdapter()).rows.get(0).size()==1);
+        layout(); HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0); View card=shelf.list.getChildAt(0); card.requestFocus();
+        activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_CENTER));
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(ViewConfiguration.getLongPressTimeout()+20));
+        android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertNotNull(dialog); assertTrue(dialog.isShowing());
+        assertEquals(6,dialog.getListView().getAdapter().getCount()); assertEquals("Zur Serienseite",dialog.getListView().getAdapter().getItem(5));
+        dialog.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_CENTER));
+        assertTrue(dialog.isShowing()); assertNull(shadowOf(activity.get()).getNextStartedActivity());
+        dialog.getListView().performItemClick(null,3,3); layout();
+        assertTrue(new WatchLater(activity.get(),app.account).contains("ep5")); assertNull(shadowOf(activity.get()).getNextStartedActivity());
+        assertTrue(card.hasFocus());
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertEquals("Aus Später ansehen entfernen",dialog.getListView().getAdapter().getItem(3));
+        dialog.dismiss();
+    }
+    @Test public void libraryActionsResumeRestartAndSynchronizeWatchedAndFavoriteState() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
+        movie.put("UserData",Json.obj("PlaybackPositionTicks",600000000L,"Played",false,"IsFavorite",false));
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null); findButton(activity.get().findViewById(android.R.id.content),"Meine Filme").performClick();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&recycler().getAdapter().getItemCount()==1); layout(); View card=recycler().getChildAt(0); card.requestFocus();
+        card.performLongClick(); android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertEquals(5,dialog.getListView().getAdapter().getCount());
+        dialog.getListView().performItemClick(null,0,0); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity(); assertEquals(60000,intent.getLongExtra("position",-1));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); dialog.getListView().performItemClick(null,1,1);
+        assertEquals(0,shadowOf(activity.get()).getNextStartedActivity().getLongExtra("position",-1));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); dialog.getListView().performItemClick(null,2,2);
+        await(()->Json.object(((MediaAdapter)recycler().getAdapter()).items.get(0),"UserData").optBoolean("Played"));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertEquals("Als ungesehen markieren",dialog.getListView().getAdapter().getItem(2)); dialog.getListView().performItemClick(null,4,4);
+        await(()->Json.object(((MediaAdapter)recycler().getAdapter()).items.get(0),"UserData").optBoolean("IsFavorite"));
+        boolean playedRequest=false,favoriteRequest=false; RecordedRequest request;
+        while((request=server.takeRequest(100,java.util.concurrent.TimeUnit.MILLISECONDS))!=null) { if("POST".equals(request.getMethod())&&"/Users/user/PlayedItems/movie".equals(request.getRequestUrl().encodedPath())) playedRequest=true; if("POST".equals(request.getMethod())&&"/Users/user/FavoriteItems/movie".equals(request.getRequestUrl().encodedPath())) favoriteRequest=true; }
+        assertTrue(playedRequest); assertTrue(favoriteRequest);
+    }
+    @Test public void showActionsResolveNextUpFirstEpisodeAndSeriesDetails() throws Exception {
+        firstEpisodes=Json.arr(episode("first",1,0));
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
+        activity=Robolectric.buildActivity(MainActivity.class).setup(); await(()->findButton(activity.get().findViewById(android.R.id.content),"Serien")!=null);
+        findButton(activity.get().findViewById(android.R.id.content),"Serien").performClick(); await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&recycler().getAdapter().getItemCount()==1); layout(); View card=recycler().getChildAt(0); card.requestFocus();
+        card.performLongClick(); android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertEquals(6,dialog.getListView().getAdapter().getCount()); dialog.getListView().performItemClick(null,0,0);
+        final android.content.Intent[] intent={null}; await(()-> { intent[0]=shadowOf(activity.get()).getNextStartedActivity(); return intent[0]!=null; }); assertEquals("ep6",new JSONObject(intent[0].getStringExtra("item")).optString("Id"));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); dialog.getListView().performItemClick(null,1,1);
+        await(()-> { intent[0]=shadowOf(activity.get()).getNextStartedActivity(); return intent[0]!=null; }); assertEquals("first",new JSONObject(intent[0].getStringExtra("item")).optString("Id")); assertEquals(0,intent[0].getLongExtra("position",-1));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); dialog.getListView().performItemClick(null,5,5);
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen")!=null);
     }
     @Test public void homeShowsResumeAndNextUpCardsAndResumesAtSavedPosition() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());

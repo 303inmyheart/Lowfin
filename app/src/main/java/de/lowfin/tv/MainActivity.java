@@ -146,7 +146,7 @@ public final class MainActivity extends Activity {
             drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
             drawerShade.setVisibility(View.VISIBLE); drawer.setVisibility(View.VISIBLE);
             drawer.setTranslationX(animate?-Ui.dp(this,214):0); drawerShade.setAlpha(animate?0:1);
-            if(animate) { drawer.animate().translationX(0).setDuration(140).start(); drawerShade.animate().alpha(1).setDuration(140).start(); }
+            if(animate) { drawer.animate().translationX(0).setInterpolator(new android.view.animation.DecelerateInterpolator()).setDuration(app.settings.getBoolean("smoothNavigation",true)?230:140).start(); drawerShade.animate().alpha(1).setDuration(140).start(); }
             Button target=null;
             for(int i=0;i<sidebar.getChildCount();i++) if(sidebar.getChildAt(i) instanceof Button) { Button button=(Button)sidebar.getChildAt(i); if(target==null) target=button; if(Boolean.TRUE.equals(button.getTag())) { target=button; break; } }
             if(target!=null) {
@@ -161,7 +161,7 @@ public final class MainActivity extends Activity {
             contentStage.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
             drawer.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
             if(animate) {
-                drawer.animate().translationX(-Ui.dp(this,214)).setDuration(120).withEndAction(()-> { if(!drawerOpen) { drawer.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); } }).start();
+                drawer.animate().translationX(-Ui.dp(this,214)).setInterpolator(new android.view.animation.DecelerateInterpolator()).setDuration(app.settings.getBoolean("smoothNavigation",true)?200:120).withEndAction(()-> { if(!drawerOpen) { drawer.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); } }).start();
                 drawerShade.animate().alpha(0).setDuration(120).withEndAction(()-> { if(!drawerOpen) drawerShade.setVisibility(View.GONE); }).start();
             } else { drawer.setVisibility(View.GONE); drawerShade.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); }
             if(drawerReturnFocus!=null&&drawerReturnFocus!=menuButton&&drawerReturnFocus.isAttachedToWindow()&&drawerReturnFocus.isShown()) drawerReturnFocus.requestFocus();
@@ -224,6 +224,7 @@ public final class MainActivity extends Activity {
             if("livetv".equals(library.optString("CollectionType"))) continue;
             sideButton(library.optString("Name"),()->show(new Screen("browse",library.optString("Name"),viewTypes(library),library.optString("Id"),library),false));
         }
+        sideButton(I18n.text("Später ansehen"),()->special(I18n.text("Später ansehen"),"watchLater"));
         sideButton(I18n.text("Favoriten"),()->special(I18n.text("Favoriten"),"favorites")); sideButton(I18n.text("Einstellungen"),()->show(new Screen("settings",I18n.text("Einstellungen"),null,null,null),false));
         if(drawerOpen&&focusedLabel!=null) for(int i=0;i<sidebar.getChildCount();i++) { View button=sidebar.getChildAt(i); if(button instanceof Button&&focusedLabel.equals(((Button)button).getText().toString())) { button.requestFocus(); break; } }
     }
@@ -269,6 +270,7 @@ public final class MainActivity extends Activity {
             case "ratings": ratingSettings(); break;
             case "search": results(); break;
         }
+        Motion.enter(contentStage,true);
     }
     private interface Work { List<JSONObject> run() throws Exception; }
     private void async(MediaAdapter adapter,Work work,TextView note) {
@@ -282,7 +284,7 @@ public final class MainActivity extends Activity {
     private MediaAdapter cards(boolean compact) {
         grid=new RecyclerView(this); int columns=app.settings.getInt("gridColumns",8);
         GridLayoutManager layout=new GridLayoutManager(this,columns); grid.setLayoutManager(layout); grid.setItemAnimator(null); grid.setHasFixedSize(true); grid.setItemViewCacheSize(4);
-        MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.wide=screen!=null&&"resume".equals(screen.type); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
+        MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.wide=screen!=null&&"resume".equals(screen.type); adapter.onActions(this::itemActions); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
         layout.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() { @Override public int getSpanSize(int position) { return adapter.span(position); } });
         body.addView(grid,new LinearLayout.LayoutParams(-1,0,1)); return adapter;
     }
@@ -305,7 +307,7 @@ public final class MainActivity extends Activity {
             else if(HomeAdapter.recommendation(row)) show(new Screen("recommendations",holder[0].labels.get(row),null,null,Json.obj("Items",new JSONArray(holder[0].rows.get(row)))),true);
             else if(row>=HomeAdapter.GENRE_START) show(new Screen("genre",pinned.get(row-HomeAdapter.GENRE_START),"Movie,Series",pinned.get(row-HomeAdapter.GENRE_START),null),true);
             else show(new Screen("browse",I18n.text("Filme"),"Movie",null,null),true);
-        },this::homeFocus,row->{ setHomeFocusMode(row); holder[0].requestRow(row); }); holder[0]=adapter; adapter.onOpenMenu(()->setDrawer(true));
+        },this::homeFocus,row->{ setHomeFocusMode(row); holder[0].requestRow(row); }); holder[0]=adapter; adapter.onActions(this::itemActions); adapter.onOpenMenu(()->setDrawer(true));
         grid.setAdapter(adapter); body.addView(grid,new LinearLayout.LayoutParams(-1,0,1));
         homeDescription=Ui.column(this); homeDescription.setPadding(Ui.dp(this,5),Ui.dp(this,10),Ui.dp(this,14),0); homeDescription.setVisibility(View.GONE);
         homeFilmTitle=Ui.title(this,"",21); homeFilmTitle.setSingleLine(true); homeFilmTitle.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmTitle);
@@ -372,7 +374,7 @@ public final class MainActivity extends Activity {
         size.height=genre?Ui.dp(this,244):0; size.weight=genre?0:1; grid.setLayoutParams(size);
         homeDescription.setVisibility(genre?View.VISIBLE:View.GONE);
         grid.setClipToPadding(false);
-        if(genre) ((LinearLayoutManager)grid.getLayoutManager()).scrollToPositionWithOffset(row,0);
+        if(genre) { Motion.enter(homeDescription,true); ((LinearLayoutManager)grid.getLayoutManager()).scrollToPositionWithOffset(row,0); }
         else if(changed&&detailBackdrop!=null) { focusedHomeId=""; detailBackdrop.setTag(null); detailBackdrop.setImageDrawable(null); }
     }
     private void homeFocus(JSONObject film,int row) {
@@ -579,6 +581,66 @@ public final class MainActivity extends Activity {
         app.io.execute(()-> { try { api.call(method,path,null); runOnUiThread(()-> { if(g==generation) after.run(); }); }
             catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(e.getMessage()); }); } });
     }
+    private List<JSONObject> watchLaterItems(int page,Api api,Library db) {
+        List<JSONObject> saved=new WatchLater(this,api.account).items(),result=new ArrayList<>();
+        for(int i=page*PAGE;i<Math.min(saved.size(),(page+1)*PAGE);i++) { JSONObject entry=saved.get(i),cached=db.item(entry.optString("Id")); result.add(cached==null?entry:cached); }
+        return result;
+    }
+    private void itemActions(JSONObject item) {
+        if(app.account==null||!Arrays.asList("Movie","Series","Episode","Video").contains(item.optString("Type"))) return;
+        final Api api=app.api; final Library db=app.library; final int g=generation;
+        final WatchLater later=new WatchLater(this,api.account); final View origin=root.findFocus();
+        boolean played=Json.object(item,"UserData").optBoolean("Played"),favorite=Json.object(item,"UserData").optBoolean("IsFavorite"),saved=later.contains(item.optString("Id"));
+        List<String> labels=new ArrayList<>(Arrays.asList(I18n.text("Fortsetzen"),I18n.text("Von vorn"),I18n.text(played?"Als ungesehen markieren":"Als gesehen markieren"),I18n.text(saved?"Aus Später ansehen entfernen":"Zu Später ansehen hinzufügen"),I18n.text(favorite?"Aus Favoriten entfernen":"Zu Favoriten hinzufügen")));
+        String seriesId="Series".equals(item.optString("Type"))?item.optString("Id"):item.optString("SeriesId");
+        if(!seriesId.isEmpty()) labels.add(I18n.text("Zur Serienseite"));
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(Json.label(item)).setItems(labels.toArray(new String[0]),(d,which)-> {
+            if(app.api!=api||g!=generation) return;
+            if(which==0||which==1) { actionPlay(item,which==1,api,g); return; }
+            if(which==3) { later.set(item,!saved); toast(I18n.text(saved?"Aus Später ansehen entfernt":"Zu Später ansehen hinzugefügt")); if(screen!=null&&"watchLater".equals(screen.type)) refreshActionCards(); else Motion.feedback(origin); return; }
+            if(which==5) { actionSeries(seriesId,api,g); return; }
+            String flag=which==2?"Played":"IsFavorite",category=which==2?"PlayedItems":"FavoriteItems"; boolean value=which==2?!played:!favorite;
+            app.io.execute(()-> { try {
+                api.call(value?"POST":"DELETE","/Users/"+api.account.user+"/"+category+"/"+item.optString("Id"),null);
+                JSONObject updated=new JSONObject(item.toString()),user=Json.object(updated,"UserData"); user.put(flag,value); updated.put("UserData",user); db.put(updated);
+                runOnUiThread(()-> { if(app.api!=api||g!=generation) return; try { item.put("UserData",user); } catch(JSONException ignored) { } toast(I18n.text("Gespeichert")); rebindActionCard(origin); Motion.feedback(origin); app.channels.publish(); if(screen!=null&&"favorites".equals(screen.type)) refreshActionCards(); });
+            } catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&g==generation) toast(I18n.text("Aktion fehlgeschlagen")); }); } });
+        }).setNegativeButton(I18n.text("Abbrechen"),null).create();
+        final boolean[] openingGesture={true};
+        dialog.setOnKeyListener((d,key,event)-> {
+            if(key!=KeyEvent.KEYCODE_DPAD_CENTER&&key!=KeyEvent.KEYCODE_ENTER&&key!=KeyEvent.KEYCODE_NUMPAD_ENTER) return false;
+            if(!openingGesture[0]) return false;
+            if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) { openingGesture[0]=false; return false; }
+            if(event.getAction()==KeyEvent.ACTION_UP) openingGesture[0]=false;
+            return true;
+        });
+        dialog.setOnDismissListener(d->{ if(origin!=null&&origin.isAttachedToWindow()&&app.api==api&&g==generation) origin.requestFocus(); });
+        dialog.show(); dialog.getListView().requestFocus(); dialog.getListView().setSelection(0); Motion.enter(dialog.getListView(),true);
+    }
+    private void rebindActionCard(View origin) {
+        if(origin==null||!(origin.getParent() instanceof RecyclerView)) return;
+        RecyclerView list=(RecyclerView)origin.getParent(); int position=list.getChildAdapterPosition(origin);
+        if(position!=RecyclerView.NO_POSITION&&list.getAdapter()!=null) list.getAdapter().notifyItemChanged(position);
+    }
+    private void refreshActionCards() {
+        if(grid==null||!(grid.getAdapter() instanceof MediaAdapter)) return;
+        final Screen s=screen; final MediaAdapter adapter=(MediaAdapter)grid.getAdapter(); final Api api=app.api; final Library db=app.library;
+        adapter.fresh=false;
+        async(adapter,()-> "watchLater".equals(s.type)?watchLaterItems(s.page,api,db):db.query("favorite=1",null,"name",PAGE,s.page*PAGE),null);
+    }
+    private void actionPlay(JSONObject item,boolean restart,Api api,int g) {
+        if(!"Series".equals(item.optString("Type"))) { play(item,restart?0:Json.position(item)); return; }
+        app.io.execute(()-> { try {
+            JSONObject response=restart?api.get("/Shows/"+item.optString("Id")+"/Episodes","UserId",api.account.user,"Limit",1,"IsMissing",false,"Fields","Overview,MediaSources,MediaStreams,ParentId"):
+                api.get("/Shows/NextUp","UserId",api.account.user,"SeriesId",item.optString("Id"),"EnableResumable",true,"Limit",1,"Fields","Overview,MediaSources,MediaStreams,ParentId");
+            JSONObject episode=Json.array(response,"Items").optJSONObject(0);
+            runOnUiThread(()-> { if(app.api!=api||g!=generation) return; if(episode==null) toast(I18n.text("Keine abspielbare Folge gefunden")); else play(episode,restart?0:Json.position(episode)); });
+        } catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&g==generation) toast(I18n.text("Aktion fehlgeschlagen")); }); } });
+    }
+    private void actionSeries(String id,Api api,int g) {
+        final Library db=app.library; app.io.execute(()-> { try { JSONObject series=api.item(id); db.put(series); runOnUiThread(()-> { if(app.api==api&&g==generation) show(new Screen("detail",series.optString("Name"),null,id,series),true); }); }
+            catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&g==generation) toast(I18n.text("Aktion fehlgeschlagen")); }); } });
+    }
     private void play(JSONObject item,long position) { play(item,position,null); }
     private void play(JSONObject item,long position,AudioTracks.Choice audio) {
         if(app.account==null) return;
@@ -605,11 +667,13 @@ public final class MainActivity extends Activity {
         TextView n=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();
         async(adapter,()-> {
             if("resume".equals(s.type)) return db.query("position>0 AND played=0",null,"stamp DESC",PAGE,s.page*PAGE);
+            if("watchLater".equals(s.type)) return watchLaterItems(s.page,api,db);
             if("favorites".equals(s.type)) return db.query("favorite=1",null,"name",PAGE,s.page*PAGE);
             return db.query("type IN ('Movie','Series','Episode') AND name LIKE ?",new String[]{"%"+s.title+"%"},"name",PAGE,s.page*PAGE);
         },null);
         async(adapter,()-> {
             JSONObject response;
+            if(s.type.equals("watchLater")) return watchLaterItems(s.page,api,db);
             if(s.type.equals("resume")) response=api.get("/Users/"+api.account.user+"/Items/Resume","MediaTypes","Video","StartIndex",s.page*PAGE,"Limit",PAGE,"Fields","Overview,ParentId,PrimaryImageAspectRatio");
             else if(s.type.equals("next")) response=api.get("/Shows/NextUp","UserId",api.account.user,"StartIndex",s.page*PAGE,"Limit",PAGE,"Fields","Overview,ParentId,PrimaryImageAspectRatio");
             else if(s.type.equals("favorites")) response=api.get("/Users/"+api.account.user+"/Items","Recursive",true,"Filters","IsFavorite","IncludeItemTypes","Movie,Series,Episode","StartIndex",s.page*PAGE,"Limit",PAGE);
@@ -637,7 +701,7 @@ public final class MainActivity extends Activity {
         Ui.space(content,8); toggle(content,I18n.text("Intros und Outros automatisch überspringen"),"autoSkip",true);
         Ui.space(content,8); toggle(content,I18n.text("Live TV beim Öffnen des Clients starten"),"liveOnLaunch",false);
         Ui.space(content,8); content.addView(Ui.button(this,"Live-TV-Aufnahmen",()->show(new Screen("recordings",I18n.text("Aufnahmen"),null,null,null),true)));
-        Ui.space(content,8); toggle(content,I18n.text("Kleine Fokusanimationen"),"animations",true);
+        Ui.space(content,8); toggle(content,I18n.text("UI-Animationen"),"animations",true);
         Ui.space(content,20); content.addView(Ui.text(this,I18n.text("Android-TV-Hauptmenü"),16,Ui.MUTED)); Ui.space(content,10);
         content.addView(Ui.button(this,I18n.text("Filme und Serien im TV-Hauptmenü: ")+(app.settings.getBoolean("homeChannels",true)?I18n.text("Ein"):I18n.text("Aus")),()-> {
             boolean enabled=!app.settings.getBoolean("homeChannels",true); app.settings.edit().putBoolean("homeChannels",enabled).apply();
@@ -745,7 +809,7 @@ public final class MainActivity extends Activity {
         if(!history.isEmpty()) { Screen prev=history.pop(); screen=prev; generation++; shell(prev.title); switch(prev.kind) {
             case "seriesResume": seriesResume(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "home": home(); break;
             case "recommendations": recommendationItems(); break; case "settings":settings();break; case "ratings":ratingSettings();break; case "recordings":recordings();break; default: renderCurrent();
-        }} else if(app.account!=null&&screen!=null&&!screen.kind.equals("home")) {
+        } Motion.enter(contentStage,false); } else if(app.account!=null&&screen!=null&&!screen.kind.equals("home")) {
             show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false);
         } else if(screen!=null&&screen.kind.equals("home")&&focusedHomeRow>=2) {
             setHomeFocusMode(0); ((HomeAdapter)grid.getAdapter()).requestRow(0);

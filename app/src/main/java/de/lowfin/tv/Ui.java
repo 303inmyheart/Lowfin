@@ -25,7 +25,8 @@ final class Ui {
         v.setOnFocusChangeListener((view,focused)-> {
             view.setBackground(background(focused?0xff383838:PANEL,focused?Accent.color:0));
             boolean animate=view.getContext().getSharedPreferences("settings",0).getBoolean("animations",true);
-            view.animate().cancel(); if(animate) view.animate().alpha(focused?1f:.87f).setDuration(110).start(); else view.setAlpha(1f);
+            view.animate().withEndAction(null).cancel(); if(animate) view.animate().alpha(focused?1f:.87f).setDuration(110).start(); else view.setAlpha(1f);
+            Motion.focus(view,focused,false);
         });
     }
     static void cardFocus(View v) {
@@ -33,9 +34,10 @@ final class Ui {
         Accent.bind(v,(view,color)->view.setBackground(background(view.isFocused()?0xff242427:Color.TRANSPARENT,view.isFocused()?color:0)));
         v.setOnFocusChangeListener((view,focused)-> {
             view.setBackground(background(focused?0xff242427:Color.TRANSPARENT,focused?Accent.color:0));
-            view.animate().cancel();
+            view.animate().withEndAction(null).cancel();
             if(view.getContext().getSharedPreferences("settings",0).getBoolean("animations",true)) view.animate().alpha(focused?1f:.92f).setDuration(110).start();
             else view.setAlpha(1f);
+            Motion.focus(view,focused,true);
         });
     }
     static void navigation(Button button,boolean selected) {
@@ -44,18 +46,18 @@ final class Ui {
         Accent.bind(button,(view,color)->view.setBackground(background(view.isFocused()?0xff38383c:selected?0xff252528:Color.TRANSPARENT,view.isFocused()?color:0)));
         button.setOnFocusChangeListener((view,focused)-> {
             view.setBackground(background(focused?0xff38383c:selected?0xff252528:Color.TRANSPARENT,focused?Accent.color:0));
-            button.setTextColor(focused||selected?Color.WHITE:MUTED);
+            button.setTextColor(focused||selected?Color.WHITE:MUTED); Motion.focus(view,focused,false);
         });
     }
     static Button quiet(Context c,String label,Runnable action) {
         Button button=button(c,label,action); button.setBackground(background(Color.TRANSPARENT,0));
         Accent.bind(button,(view,color)->view.setBackground(background(view.isFocused()?0xff333337:Color.TRANSPARENT,view.isFocused()?color:0)));
-        button.setOnFocusChangeListener((view,focused)->view.setBackground(background(focused?0xff333337:Color.TRANSPARENT,focused?Accent.color:0))); return button;
+        button.setOnFocusChangeListener((view,focused)-> { view.setBackground(background(focused?0xff333337:Color.TRANSPARENT,focused?Accent.color:0)); Motion.focus(view,focused,false); }); return button;
     }
     static Button primary(Context c,String text,Runnable click) {
         Button button=button(c,text,click); button.setTextColor(Color.BLACK); button.setBackground(background(Accent.color,0));
         Accent.bind(button,(view,color)->view.setBackground(background(color,view.isFocused()?0xff777777:0)));
-        button.setOnFocusChangeListener((view,focused)->view.setBackground(background(Accent.color,focused?0xff777777:0))); return button;
+        button.setOnFocusChangeListener((view,focused)-> { view.setBackground(background(Accent.color,focused?0xff777777:0)); Motion.focus(view,focused,false); }); return button;
     }
     static Button button(Context c,String s,Runnable click) {
         Button b=new Button(c); b.setText(s); b.setAllCaps(false); b.setTextSize(13); b.setTextColor(Color.WHITE);
