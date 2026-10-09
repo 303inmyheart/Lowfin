@@ -26,6 +26,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private final Map<Integer,Integer> selectedColumns=new HashMap<>();
     private Runnable openMenu=()->{};
     void onOpenMenu(Runnable action) { openMenu=action; }
+    private Consumer<JSONObject> actions=item->{};
+    void onActions(Consumer<JSONObject> action) { actions=action; }
     private final RecyclerView.RecycledViewPool pool=new RecyclerView.RecycledViewPool();
     private final Map<String,android.os.Parcelable> positions=new HashMap<>();
     HomeAdapter(Images images,List<String> genres,BiConsumer<JSONObject,Integer> play,IntConsumer more,BiConsumer<JSONObject,Integer> focused,IntConsumer move) {
@@ -41,8 +43,9 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         });
     }
     void setFocusedShelf(int row) {
+        int previous=focusedShelf;
         focusedShelf=row>=2&&I18n.preferences().getBoolean("singleShelf",true)?row:-1;
-        if(owner!=null) for(int i=0;i<owner.getChildCount();i++) { View child=owner.getChildAt(i); int index=owner.getChildAdapterPosition(child); child.setVisibility(index>=0&&hidden(index)?View.GONE:focusedShelf<0||index==focusedShelf?View.VISIBLE:View.INVISIBLE); }
+        if(owner!=null) for(int i=0;i<owner.getChildCount();i++) { View child=owner.getChildAt(i); int index=owner.getChildAdapterPosition(child); child.setVisibility(index>=0&&hidden(index)?View.GONE:focusedShelf<0||index==focusedShelf?View.VISIBLE:View.INVISIBLE); if(previous!=focusedShelf&&index==focusedShelf) Motion.enter(child,row>previous); }
     }
     void requestRow(int row) {
         if(owner==null||row<0||row>=rows.size()) return;
@@ -119,6 +122,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         if(adapter==null) {
             adapter=new Cards(images,new ArrayList<>(),item->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) { if("More".equals(item.optString("Type"))) more.accept(position); else play.accept(item,position); } },(item,column)->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION&&(focusedShelf<0||position==focusedShelf)) { lastColumn=column; selectedColumns.put(position,lastColumn); focused.accept("More".equals(item.optString("Type"))?(rows.get(position).isEmpty()?null:rows.get(position).get(rows.get(position).size()-1)):item,position); } },direction->{ int position=shelf.getBindingAdapterPosition(); int target=nextRow(position,direction); if(position!=RecyclerView.NO_POSITION&&target>=0) { move.accept(target); return true; } return false; }); shelf.list.setAdapter(adapter);
         }
+        adapter.actions=actions;
         ((ShelfList)shelf.list).openMenu=openMenu;
         List<JSONObject> cards=new ArrayList<>(data); if(!data.isEmpty()||!entryPending) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=index>=2; adapter.wide=index<2; adapter.update(cards);
         int height=index<2?180:204; for(JSONObject item:data) { double ratio=index<2?16.0/9:Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
@@ -177,6 +181,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         }
     }
     private static final class Cards extends RecyclerView.Adapter<Card> {
+        private Consumer<JSONObject> actions=item->{};
         private final Images images; private boolean compact, wide; private List<JSONObject> data; private final Consumer<JSONObject> open; private final BiConsumer<JSONObject,Integer> focused; private final IntPredicate move;
         Cards(Images images,List<JSONObject> data,Consumer<JSONObject> open,BiConsumer<JSONObject,Integer> focused,IntPredicate move) { this.images=images; this.data=data; this.open=open; this.focused=focused; this.move=move; setHasStableIds(true); }
         @Override public long getItemId(int position) { return stableId(data.get(position)); }
@@ -210,7 +215,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             h.progress.setProgress(duration>0?(int)Math.min(1000,pos*1000/duration):0); h.progress.setVisibility(pos>0?View.VISIBLE:View.INVISIBLE);
             // Install the styling once per holder; binding must not recursively wrap listeners.
             h.itemView.setOnFocusChangeListener((view,hasFocus)-> { h.focusStyle.onFocusChange(view,hasFocus); if(hasFocus) focused.accept(j,h.getBindingAdapterPosition()); });
-            h.itemView.setOnKeyListener((view,key,event)-> {
+            View.OnKeyListener navigation=(view,key,event)-> {
                 if(key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_DOWN) {
                     if(event.getAction()==KeyEvent.ACTION_DOWN) move.test(key==KeyEvent.KEYCODE_DPAD_UP?-1:1);
                     return true;
@@ -219,10 +224,12 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
                     if(event.getAction()==KeyEvent.ACTION_DOWN&&h.itemView.getParent() instanceof ShelfList) ((ShelfList)h.itemView.getParent()).moveCard(h.itemView,key==KeyEvent.KEYCODE_DPAD_RIGHT?1:-1);
                     return true;
                 } return false;
-            });
+            };
+            if("More".equals(j.optString("Type"))) { ConfirmPress.cancel(h.itemView); h.itemView.setOnKeyListener(navigation); h.itemView.setOnLongClickListener(null); }
+            else ConfirmPress.bind(h.itemView,navigation,()->actions.accept(j));
             if("More".equals(j.optString("Type"))) { h.cover.setTag(null); h.cover.setImageDrawable(new MoreArtwork()); h.episode.setText(I18n.text("Alle Titel")); } else images.show(h.cover,j,wide||"Episode".equals(j.optString("Type"))); h.itemView.setContentDescription((episode?j.optString("SeriesName")+" · ":"")+Json.label(j)); h.itemView.setOnClickListener(v->open.accept(j));
         }
-        @Override public void onViewRecycled(Card h) { h.cover.setTag(null); h.cover.setImageDrawable(null); h.itemView.animate().cancel(); }
+        @Override public void onViewRecycled(Card h) { ConfirmPress.cancel(h.itemView); h.cover.setTag(null); h.cover.setImageDrawable(null); h.itemView.animate().cancel(); }
     }
     private static final class MoreArtwork extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);

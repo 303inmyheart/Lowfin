@@ -1,1 +1,4 @@
-<resources><item name="accent_style" type="id" /></resources>
+<resources>
+    <item name="accent_style" type="id" />
+    <item name="confirm_press" type="id" />
+</resources>

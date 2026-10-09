@@ -9,6 +9,14 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.8
+
+- Holding remote OK/Enter on home or library cards opens Continue, Restart, watched/unwatched, Watch later and favorite actions, plus series details for shows and episodes. Release after a hold never launches the normal click action; remotes without repeat events are supported.
+- Continue on a show resolves Jellyfin Next Up, including resumable episodes; Restart resolves its first available episode. Watched and favorite actions update Jellyfin and the local metadata cache.
+- Separate persistent device-local Watch later list for each account/server, accessible from the sidebar, independent of server favorites.
+- Optional smoother screen/shelf/drawer transitions, focus scaling and saved-action feedback. Settings → Home screen and appearance provides a separate smooth-navigation switch and the UI animation master switch; previous animation preferences are retained.
+- English and German translations for new actions/settings. Verified with 162 unit/UI tests, debug/release lint and a signed release build. Physical remote/TV performance still needs device verification.
+
 ## 0.7.7
 
 - Continue Watching movies use 16:9 Thumb/backdrop artwork, matching episodes and the More card. Library movie posters retain 2:3 frames.

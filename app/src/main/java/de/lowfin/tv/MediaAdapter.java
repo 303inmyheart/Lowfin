@@ -15,6 +15,8 @@ final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
     boolean fresh;
     private Runnable openMenu=()->{};
     void onOpenMenu(Runnable action) { openMenu=action; }
+    private Consumer<JSONObject> actions=item->{};
+    void onActions(Consumer<JSONObject> action) { actions=action; }
     private final Images images; private final Consumer<JSONObject> open;
     private final boolean compact;
     boolean wide;
@@ -43,17 +45,17 @@ final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
         if(Json.position(item)>0) sub+="  ↻ "+Json.position(item)/60000+" min";
         if(user.optBoolean("IsFavorite")) sub+="  ★";
         holder.subtitle.setText(sub.trim()); holder.itemView.setContentDescription(Json.label(item));
-        holder.itemView.setOnKeyListener((view,key,event)-> {
+        ConfirmPress.bind(holder.itemView,(view,key,event)-> {
             if(key!=KeyEvent.KEYCODE_DPAD_LEFT) return false;
             RecyclerView recycler=(RecyclerView)view.getParent(); int cardPosition=holder.getBindingAdapterPosition();
             if(cardPosition!=RecyclerView.NO_POSITION&&recycler.getLayoutManager() instanceof androidx.recyclerview.widget.GridLayoutManager) {
                 androidx.recyclerview.widget.GridLayoutManager layout=(androidx.recyclerview.widget.GridLayoutManager)recycler.getLayoutManager();
                 if(layout.getSpanSizeLookup().getSpanIndex(cardPosition,layout.getSpanCount())==0) { if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) openMenu.run(); return true; }
             } return false;
-        });
+        },()->actions.accept(item));
         images.show(holder.image,item,wide); holder.itemView.setOnClickListener(v->open.accept(item));
     }
-    @Override public void onViewRecycled(Card card) { card.image.setTag(null); card.image.setImageDrawable(null); card.itemView.animate().cancel(); }
+    @Override public void onViewRecycled(Card card) { ConfirmPress.cancel(card.itemView); card.image.setTag(null); card.image.setImageDrawable(null); card.itemView.animate().cancel(); }
     static final class Card extends RecyclerView.ViewHolder {
         final ArtworkView image; final TextView title,subtitle;
         Card(View v,ArtworkView image,TextView title,TextView subtitle) { super(v); this.image=image; this.title=title; this.subtitle=subtitle; }

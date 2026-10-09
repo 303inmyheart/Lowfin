@@ -303,4 +303,19 @@
     <string name="started_episodes">Begonnene Folgen</string>
     <string name="dynamic_seek_help">Seeken startet bei 5 Sekunden und beschleunigt beim Halten.</string>
     <string name="ends_at">"Ende um "</string>
+    <string name="ui_animations">UI-Animationen</string>
+    <string name="smooth_navigation">Flüssige Navigation und Aktionsanimationen</string>
+    <string name="watch_later">Später ansehen</string>
+    <string name="mark_unwatched">Als ungesehen markieren</string>
+    <string name="mark_watched">Als gesehen markieren</string>
+    <string name="remove_watch_later">Aus Später ansehen entfernen</string>
+    <string name="add_watch_later">Zu Später ansehen hinzufügen</string>
+    <string name="remove_favorite">Aus Favoriten entfernen</string>
+    <string name="add_favorite">Zu Favoriten hinzufügen</string>
+    <string name="series_page">Zur Serienseite</string>
+    <string name="removed_watch_later">Aus Später ansehen entfernt</string>
+    <string name="added_watch_later">Zu Später ansehen hinzugefügt</string>
+    <string name="action_saved">Gespeichert</string>
+    <string name="action_failed">Aktion fehlgeschlagen</string>
+    <string name="no_playable_episode">Keine abspielbare Folge gefunden</string>
 </resources>
