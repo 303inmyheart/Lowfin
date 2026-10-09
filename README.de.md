@@ -4,7 +4,7 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.9**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.10**.
 
 ## Installieren
 
@@ -92,7 +92,7 @@ API-Dokumentation: [OMDb](https://www.omdbapi.com/), [MDBList](https://docs.mdbl
 - **Horror** und **Thriller** sind standardmäßig als zufällige Filmreihen angeheftet. Unter **Menü → Genres anheften → gewünschtes Genre → Menü → Auf Startseite anheften** lassen sich weitere Reihen hinzufügen; **Von Startseite lösen** entfernt sie wieder. Die Reihen werden pro Konto gespeichert. Sie verwenden höchstens 18 zufällige Filme pro Genre und speichern diese Auswahl für den nächsten Start bzw. Offline-Betrieb.
 - Sobald eine Genre-Reihe Fokus erhält, bleibt **nur diese eine Reihe sichtbar**. Unter den Postern stehen Titel, Metadaten und Beschreibung. Der Hintergrund wechselt zum Film-Backdrop, leicht entsättigt und abgedunkelt. Hoch/runter wechseln die Reihe; rechts an der letzten Karte bleibt der Fokus in derselben Reihe. Schnelle Filmwechsel laden den Hintergrund erst nach einer kurzen Pause.
 - Filme und Serien werden auch auf Start als **2:3-Poster** gezeigt, Folgen als **16:9**. 4:3-Folgenbilder werden mittig beschnitten.
-- **▶ Trailer** erscheint auf der Detailseite, wenn Jellyfin einen YouTube-Trailer in `RemoteTrailers` liefert. Bei mehreren Trailern gibt es eine Auswahl. Die Wiedergabe läuft in Lowfin über den offiziellen [YouTube-IFrame-Player](https://developers.google.com/youtube/iframe_api_reference) in einer Android-WebView, mit Wiedergabe/Pause, ±10 Sekunden und Rückkehr zur Detailseite. Die WebView wird erst beim Trailerstart erzeugt und danach freigegeben; normale Filmwiedergabe bleibt in Media3. Android System WebView und eine Verbindung zu YouTube müssen verfügbar sein. Manche Videos erlauben kein Einbetten oder sind entfernt; Lowfin zeigt dafür einen Fehler. Ohne hinterlegten YouTube-Link wird keine Trailer-Taste angezeigt. Die App-Identifikation folgt den [YouTube-Vorgaben für WebViews](https://developers.google.com/youtube/terms/required-minimum-functionality).
+- **▶ Trailer** erscheint bei YouTube-Links in Jellyfins `RemoteTrailers`. Die Wiedergabe läuft vollständig im nativen Media3-Player mit Lowfins Playleiste, ohne YouTube-Oberfläche. Die Stream-Ermittlung orientiert sich an [Moonfins Resolver](https://github.com/Moonfin-Client/Moonfin-Core/blob/main/lib/data/services/youtube_stream_resolver.dart). Die Qualität ist für schwache Geräte auf 720p begrenzt. YouTube muss eine abspielbare Streamadresse liefern; ein Gerätetest steht aus.
 
 ## Update 0.3.1
 
@@ -185,3 +185,15 @@ API-Tests mit einem lokalen Mockserver; Android-11-Tests mit Robolectric für SQ
 - [Android-TV-Startseitenkanäle](https://developer.android.com/training/tv/discovery/recommendations-channel).
 
 Eigenständige Implementierung in Java, ohne laufende WebView oder Flutter-Engine. Animationen betreffen kurzzeitig Transparenz und Fokusdarstellung; eine Garantie für ruckelfreie Wiedergabe auf unbekannter Hardware lässt sich erst nach dem Gerätetest beurteilen.
+
+## API-Keys per TXT importieren
+
+Wenn noch keine Bewertungs-API-Keys gespeichert sind, erstellt Lowfin beim Start **Download/Lowfin-API-Keys.txt**. Die Datei erklärt alle Anbieter. Keys hinter `=` eintragen, als UTF-8 speichern und zu Lowfin zurückkehren. Die App prüft im Vordergrund alle fünf Sekunden, speichert ausgefüllte Keys verschlüsselt und löscht die Datei nach erfolgreichem Import. Ungenutzte Anbieter dürfen leer bleiben. Bestehende Keys deaktivieren den automatischen Import. Wenn der Texteditor die ursprüngliche Datei ersetzt, lässt sie sich in den Bewertungseinstellungen über den TXT-Dateiauswahldialog importieren.
+
+```ini
+OMDB_API_KEY=
+MDBLIST_API_KEY=
+TMDB_API_KEY=
+```
+
+Ohne Anführungszeichen und ohne `Bearer`-Präfix eintragen.

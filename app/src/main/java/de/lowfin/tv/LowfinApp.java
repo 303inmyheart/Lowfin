@@ -14,11 +14,12 @@ public final class LowfinApp extends Application {
     HomeChannels channels;
     Accent accent;
     Ratings ratings;
+    RatingKeyImport keyImport;
     VideoCache videoCache;
     SharedPreferences settings;
     volatile String syncStatus=I18n.text("Cache noch nicht erstellt");
     volatile boolean syncing=false,playing=false;
-    @Override public void onCreate() { super.onCreate(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
+    @Override public void onCreate() { super.onCreate(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
     synchronized void setAccount(Account a) {
         if(images!=null) images.close();
         if(ratings!=null) ratings.close();

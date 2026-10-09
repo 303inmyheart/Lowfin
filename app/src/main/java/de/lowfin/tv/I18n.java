@@ -7,6 +7,17 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("API-Keys aus TXT-Datei",R.string.key_file_title);
+        IDS.put("Download-Datei jetzt prüfen",R.string.key_file_check);
+        IDS.put("TXT-Datei auswählen",R.string.key_file_select);
+        IDS.put("API-Keys sind bereits gespeichert. Automatischer TXT-Import ist deaktiviert.",R.string.key_file_configured);
+        IDS.put("TXT-Format ungültig. Datei bleibt erhalten: UTF-8, Feldnamen und Werte prüfen.",R.string.key_file_invalid);
+        IDS.put("TXT-Import nicht möglich. Datei und vorhandene Keys bleiben erhalten.",R.string.key_file_error);
+        IDS.put("API-Keys gespeichert. Die TXT-Datei konnte noch nicht gelöscht werden.",R.string.key_file_delete_pending);
+        IDS.put("API-Keys verschlüsselt importiert und TXT-Datei gelöscht.",R.string.key_file_imported);
+        IDS.put("Download/Lowfin-API-Keys.txt ausfüllen und speichern. Leere Anbieter sind optional.",R.string.key_file_waiting);
+        IDS.put("Kein Dateiauswahldialog verfügbar. Die Download-Datei verwenden.",R.string.key_file_no_picker);
+
         IDS.put("UI-Animationen",R.string.ui_animations);
         IDS.put("Flüssige Navigation und Aktionsanimationen",R.string.smooth_navigation);
         IDS.put("Später ansehen",R.string.watch_later);

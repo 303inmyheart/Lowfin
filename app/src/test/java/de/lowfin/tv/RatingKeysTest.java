@@ -7,6 +7,13 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=30)
 public class RatingKeysTest {
+    @Test public void batchEncryptionFailureCannotSaveOnlyTheFirstProvider() throws Exception {
+        android.content.Context c=RuntimeEnvironment.getApplication(); final int[] requests={0};
+        RatingKeys vault=new RatingKeys(c,()-> { if(++requests[0]>1) throw new java.io.IOException("Keystore failure"); return new javax.crypto.spec.SecretKeySpec(new byte[32],"AES"); });
+        java.util.Map<String,String> values=new java.util.LinkedHashMap<>(); values.put("omdb","first-private"); values.put("tmdb","second-private");
+        try { vault.importIfEmpty(values); fail("Encryption should fail"); } catch(java.io.IOException expected) { }
+        assertFalse(vault.hasAny()); assertTrue(c.getSharedPreferences("rating-keys",0).getAll().isEmpty());
+    }
     @Test public void keysRoundTripEncryptedAndCanBeRemovedWithoutAffectingOtherProviders() throws Exception {
         android.content.Context c=RuntimeEnvironment.getApplication(); RatingKeys vault=new RatingKeys(c,()->new javax.crypto.spec.SecretKeySpec(new byte[32],"AES"));
         vault.put("omdb","private-omdb-key"); vault.put("tmdb","private-tmdb-key");
