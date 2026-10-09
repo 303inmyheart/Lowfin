@@ -33,7 +33,7 @@ final class Options {
     void playback() {
         toggle("Untertitel standardmäßig aktivieren","defaultSubtitles",false);
         toggle("Intros automatisch überspringen","skipIntro",true); toggle("Outros automatisch überspringen","skipOutro",true);
-        number("Sprungweite · Sekunden","seekSeconds",10,new int[]{5,10,15,30,60},numbers(new int[]{5,10,15,30,60}));
+        content.addView(Ui.text(activity,I18n.text("Seeken startet bei 5 Sekunden und beschleunigt beim Halten."),12,Ui.MUTED));
         number("Player-Menü ausblenden · Sekunden","controlsSeconds",5,new int[]{3,5,8,12,30},numbers(new int[]{3,5,8,12,30}));
         number("RAM-Puffer · Maximum MB","bufferMb",48,new int[]{24,32,48,64},numbers(new int[]{24,32,48,64}));
         number("Live-TV-Puffer · Maximum MB","liveBufferMb",32,new int[]{16,24,32,48},numbers(new int[]{16,24,32,48}));

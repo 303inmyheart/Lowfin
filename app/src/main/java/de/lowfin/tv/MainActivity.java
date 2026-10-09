@@ -254,6 +254,7 @@ public final class MainActivity extends Activity {
             case "home": home(); break;
             case "recommendations": recommendationItems(); break;
             case "browse": browse(); break;
+            case "seriesResume": seriesResume(); break;
             case "genres": genres(); break;
             case "genre": genreItems(); break;
             case "detail": detail(next.item); break;
@@ -360,7 +361,7 @@ public final class MainActivity extends Activity {
                     } catch(Exception ignored) { /* Preserve the cached random selection. */ } });
                 }
             }
-        }; homeReload.run();
+        }; adapter.requestRow(0); homeReload.run();
     }
     private void setHomeFocusMode(int row) {
         if(grid==null||homeDescription==null||screen==null||!screen.kind.equals("home")) return;
@@ -403,10 +404,18 @@ public final class MainActivity extends Activity {
     }
     private void browse() {
         final Screen s=screen;
+        if("Series".equals(s.type)) { LinearLayout tabs=Ui.row(this); Ui.addButton(tabs,Ui.button(this,I18n.text("Alle Serien"),()->{})); Ui.addButton(tabs,Ui.button(this,I18n.text("Begonnene Folgen"),()->show(new Screen("seriesResume",I18n.text("Begonnene Folgen"),null,s.parent,null),true))); body.addView(tabs); }
         TextView note=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();
         final Api api=app.api; final Library db=app.library;
         async(adapter,()->db.browse(s.type,s.parent,null,s.page*PAGE,PAGE),null);
         async(adapter,()-> { JSONArray a=Json.array(api.items(s.page*PAGE,PAGE,s.type,s.parent,null),"Items"); long stamp=System.currentTimeMillis(); db.put(a,stamp); if(s.parent!=null) db.link(s.parent,a,stamp); return list(a); },note);
+    }
+    private void seriesResume() {
+        final Screen s=screen; final Api api=app.api; final Library db=app.library;
+        TextView status=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();
+        String key="seriesResume-"+(s.parent==null?"all":s.parent)+"-"+s.page;
+        async(adapter,()-> { String cached=db.state(key); return cached.isEmpty()?new ArrayList<>():list(new JSONArray(cached)); },null);
+        async(adapter,()-> { JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"ParentId",s.parent,"IncludeItemTypes","Episode","Filters","IsResumable","SortBy","DatePlayed","SortOrder","Descending","StartIndex",s.page*PAGE,"Limit",PAGE,"Fields","Overview,MediaSources,MediaStreams,ParentId,PrimaryImageAspectRatio"),"Items"); db.put(items,System.currentTimeMillis()); db.state(key,items.toString()); return list(items); },status);
     }
     private void genres() {
         TextView note=note(I18n.text("Genres werden geladen …")); grid=new RecyclerView(this); grid.setLayoutManager(new GridLayoutManager(this,3)); grid.setItemAnimator(null);
@@ -462,9 +471,10 @@ public final class MainActivity extends Activity {
         Ui.addButton(row,prev); row.addView(Ui.text(this,I18n.text("Seite ")+(screen.page+1)+I18n.text("  ·  60 Einträge  "),13,Ui.MUTED));
         Ui.addButton(row,Ui.button(this,I18n.text("Nächste Seite →"),()-> { screen.page++; screen.scroll=null; generation++; shell(screen.title); renderCurrent(); })); body.addView(row);
     }
-    private void renderCurrent() { if(screen.kind.equals("genre")) genreItems(); else if(screen.kind.equals("genres")) genres(); else if(screen.kind.equals("episodes")) episodes(); else if(screen.kind.equals("search")) results(); else browse(); }
+    private void renderCurrent() { if(screen.kind.equals("seriesResume")) seriesResume(); else if(screen.kind.equals("genre")) genreItems(); else if(screen.kind.equals("genres")) genres(); else if(screen.kind.equals("episodes")) episodes(); else if(screen.kind.equals("search")) results(); else browse(); }
     private void open(JSONObject item) {
         String type=item.optString("Type");
+        if(screen!=null&&screen.kind.equals("seriesResume")&&"Episode".equals(type)) { play(item,Json.position(item)); return; }
         if(type.equals("Series")) show(new Screen("seasons",item.optString("Name"),null,item.optString("Id"),item),true);
         else if(type.equals("BoxSet")) show(new Screen("browse",item.optString("Name"),"Movie,Series",item.optString("Id"),item),true);
         else if(type.equals("Season")) show(new Screen("episodes",item.optString("Name"),"Episode",item.optString("Id"),item),true);
@@ -733,7 +743,7 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if(drawerOpen) { setDrawer(false); return; }
         if(!history.isEmpty()) { Screen prev=history.pop(); screen=prev; generation++; shell(prev.title); switch(prev.kind) {
-            case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "home": home(); break;
+            case "seriesResume": seriesResume(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "home": home(); break;
             case "recommendations": recommendationItems(); break; case "settings":settings();break; case "ratings":ratingSettings();break; case "recordings":recordings();break; default: renderCurrent();
         }} else if(app.account!=null&&screen!=null&&!screen.kind.equals("home")) {
             show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false);

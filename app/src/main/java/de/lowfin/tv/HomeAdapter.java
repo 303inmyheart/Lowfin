@@ -21,6 +21,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private final BiConsumer<JSONObject,Integer> focused;
     private final IntConsumer move;
     private RecyclerView owner;
+    private boolean entryPending=true;
     private int pendingRow=-1,pendingColumn,lastColumn,focusedShelf=-1;
     private final Map<Integer,Integer> selectedColumns=new HashMap<>();
     private Runnable openMenu=()->{};
@@ -53,6 +54,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     }
     private void focusPending(Shelf shelf) {
         if(pendingRow<0||shelf.getBindingAdapterPosition()!=pendingRow) return;
+        if(entryPending&&rows.get(pendingRow).isEmpty()) return;
         int column=pendingColumn; pendingRow=-1;
         ((ShelfList)shelf.list).requestCard(column);
     }
@@ -84,6 +86,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         Shelf shelf=owner==null?null:(Shelf)owner.findViewHolderForAdapterPosition(index);
         boolean restore=shelf!=null&&shelf.list.hasFocus()||focusedShelf==index;
         int column=restore&&shelf!=null?((ShelfList)shelf.list).selection():selectedColumns.getOrDefault(index,0);
+        boolean entry=entryPending&&index<2&&!data.isEmpty()&&!hidden(index)&&(index==0||hidden(0));
+        if(entry) { entryPending=false; column=0; restore=true; }
         rows.set(index,data); notifyItemChanged(index);
         if(restore) {
             selectedColumns.put(index,Math.min(Math.max(0,column),data.size()));
@@ -116,7 +120,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             adapter=new Cards(images,new ArrayList<>(),item->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) { if("More".equals(item.optString("Type"))) more.accept(position); else play.accept(item,position); } },(item,column)->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION&&(focusedShelf<0||position==focusedShelf)) { lastColumn=column; selectedColumns.put(position,lastColumn); focused.accept("More".equals(item.optString("Type"))?(rows.get(position).isEmpty()?null:rows.get(position).get(rows.get(position).size()-1)):item,position); } },direction->{ int position=shelf.getBindingAdapterPosition(); int target=nextRow(position,direction); if(position!=RecyclerView.NO_POSITION&&target>=0) { move.accept(target); return true; } return false; }); shelf.list.setAdapter(adapter);
         }
         ((ShelfList)shelf.list).openMenu=openMenu;
-        List<JSONObject> cards=new ArrayList<>(data); cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=index>=2; adapter.update(cards);
+        List<JSONObject> cards=new ArrayList<>(data); if(!data.isEmpty()||!entryPending) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=index>=2; adapter.update(cards);
         int height=index<2?180:204; for(JSONObject item:data) { double ratio=Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
         ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); dimensions.height=Ui.dp(shelf.list.getContext(),height); shelf.list.setLayoutParams(dimensions);
         if(positions.containsKey(shelf.key)) shelf.list.getLayoutManager().onRestoreInstanceState(positions.get(shelf.key));
