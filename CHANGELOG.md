@@ -9,6 +9,13 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.12
+
+- Automatic next-episode playback keeps player controls and title/logo overlays hidden during opening and startup. Remote input still opens controls normally; manually starting media or choosing Next episode retains the existing startup controls.
+- Returning from buffering no longer reopens the player controls automatically.
+- Home recommendation/pinned-genre focus details show up to three genres inline with the existing metadata, without adding height. Continue watching and Next up remain unchanged. Detail genres use the same compact separator and stay on one line; empty/duplicate names are filtered.
+- Verified with 180 passing unit/UI tests, debug/release lint and a signed release build. Genre layout was checked in the HD preview; physical-TV autoplay verification remains pending.
+
 ## 0.7.11
 
 - Sidebar gray background now follows keyboard/remote focus exclusively. The current page retains its brighter label but no longer displays a second persistent selection box after the cursor moves.

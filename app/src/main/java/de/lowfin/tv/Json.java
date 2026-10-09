@@ -19,4 +19,9 @@ final class Json {
         if ("Episode".equals(item.optString("Type"))) return "S"+item.optInt("ParentIndexNumber")+" · E"+item.optInt("IndexNumber")+"  "+name;
         return name;
     }
+    static String genres(JSONObject item) {
+        java.util.Set<String> names=new java.util.LinkedHashSet<>(); JSONArray genres=array(item,"Genres");
+        for(int i=0;i<genres.length()&&names.size()<3;i++) { Object value=genres.opt(i); if(value instanceof String&&!((String)value).trim().isEmpty()) names.add(((String)value).trim()); }
+        return String.join(" · ",names);
+    }
 }

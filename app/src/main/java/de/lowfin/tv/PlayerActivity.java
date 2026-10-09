@@ -41,7 +41,7 @@ public final class PlayerActivity extends Activity {
     private boolean initialAudioApplied;
     private volatile int generation;
     private String sourceId,sessionId,liveId,method="DirectPlay";
-    private boolean live,started,forceHls,released,subtitleChosen;
+    private boolean live,started,forceHls,released,subtitleChosen,revealControlsOnStart=true;
     private final ExecutorService network=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
     private long lastReport;
@@ -127,10 +127,12 @@ public final class PlayerActivity extends Activity {
             else { forceHls=true; load(position(),true); }
         }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
-    private void load(long position,boolean keepSelections) {
+    private void load(long position,boolean keepSelections) { load(position,keepSelections,true); }
+    private void load(long position,boolean keepSelections,boolean revealControls) {
+        revealControlsOnStart=revealControls;
         seekGesture.reset(); bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
-        message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); updateChromeTitle(); showChrome(false);
+        message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); updateChromeTitle(); if(revealControlsOnStart) showChrome(false); else hideChrome();
         final String id=item.optString("Id"); final boolean isLive=live;
         final String requestedSource=sourceId; final int requestedAudio=audio,requestedSubtitle=subtitle; final boolean force=forceHls;
         if(isLive) app.settings.edit().putString("lastChannel",id).apply();
@@ -238,7 +240,7 @@ public final class PlayerActivity extends Activity {
                 if(state==Player.STATE_READY) {
                     liveBuffer.reset();
                     bufferBar.setVisibility(View.GONE); message.setVisibility(View.GONE);
-                    showChrome(false);
+                    if(!started&&revealControlsOnStart) showChrome(false);
                     if(!started) { if(live&&lastReport==0) chrome.resetLiveClock(); started=true; report("",player.getCurrentPosition()); lastReport=SystemClock.elapsedRealtime(); }
                 }
                 if(state==Player.STATE_ENDED&&!live) {
@@ -250,7 +252,7 @@ public final class PlayerActivity extends Activity {
                 bufferBar.setVisibility(View.GONE);
                 if(g!=generation||released) return;
                 if(live&&liveCandidate+1<liveCandidates.size()) { retryLiveTransport(); return; }
-                if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true); }
+                if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true,revealControlsOnStart); }
                 else { message.setText(I18n.text("Wiedergabefehler: ")+error.getErrorCodeName()+I18n.text("\nZurück oder erneut ‚Über Server abspielen‘ wählen.")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
             }
         });
@@ -314,7 +316,7 @@ public final class PlayerActivity extends Activity {
             names.add(s.optString("DisplayTitle",s.optString("Language",I18n.text("Spur ")+s.optInt("Index")))); indices.add(s.optInt("Index"));
         }
         if(names.isEmpty()) { toast(I18n.text("Keine weiteren Spuren")); return; }
-        new AlertDialog.Builder(this).setTitle(type.equals("Audio")?I18n.text("Tonspur"):I18n.text("Untertitel")).setItems(names.toArray(new String[0]),(d,w)-> { if(type.equals("Subtitle")) subtitleChosen=true; long p=position(); if(type.equals("Subtitle")&&indices.get(w)==-1&&player!=null) { subtitle=-1; player.setTrackSelectionParameters(SubtitlePolicy.off(player.getTrackSelectionParameters())); return; } if(type.equals("Audio")&&method.equals("DirectPlay")&&selectLocalAudio(indices.get(w))) { audio=indices.get(w); return; } if(type.equals("Audio")) audio=indices.get(w); else subtitle=indices.get(w); forceHls=app.settings.getBoolean("serverFallback",false); load(p,true); }).setNegativeButton(I18n.text("Abbrechen"),null).show();
+        new AlertDialog.Builder(this).setTitle(type.equals("Audio")?I18n.text("Tonspur"):I18n.text("Untertitel")).setItems(names.toArray(new String[0]),(d,w)-> { if(type.equals("Subtitle")) subtitleChosen=true; long p=position(); if(type.equals("Subtitle")&&indices.get(w)==-1&&player!=null) { subtitle=-1; player.setTrackSelectionParameters(SubtitlePolicy.off(player.getTrackSelectionParameters())); return; } if(type.equals("Audio")&&method.equals("DirectPlay")&&selectLocalAudio(indices.get(w))) { audio=indices.get(w); return; } if(type.equals("Audio")) audio=indices.get(w); else subtitle=indices.get(w); forceHls=app.settings.getBoolean("serverFallback",false); load(p,true,revealControlsOnStart); }).setNegativeButton(I18n.text("Abbrechen"),null).show();
     }
     private void liveTracks(String type) {
         boolean text=type.equals("Subtitle"); int trackType=text?C.TRACK_TYPE_TEXT:C.TRACK_TYPE_AUDIO;
@@ -366,7 +368,7 @@ public final class PlayerActivity extends Activity {
             else if(episodes.length()==1&&id.equals(episodes.optJSONObject(0).optString("Id"))) next=null;
             JSONObject chosen=next;
             runOnUiThread(()-> { if(g!=generation||released) return; if(chosen==null) { toast(I18n.text("Keine weitere Folge")); if(automatic) finish(); return; }
-                cleanupSession(); item=chosen; audio=-1; sourceId=null; forceHls=false; load(0,false);
+                cleanupSession(); item=chosen; audio=-1; sourceId=null; forceHls=false; load(0,false,!automatic);
             });
         } catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(I18n.text("Nächste Folge konnte nicht geladen werden")); }); } });
     }

@@ -317,7 +317,7 @@ public final class MainActivity extends Activity {
         grid.setAdapter(adapter); body.addView(grid,new LinearLayout.LayoutParams(-1,0,1));
         homeDescription=Ui.column(this); homeDescription.setPadding(Ui.dp(this,5),Ui.dp(this,10),Ui.dp(this,14),0); homeDescription.setVisibility(View.GONE);
         homeFilmTitle=Ui.title(this,"",21); homeFilmTitle.setSingleLine(true); homeFilmTitle.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmTitle);
-        homeFilmMeta=Ui.text(this,"",11,Ui.MUTED); homeDescription.addView(homeFilmMeta); Ui.space(homeDescription,6);
+        homeFilmMeta=Ui.text(this,"",11,Ui.MUTED); homeFilmMeta.setSingleLine(true); homeFilmMeta.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmMeta); Ui.space(homeDescription,6);
         homeRatings=new RatingsRow(this); homeDescription.addView(homeRatings); Ui.space(homeDescription,6);
         homeFilmOverview=Ui.text(this,"",14,0xffdddddf); homeFilmOverview.setMaxLines(3); homeFilmOverview.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmOverview,new LinearLayout.LayoutParams(-1,0,1));
         homeFilmOverview.addOnLayoutChangeListener((view,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)-> {
@@ -401,7 +401,7 @@ public final class MainActivity extends Activity {
         homeFilmTitle.setText(film.optString("Name"));
         List<String> facts=new ArrayList<>(); if(film.optInt("ProductionYear")>0) facts.add(""+film.optInt("ProductionYear"));
         if(film.optLong("RunTimeTicks")>0) facts.add(film.optLong("RunTimeTicks")/600000000+" min");
-        if(!film.optString("OfficialRating").isEmpty()) facts.add(film.optString("OfficialRating")); homeFilmMeta.setText(String.join("  ·  ",facts));
+        if(!film.optString("OfficialRating").isEmpty()) facts.add(film.optString("OfficialRating")); String genreText=Json.genres(film); if(!genreText.isEmpty()) facts.add(genreText); homeFilmMeta.setText(String.join("  ·  ",facts));
         homeFilmOverview.setText(android.text.Html.fromHtml(film.optString("Overview",I18n.text("Keine Beschreibung vorhanden")),android.text.Html.FROM_HTML_MODE_LEGACY));
     }
     private void recommendationItems() {
@@ -531,7 +531,7 @@ public final class MainActivity extends Activity {
         TextView eyebrow=Ui.text(this,"",11,Ui.MUTED); eyebrow.setLetterSpacing(.12f); content.addView(eyebrow); Ui.space(content,5);
         TextView title=Ui.title(this,"",27); title.setMaxLines(2); title.setEllipsize(android.text.TextUtils.TruncateAt.END); content.addView(title); Ui.space(content,8);
         TextView meta=Ui.text(this,"",13,Ui.MUTED); content.addView(meta); Ui.space(content,8);
-        TextView genres=Ui.text(this,"",12,Ui.MUTED); content.addView(genres); Ui.space(content,8);
+        TextView genres=Ui.text(this,"",12,Ui.MUTED); genres.setSingleLine(true); genres.setEllipsize(android.text.TextUtils.TruncateAt.END); content.addView(genres); Ui.space(content,8);
         RatingsRow ratings=new RatingsRow(this); content.addView(ratings); Ui.space(content,12);
         Ui.space(detail,16);
         HorizontalScrollView actionScroll=new HorizontalScrollView(this); actionScroll.setHorizontalScrollBarEnabled(false);
@@ -546,7 +546,7 @@ public final class MainActivity extends Activity {
             eyebrow.setText(series?I18n.text("SERIE"):episode?j.optString("SeriesName",I18n.text("FOLGE")).toUpperCase(java.util.Locale.GERMAN):I18n.text("FILM")); title.setText(j.optString("Name"));
             java.util.List<String> facts=new ArrayList<>(); if(episode) facts.add(I18n.text("Staffel ")+j.optInt("ParentIndexNumber")+I18n.text(" · Folge ")+j.optInt("IndexNumber"));
             if(j.optInt("ProductionYear")>0) facts.add(""+j.optInt("ProductionYear")); if(j.optLong("RunTimeTicks")>0) facts.add(j.optLong("RunTimeTicks")/600000000+" min"); if(!Json.str(j,"OfficialRating").isEmpty()) facts.add(Json.str(j,"OfficialRating"));
-            meta.setText(String.join("  ·  ",facts)); java.util.List<String> names=new ArrayList<>(); JSONArray genre=Json.array(j,"Genres"); for(int i=0;i<Math.min(genre.length(),3);i++) names.add(genre.optString(i)); genres.setText(String.join("  /  ",names)); genres.setVisibility(names.isEmpty()?View.GONE:View.VISIBLE);
+            meta.setText(String.join("  ·  ",facts)); String genreText=Json.genres(j); genres.setText(genreText); genres.setVisibility(genreText.isEmpty()?View.GONE:View.VISIBLE);
             if(detailBackdrop!=null) app.images.backdrop(detailBackdrop,j);
             overview.setText(j.optString("Overview",I18n.text("Keine Beschreibung vorhanden"))); image.ratio(Artwork.ratio(j,false)); image.crop(Artwork.crop(j,false)); image.getLayoutParams().width=Ui.dp(this,Artwork.ratio(j,false)>1?224:126); app.images.show(image,j);
             int focusPlay=-1; for(int i=0;i<playActions.getChildCount();i++) if(playActions.getChildAt(i).hasFocus()) focusPlay=i;
