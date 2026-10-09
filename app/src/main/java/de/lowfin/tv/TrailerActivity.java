@@ -50,7 +50,7 @@ public final class TrailerActivity extends Activity {
         player=new ExoPlayer.Builder(this).setMediaSourceFactory(new DefaultMediaSourceFactory(http)).build(); video.setPlayer(player);
         player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(1280,720).setPreferredVideoMimeType(MimeTypes.VIDEO_H264).build());
         player.addListener(new Player.Listener() {
-            @Override public void onPlaybackStateChanged(int state) { buffer.setVisibility(state==Player.STATE_BUFFERING?View.VISIBLE:View.GONE); status.setText(state==Player.STATE_BUFFERING?I18n.text("Trailer wird gepuffert …"):state==Player.STATE_ENDED?I18n.text("Trailer beendet"):""); if(state==Player.STATE_READY) showChrome(true); }
+            @Override public void onPlaybackStateChanged(int state) { if(state==Player.STATE_ENDED) { finish(); return; } buffer.setVisibility(state==Player.STATE_BUFFERING?View.VISIBLE:View.GONE); status.setText(state==Player.STATE_BUFFERING?I18n.text("Trailer wird gepuffert …"):state==Player.STATE_ENDED?I18n.text("Trailer beendet"):""); if(state==Player.STATE_READY) showChrome(true); }
             @Override public void onPlayerError(PlaybackException error) { buffer.setVisibility(View.GONE); status.setText(I18n.text("YouTube konnte nicht geladen werden")); showChrome(true); }
         });
         app.io.execute(()-> { try { String url=new YouTubeStreams().resolve(id); runOnUiThread(()-> { if(destroyed) return; player.setMediaItem(MediaItem.fromUri(url)); player.prepare(); player.setPlayWhenReady(active); }); }

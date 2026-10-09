@@ -42,10 +42,10 @@ final class Ui {
     }
     static void navigation(Button button,boolean selected) {
         button.setTextSize(13); button.setTextColor(selected?Color.WHITE:MUTED);
-        button.setBackground(background(selected?0xff252528:Color.TRANSPARENT,0));
-        Accent.bind(button,(view,color)->view.setBackground(background(view.isFocused()?0xff38383c:selected?0xff252528:Color.TRANSPARENT,view.isFocused()?color:0)));
+        button.setBackground(background(Color.TRANSPARENT,0));
+        Accent.bind(button,(view,color)->view.setBackground(background(view.isFocused()?0xff38383c:Color.TRANSPARENT,view.isFocused()?color:0)));
         button.setOnFocusChangeListener((view,focused)-> {
-            view.setBackground(background(focused?0xff38383c:selected?0xff252528:Color.TRANSPARENT,focused?Accent.color:0));
+            view.setBackground(background(focused?0xff38383c:Color.TRANSPARENT,focused?Accent.color:0));
             button.setTextColor(focused||selected?Color.WHITE:MUTED); view.animate().withEndAction(null).cancel(); view.setScaleX(1); view.setScaleY(1); view.setAlpha(1); view.setPressed(false);
         });
     }

@@ -42,6 +42,16 @@ public class PlayerChromeTest {
         chrome.play.performClick(); chrome.options.performClick(); assertEquals(1,toggles); assertEquals(1,options);
         screenshot("player-hd.png");
     }
+    @Test public void seekFocusHasClearFrameAndLargerMarkerWithoutSeeking() throws Exception {
+        setup(false); layout(); chrome.play.requestFocus(); int small=chrome.timeline.getThumb().getIntrinsicWidth(),position=chrome.timeline.getProgress();
+        assertTrue(chrome.timeline.requestFocus()); layout();
+        assertTrue(chrome.timeline.getThumb().getIntrinsicWidth()>small); assertEquals(Ui.dp(activity.get(),20),chrome.timeline.getThumb().getBounds().width());
+        assertTrue(Color.alpha(((android.graphics.drawable.GradientDrawable)chrome.timeline.getBackground()).getColor().getDefaultColor())>0);
+        assertEquals(Ui.dp(activity.get(),5),((android.graphics.drawable.LayerDrawable)chrome.timeline.getProgressDrawable()).getLayerHeight(0));
+        assertEquals(position,chrome.timeline.getProgress()); assertEquals(0,seek); screenshot("player-seek-focused-hd.png");
+        chrome.play.requestFocus(); assertEquals(small,chrome.timeline.getThumb().getIntrinsicWidth());
+        assertEquals(Color.TRANSPARENT,((android.graphics.drawable.GradientDrawable)chrome.timeline.getBackground()).getColor().getDefaultColor());
+    }
     @Test public void liveTransportHasNoFakeSeekBar() throws Exception {
         setup(true); layout(); assertEquals(View.GONE,chrome.timeline.getVisibility()); assertEquals("0:00",chrome.current.getText().toString()); screenshot("player-live-hd.png");
     }
