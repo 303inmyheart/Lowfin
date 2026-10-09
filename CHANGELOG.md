@@ -9,6 +9,14 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.4
+
+- Home entry focuses the first Continue watching item instead of its More card after asynchronous loading.
+- Bouncing buffering animation also covers opening streams.
+- Player options sit below the timeline beside transport controls. Up/down navigation selects timeline/play; Menu opens options.
+- Held remote seeking previews an accelerating target starting at 5 seconds and commits once on release; Back cancels the preview.
+- Series-only library tab lists resumable episodes scoped to that library, with direct resume and account-scoped offline caching.
+
 ## 0.7.3
 
 - Animated slim buffering bar with a softly bouncing accent gradient. Animation stops when hidden, detached or the player leaves the foreground. Error messages remain readable.

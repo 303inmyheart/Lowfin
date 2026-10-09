@@ -8,7 +8,7 @@ import android.widget.*;
 
 /** Compact native TV transport. The video remains unobstructed above the bottom gradient. */
 final class PlayerChrome extends LinearLayout {
-    interface Actions { void toggle(); void seek(long millis); void seekTo(long millis); void options(); void next(); void channels(); }
+    interface Actions { void toggle(); void seek(long millis); void seekTo(long millis); void options(); void next(); void channels(); default boolean seekHeld(int direction,KeyEvent event) { return false; } }
     final TextView title,caption,current,remaining;
     final Button play,options;
     final SeekBar timeline;
@@ -18,7 +18,7 @@ final class PlayerChrome extends LinearLayout {
         super(context); setOrientation(VERTICAL); setPadding(Ui.dp(context,32),Ui.dp(context,30),Ui.dp(context,32),Ui.dp(context,16));
         GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x0009090b,0xe609090b,0xf909090b}); setBackground(gradient);
         LinearLayout heading=Ui.row(context); title=Ui.title(context,"",18); title.setSingleLine(true); title.setEllipsize(android.text.TextUtils.TruncateAt.END); heading.addView(title,new LayoutParams(0,-2,1));
-        options=Ui.quiet(context,I18n.text("⋯  Optionen"),actions::options); heading.addView(options,new LayoutParams(-2,Ui.dp(context,36))); addView(heading);
+        options=Ui.quiet(context,I18n.text("⋯  Optionen"),actions::options); addView(heading);
         caption=Ui.text(context,"",11,Ui.MUTED); caption.setSingleLine(true); addView(caption); Ui.space(this,6);
         timeline=new SeekBar(context); timeline.setMax(10000); timeline.setPadding(Ui.dp(context,5),0,Ui.dp(context,5),0);
         GradientDrawable track=Ui.background(0xff48484f,0),buffer=Ui.background(0xff85858d,0),progress=Ui.background(Accent.color,0);
@@ -34,12 +34,14 @@ final class PlayerChrome extends LinearLayout {
         });
         LinearLayout transport=Ui.row(context);
         current=Ui.text(context,live?"● LIVE":"0:00",11,Color.WHITE); transport.addView(current,new LayoutParams(Ui.dp(context,76),-2));
-        if(!live) transport.addView(Ui.quiet(context,"−"+context.getSharedPreferences("settings",0).getInt("seekSeconds",10)+" s",()->actions.seek(-context.getSharedPreferences("settings",0).getInt("seekSeconds",10)*1000L)),new LayoutParams(-2,Ui.dp(context,36)));
+        if(!live) transport.addView(Ui.quiet(context,"−5 s",()->actions.seek(-5000L)),new LayoutParams(-2,Ui.dp(context,36)));
         play=Ui.primary(context,"Ⅱ",actions::toggle); play.setTextSize(19); play.setContentDescription("Pause"); LayoutParams playParams=new LayoutParams(Ui.dp(context,48),Ui.dp(context,36)); playParams.setMargins(Ui.dp(context,8),0,Ui.dp(context,8),0); transport.addView(play,playParams);
-        if(!live) transport.addView(Ui.quiet(context,"+"+context.getSharedPreferences("settings",0).getInt("seekSeconds",10)+" s",()->actions.seek(context.getSharedPreferences("settings",0).getInt("seekSeconds",10)*1000L)),new LayoutParams(-2,Ui.dp(context,36)));
+        if(!live) transport.addView(Ui.quiet(context,"+5 s",()->actions.seek(5000L)),new LayoutParams(-2,Ui.dp(context,36)));
         View spacer=new View(context); transport.addView(spacer,new LayoutParams(0,1,1));
         if(live) transport.addView(Ui.quiet(context,I18n.text("Sender"),actions::channels),new LayoutParams(-2,Ui.dp(context,36)));
         else if(episode) transport.addView(Ui.quiet(context,I18n.text("Nächste Folge  ›"),actions::next),new LayoutParams(-2,Ui.dp(context,36)));
+        transport.addView(options,new LayoutParams(-2,Ui.dp(context,36)));
+        for(int i=0;i<transport.getChildCount();i++) { View button=transport.getChildAt(i); if(button instanceof Button) { String label=((Button)button).getText().toString(); if(label.equals("−5 s")||label.equals("+5 s")) button.setOnKeyListener((v,key,event)->(key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER)&&actions.seekHeld(label.startsWith("−")?-1:1,event)); } }
         remaining=Ui.text(context,"",11,Ui.MUTED); remaining.setGravity(Gravity.END); transport.addView(remaining,new LayoutParams(Ui.dp(context,76),-2)); addView(transport);
     }
     void update(long position,long buffered,long length,boolean playing,boolean live) {
@@ -49,5 +51,6 @@ final class PlayerChrome extends LinearLayout {
         if(!dragging) timeline.setProgress(length>0?(int)Math.min(10000,position*10000/length):0);
         timeline.setSecondaryProgress(length>0?(int)Math.min(10000,buffered*10000/length):0);
     }
+    void preview(long position,long length,long step,boolean playing) { update(position,position,length,playing,false); remaining.setText("±"+step/1000+" s"); }
     static String time(long millis) { long seconds=Math.max(0,millis)/1000; return seconds>=3600?String.format(java.util.Locale.ROOT,"%d:%02d:%02d",seconds/3600,seconds/60%60,seconds%60):String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60); }
 }

@@ -299,4 +299,7 @@
     <string name="buffer_settings">RAM buffer · See advanced playback settings</string>
     <string name="default_subtitles">Enable subtitles by default</string>
     <string name="audio_automatic">Automatic</string>
+    <string name="all_series">All series</string>
+    <string name="started_episodes">Continue episodes</string>
+    <string name="dynamic_seek_help">Seeking starts at 5 seconds and accelerates while held.</string>
 </resources>

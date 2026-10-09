@@ -38,6 +38,7 @@ public class PlayerChromeTest {
         setup(false); layout(); assertTrue(chrome.getMeasuredHeight()<230);
         assertEquals("10:15",chrome.current.getText().toString()); assertEquals("−34:45",chrome.remaining.getText().toString());
         assertTrue(chrome.timeline.getSecondaryProgress()>chrome.timeline.getProgress());
+        assertTrue(chrome.options.getTop()+((View)chrome.options.getParent()).getTop()>chrome.timeline.getTop());
         chrome.play.performClick(); chrome.options.performClick(); assertEquals(1,toggles); assertEquals(1,options);
         screenshot("player-hd.png");
     }

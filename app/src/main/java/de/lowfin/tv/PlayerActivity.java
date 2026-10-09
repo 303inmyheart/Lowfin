@@ -31,6 +31,8 @@ public final class PlayerActivity extends Activity {
     private PlayerChrome chrome;
     private TextView message;
     private BufferBar bufferBar;
+    private final SeekGesture seekGesture=new SeekGesture();
+    private int seekDirection;
     private Button skip;
     private long skipTarget,requestedPosition;
     private int audio=-1,subtitle=-1;
@@ -44,10 +46,10 @@ public final class PlayerActivity extends Activity {
     private List<String> liveCandidates=Collections.emptyList();
     private int liveCandidate;
     private final LiveBufferWatchdog liveBuffer=new LiveBufferWatchdog();
-    private final Runnable hideControls=()-> { if(player!=null&&player.getPlayWhenReady()) hideChrome(); };
+    private final Runnable hideControls=()-> { if(player!=null&&player.getPlayWhenReady()&&!seekGesture.active()) hideChrome(); };
     private final Runnable tick=new Runnable() { @Override public void run() {
         if(released||player==null) return;
-        if(chrome!=null&&chrome.getVisibility()==View.VISIBLE) chrome.update(player.getCurrentPosition(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
+        if(chrome!=null&&chrome.getVisibility()==View.VISIBLE&&!seekGesture.active()) chrome.update(player.getCurrentPosition(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
         if(live&&player.getPlaybackState()==Player.STATE_BUFFERING) {
             int action=liveBuffer.poll(SystemClock.elapsedRealtime());
             if(action==LiveBufferWatchdog.RECONNECT) { retryLiveTransport(); message.setText(I18n.text("Live-Stream wird erneut verbunden …")); }
@@ -79,6 +81,7 @@ public final class PlayerActivity extends Activity {
         chrome=new PlayerChrome(this,live,"Episode".equals(item.optString("Type")),new PlayerChrome.Actions() {
             @Override public void toggle() { if(player!=null) { if(player.getPlayWhenReady()) player.pause(); else player.play(); showChrome(false); } }
             @Override public void seek(long delta) { seekTo(position()+delta); }
+            @Override public boolean seekHeld(int direction,KeyEvent event) { return heldSeek(direction,event); }
             @Override public void seekTo(long target) { PlayerActivity.this.seekTo(target); }
             @Override public void options() { optionsMenu(); }
             @Override public void next() { nextEpisode(false); }
@@ -97,7 +100,7 @@ public final class PlayerActivity extends Activity {
         chrome.caption.setText(live?"Live TV":item.optString("Type").equals("Episode")?Json.label(item):item.optString("ProductionYear",""));
     }
     private void showChrome(boolean focus) {
-        chrome.setVisibility(View.VISIBLE); if(player!=null) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
+        chrome.setVisibility(View.VISIBLE); if(player!=null&&!seekGesture.active()) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
         if(focus) chrome.play.requestFocus(); handler.removeCallbacks(hideControls); handler.postDelayed(hideControls,app.settings.getInt("controlsSeconds",5)*1000L);
     }
     private void hideChrome() { chrome.setVisibility(View.GONE); handler.removeCallbacks(hideControls); view.requestFocus(); }
@@ -115,9 +118,9 @@ public final class PlayerActivity extends Activity {
         }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
     private void load(long position,boolean keepSelections) {
-        bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
+        seekGesture.reset(); bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
-        bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); message.setText(I18n.text("Stream wird geöffnet …")); updateChromeTitle(); showChrome(false);
+        message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); updateChromeTitle(); showChrome(false);
         final String id=item.optString("Id"); final boolean isLive=live;
         final String requestedSource=sourceId; final int requestedAudio=audio,requestedSubtitle=subtitle; final boolean force=forceHls;
         if(isLive) app.settings.edit().putString("lastChannel",id).apply();
@@ -386,22 +389,49 @@ public final class PlayerActivity extends Activity {
             .setPositiveButton(I18n.text("Aufnehmen"),(d,w)-> { network.execute(()-> { try { JSONObject timer=api.get("/LiveTv/Timers/Defaults","ProgramId",p.optString("Id")); timer.put("ProgramId",p.optString("Id")); api.post("/LiveTv/Timers",timer); runOnUiThread(()->toast(I18n.text("Aufnahme geplant"))); } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Aufnahme konnte nicht geplant werden"))); } }); }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
     private void toast(String s) { if(!released) Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
+    private boolean heldSeek(int direction,KeyEvent event) {
+        if(player==null||live) return true;
+        if(event.getAction()==KeyEvent.ACTION_DOWN) {
+            long now=SystemClock.elapsedRealtime(),length=player.getDuration();
+            if(!seekGesture.active()) { seekDirection=direction; seekGesture.begin(event.getKeyCode(),direction,position(),now,length); }
+            else seekGesture.repeat(now,length);
+            showChrome(false); handler.removeCallbacks(hideControls);
+            chrome.preview(seekGesture.target(),length,SeekGesture.step(Math.max(0,event.getEventTime()-event.getDownTime())),player.getPlayWhenReady());
+        } else if(event.getAction()==KeyEvent.ACTION_UP&&seekGesture.active()) {
+            long target=seekGesture.target(); seekGesture.reset();
+            if(!event.isCanceled()) seekTo(target); else showChrome(false);
+        }
+        return true;
+    }
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        int remote=e.getKeyCode();
+        if(seekGesture.active()&&remote==seekGesture.key()) return heldSeek(seekDirection,e);
+        boolean arrow=remote==KeyEvent.KEYCODE_DPAD_LEFT||remote==KeyEvent.KEYCODE_DPAD_RIGHT;
+        boolean mediaSeek=remote==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD||remote==KeyEvent.KEYCODE_MEDIA_REWIND;
+        if(!live&&(mediaSeek||arrow&&(chrome.getVisibility()!=View.VISIBLE||chrome.timeline.hasFocus()||view.hasFocus()))) {
+            if(e.getAction()==KeyEvent.ACTION_DOWN) { heldSeek(remote==KeyEvent.KEYCODE_DPAD_RIGHT||remote==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD?1:-1,e); chrome.timeline.requestFocus(); }
+            return true;
+        }
         if(e.getAction()==KeyEvent.ACTION_DOWN) {
             int key=e.getKeyCode();
             if(live&&(key==KeyEvent.KEYCODE_CHANNEL_UP||key==KeyEvent.KEYCODE_CHANNEL_DOWN)) { zap(key==KeyEvent.KEYCODE_CHANNEL_UP?1:-1); return true; }
-            if(key==KeyEvent.KEYCODE_MENU||key==KeyEvent.KEYCODE_DPAD_UP&&(chrome.getVisibility()!=View.VISIBLE||view.hasFocus())) { showChrome(false); if(skip.getVisibility()==View.VISIBLE) skip.requestFocus(); else chrome.options.requestFocus(); return true; }
-            if(key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER) { if(chrome.getVisibility()!=View.VISIBLE) { showChrome(true); return true; } if(view.hasFocus()) { chrome.play.requestFocus(); chrome.play.performClick(); return true; } }
-            if((key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT)&&chrome.getVisibility()!=View.VISIBLE&&!live) { seekTo(position()+(key==KeyEvent.KEYCODE_DPAD_RIGHT?app.settings.getInt("seekSeconds",10)*1000L:-app.settings.getInt("seekSeconds",10)*1000L)); return true; }
+            if(key==KeyEvent.KEYCODE_MENU) { if(e.getRepeatCount()==0) { showChrome(false); chrome.options.requestFocus(); } return true; }
+            if(key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_DOWN) {
+                if(chrome.getVisibility()!=View.VISIBLE||view.hasFocus()) { showChrome(true); if(key==KeyEvent.KEYCODE_DPAD_UP&&skip.getVisibility()==View.VISIBLE) skip.requestFocus(); return true; }
+                if(!live&&key==KeyEvent.KEYCODE_DPAD_UP&&!chrome.timeline.hasFocus()&&!skip.hasFocus()) { chrome.timeline.requestFocus(); return true; }
+                if(key==KeyEvent.KEYCODE_DPAD_UP&&chrome.timeline.hasFocus()) { if(skip.getVisibility()==View.VISIBLE) skip.requestFocus(); return true; }
+                if(key==KeyEvent.KEYCODE_DPAD_DOWN&&chrome.timeline.hasFocus()) { chrome.play.requestFocus(); return true; }
+                if(key==KeyEvent.KEYCODE_DPAD_DOWN&&chrome.hasFocus()) { hideChrome(); return true; }
+            }
+            if(key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER) { if(chrome.getVisibility()!=View.VISIBLE) { showChrome(true); return true; } if(view.hasFocus()||chrome.timeline.hasFocus()) { if(e.getRepeatCount()==0) { chrome.play.requestFocus(); chrome.play.performClick(); } return true; } }
             if((key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE||key==KeyEvent.KEYCODE_MEDIA_PLAY||key==KeyEvent.KEYCODE_MEDIA_PAUSE)&&player!=null) {
                 if(key==KeyEvent.KEYCODE_MEDIA_PAUSE||key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE&&player.getPlayWhenReady()) player.pause(); else player.play(); showChrome(false); return true;
             }
-            if(key==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD||key==KeyEvent.KEYCODE_MEDIA_REWIND) { seekTo(position()+(key==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD?app.settings.getInt("seekSeconds",10)*1000L:-app.settings.getInt("seekSeconds",10)*1000L)); return true; }
             if(chrome.getVisibility()==View.VISIBLE&&key!=KeyEvent.KEYCODE_BACK) { handler.removeCallbacks(hideControls); handler.postDelayed(hideControls,app.settings.getInt("controlsSeconds",5)*1000L); }
         }
         return super.dispatchKeyEvent(e);
     }
-    @Override public void onBackPressed() { if(chrome!=null&&chrome.getVisibility()==View.VISIBLE) hideChrome(); else finish(); }
+    @Override public void onBackPressed() { if(seekGesture.active()) { seekGesture.reset(); showChrome(true); } else if(chrome!=null&&chrome.getVisibility()==View.VISIBLE) hideChrome(); else finish(); }
     @Override protected void onSaveInstanceState(Bundle state) { state.putLong("position",position()); state.putInt("audioStreamIndex",audio); state.putString("mediaSourceId",sourceId); super.onSaveInstanceState(state); }
     @Override protected void onStop() { super.onStop(); release(); finish(); }
     private void release() {

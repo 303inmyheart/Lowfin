@@ -48,6 +48,7 @@ public class TvUiTest {
                     JSONArray seasons=new JSONArray(); for(int i=1;i<=45;i++) seasons.put(Json.obj("Id","s"+i,"ParentId","show","SeriesId","show","Type","Season","IndexNumber",i,"Name","Staffel "+i,"RecursiveItemCount",24,"ImageTags",Json.obj("Primary","season-poster"),"PrimaryImageAspectRatio",2.0/3));
                     return new MockResponse().setBody(Json.obj("Items",seasons,"TotalRecordCount",45).toString());
                 }
+                if(path.equals("/Users/user/Items")&&"IsResumable".equals(request.getRequestUrl().queryParameter("Filters"))) return new MockResponse().setBody(Json.obj("Items",Json.arr(episode("ep5",5,6000000000L)),"TotalRecordCount",1).toString());
                 if(path.equals("/Users/user/Items")) { boolean movies="Movie".equals(request.getRequestUrl().queryParameter("IncludeItemTypes"))||request.getRequestUrl().queryParameter("Genres")!=null; return new MockResponse().setBody(Json.obj("Items",Json.arr(movies?movie:series),"TotalRecordCount",1).toString()); }
                 if(path.equals("/Users/user/Items/show")) return new MockResponse().setBody(series.toString());
                 if(path.endsWith("/Items/Resume")) return new MockResponse().setBody(Json.obj("Items",Json.arr(episode("ep5",5,6000000000L)),"TotalRecordCount",1).toString());
@@ -117,8 +118,24 @@ public class TvUiTest {
         assertNotNull(findText(home,"Weiterschauen"));
         await(()-> { ArtworkView image=(ArtworkView)find(home,v->v instanceof ArtworkView); return image!=null&&image.getDrawable()!=null; }); screenshot("home-hd.png");
         HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)home.findViewHolderForAdapterPosition(0); assertNotNull(shelf); assertTrue(shelf.list.getChildCount()>0);
+        await(()->shelf.list.getChildAt(0).hasFocus());
         shelf.list.getChildAt(0).performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity(); assertNotNull(intent);
         assertEquals(600000L,intent.getLongExtra("position",-1)); assertEquals("ep5",new JSONObject(intent.getStringExtra("item")).optString("Id"));
+    }
+    @Test public void seriesLibraryHasScopedResumeTabAndLaunchesAtSavedPosition() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null);
+        View root=activity.get().findViewById(android.R.id.content);
+        findButton(root,"Meine Filme").performClick(); assertNull(findButton(root,"Begonnene Folgen"));
+        findButton(root,"Serien").performClick(); assertNotNull(findButton(root,"Alle Serien")); findButton(root,"Begonnene Folgen").performClick();
+        await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);
+        recycler().getChildAt(0).performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity();
+        assertEquals(PlayerActivity.class.getName(),intent.getComponent().getClassName()); assertEquals(600000L,intent.getLongExtra("position",-1));
+        String cached=app.library.state("seriesResume-shows-0"); assertTrue(cached.contains("ep5"));
+        boolean scoped=false; okhttp3.mockwebserver.RecordedRequest request;
+        while((request=server.takeRequest(100,java.util.concurrent.TimeUnit.MILLISECONDS))!=null) if("IsResumable".equals(request.getRequestUrl().queryParameter("Filters"))) { assertEquals("shows",request.getRequestUrl().queryParameter("ParentId")); assertEquals("Episode",request.getRequestUrl().queryParameter("IncludeItemTypes")); scoped=true; }
+        assertTrue(scoped);
     }
     @Test public void moreIsAPosterAtRowEndAndOpensTheCorrectListWithoutHomeActionButtons() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());

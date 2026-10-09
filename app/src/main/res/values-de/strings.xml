@@ -299,4 +299,7 @@
     <string name="buffer_settings">RAM-Puffer · siehe erweiterte Wiedergabeeinstellungen</string>
     <string name="default_subtitles">Untertitel standardmäßig aktivieren</string>
     <string name="audio_automatic">Automatisch</string>
+    <string name="all_series">Alle Serien</string>
+    <string name="started_episodes">Begonnene Folgen</string>
+    <string name="dynamic_seek_help">Seeken startet bei 5 Sekunden und beschleunigt beim Halten.</string>
 </resources>
