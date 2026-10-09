@@ -9,6 +9,11 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.6
+
+- Live TV identity displays the Jellyfin channel logo, preferring Logo artwork and falling back to Primary. Missing images retain the channel name.
+- Player channel picker shows proportional logos in fixed-size frames beside channel names and numbers, with recycled rows and cached artwork.
+
 ## 0.7.5
 
 - Series logo and episode identity appear at top left, with a fixed proportional logo frame and text fallback.

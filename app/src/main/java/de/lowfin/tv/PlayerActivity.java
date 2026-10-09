@@ -100,7 +100,8 @@ public final class PlayerActivity extends Activity {
     private void updateChromeTitle() {
         chrome.title.setText(item.optString("Type").equals("Episode")?item.optString("SeriesName",item.optString("Name")):item.optString("Name"));
         JSONObject artwork=Artwork.logo(item)!=null?item:logoSeries!=null&&logoSeries.optString("Id").equals(item.optString("SeriesId"))?logoSeries:null;
-        if(artwork!=null&&app.images!=null) app.images.logo(chrome.logo,artwork); else chrome.logo.setImageDrawable(null);
+        if(live&&app.images!=null) app.images.channelLogo(chrome.logo,item);
+        else if(artwork!=null&&app.images!=null) app.images.logo(chrome.logo,artwork); else chrome.logo.setImageDrawable(null);
         String series=item.optString("SeriesId");
         if(!series.isEmpty()&&Artwork.logo(item)==null&&!series.equals(logoRequest)) {
             logoRequest=series; final Api logoApi=app.api;
@@ -372,8 +373,8 @@ public final class PlayerActivity extends Activity {
     private void channels() {
         int g=generation;
         network.execute(()-> { try { List<JSONObject> list=new ArrayList<>(); JSONArray channels=Json.array(api.get("/LiveTv/Channels","UserId",api.account.user,"SortBy","SortName"),"Items");
-            String[] labels=new String[channels.length()]; for(int i=0;i<channels.length();i++) { JSONObject c=channels.optJSONObject(i); list.add(c); labels[i]=c.optString("ChannelNumber")+"  "+c.optString("Name"); }
-            runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Sender wechseln")).setItems(labels,(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
+            for(int i=0;i<channels.length();i++) { JSONObject c=channels.optJSONObject(i); if(c!=null) list.add(c); }
+            runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Sender wechseln")).setAdapter(new ChannelPicker(this,app.images,list),(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
         } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Senderliste nicht verfügbar"))); } });
     }
     private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; chrome.resetLiveClock(); live=true; audio=-1; sourceId=null; forceHls=false; load(0,false); }
