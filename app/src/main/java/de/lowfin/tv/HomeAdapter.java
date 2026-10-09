@@ -120,8 +120,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             adapter=new Cards(images,new ArrayList<>(),item->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) { if("More".equals(item.optString("Type"))) more.accept(position); else play.accept(item,position); } },(item,column)->{ int position=shelf.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION&&(focusedShelf<0||position==focusedShelf)) { lastColumn=column; selectedColumns.put(position,lastColumn); focused.accept("More".equals(item.optString("Type"))?(rows.get(position).isEmpty()?null:rows.get(position).get(rows.get(position).size()-1)):item,position); } },direction->{ int position=shelf.getBindingAdapterPosition(); int target=nextRow(position,direction); if(position!=RecyclerView.NO_POSITION&&target>=0) { move.accept(target); return true; } return false; }); shelf.list.setAdapter(adapter);
         }
         ((ShelfList)shelf.list).openMenu=openMenu;
-        List<JSONObject> cards=new ArrayList<>(data); if(!data.isEmpty()||!entryPending) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=index>=2; adapter.update(cards);
-        int height=index<2?180:204; for(JSONObject item:data) { double ratio=Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
+        List<JSONObject> cards=new ArrayList<>(data); if(!data.isEmpty()||!entryPending) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=index>=2; adapter.wide=index<2; adapter.update(cards);
+        int height=index<2?180:204; for(JSONObject item:data) { double ratio=index<2?16.0/9:Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
         ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); dimensions.height=Ui.dp(shelf.list.getContext(),height); shelf.list.setLayoutParams(dimensions);
         if(positions.containsKey(shelf.key)) shelf.list.getLayoutManager().onRestoreInstanceState(positions.get(shelf.key));
         shelf.list.post(()->focusPending(shelf));
@@ -177,7 +177,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         }
     }
     private static final class Cards extends RecyclerView.Adapter<Card> {
-        private final Images images; private boolean compact; private List<JSONObject> data; private final Consumer<JSONObject> open; private final BiConsumer<JSONObject,Integer> focused; private final IntPredicate move;
+        private final Images images; private boolean compact, wide; private List<JSONObject> data; private final Consumer<JSONObject> open; private final BiConsumer<JSONObject,Integer> focused; private final IntPredicate move;
         Cards(Images images,List<JSONObject> data,Consumer<JSONObject> open,BiConsumer<JSONObject,Integer> focused,IntPredicate move) { this.images=images; this.data=data; this.open=open; this.focused=focused; this.move=move; setHasStableIds(true); }
         @Override public long getItemId(int position) { return stableId(data.get(position)); }
         private long stableId(JSONObject j) { long hash=0xcbf29ce484222325L; for(char c:j.optString("Id").toCharArray()) { hash^=c; hash*=0x100000001b3L; } return hash; }
@@ -190,7 +190,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
                 @Override public boolean areContentsTheSame(int a,int b) { return before.get(a).toString().equals(next.get(b).toString()); }
             }); data=next; diff.dispatchUpdatesTo(this);
         }
-        @Override public int getItemViewType(int position) { return "More".equals(data.get(position).optString("Type"))?(data.get(position).optBoolean("Wide")?3:2):Artwork.ratio(data.get(position),true)<1?(compact?4:0):1; }
+        @Override public int getItemViewType(int position) { return "More".equals(data.get(position).optString("Type"))?(data.get(position).optBoolean("Wide")?3:2):!wide&&Artwork.ratio(data.get(position),true)<1?(compact?4:0):1; }
         @Override public int getItemCount() { return data.size(); }
         @Override public Card onCreateViewHolder(ViewGroup parent,int type) {
             Context c=parent.getContext(); LinearLayout box=Ui.column(c); Ui.cardFocus(box); box.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS); box.setPadding(Ui.dp(c,5),Ui.dp(c,5),Ui.dp(c,5),Ui.dp(c,5));
@@ -203,7 +203,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             return new Card(box,cover,progress,title,episode);
         }
         @Override public void onBindViewHolder(Card h,int index) {
-            JSONObject j=data.get(index); h.cover.ratio(j.optBoolean("Wide")?16.0/9:Artwork.ratio(j,true)); h.cover.crop(Artwork.crop(j,true)); boolean episode="Episode".equals(j.optString("Type"));
+            JSONObject j=data.get(index); h.cover.ratio(wide||j.optBoolean("Wide")?16.0/9:Artwork.ratio(j,true)); h.cover.crop(Artwork.crop(j,true)); boolean episode="Episode".equals(j.optString("Type"));
             h.title.setText(episode?j.optString("SeriesName",j.optString("Name")):j.optString("Name"));
             h.episode.setText(episode?Json.label(j):j.optString("ProductionYear","")+"  ·  "+j.optLong("RunTimeTicks")/600000000+" min");
             long pos=Json.position(j),duration=j.optLong("RunTimeTicks")/10000;
@@ -220,7 +220,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
                     return true;
                 } return false;
             });
-            if("More".equals(j.optString("Type"))) { h.cover.setTag(null); h.cover.setImageDrawable(new MoreArtwork()); h.episode.setText(I18n.text("Alle Titel")); } else images.show(h.cover,j,"Episode".equals(j.optString("Type"))); h.itemView.setContentDescription((episode?j.optString("SeriesName")+" · ":"")+Json.label(j)); h.itemView.setOnClickListener(v->open.accept(j));
+            if("More".equals(j.optString("Type"))) { h.cover.setTag(null); h.cover.setImageDrawable(new MoreArtwork()); h.episode.setText(I18n.text("Alle Titel")); } else images.show(h.cover,j,wide||"Episode".equals(j.optString("Type"))); h.itemView.setContentDescription((episode?j.optString("SeriesName")+" · ":"")+Json.label(j)); h.itemView.setOnClickListener(v->open.accept(j));
         }
         @Override public void onViewRecycled(Card h) { h.cover.setTag(null); h.cover.setImageDrawable(null); h.itemView.animate().cancel(); }
     }

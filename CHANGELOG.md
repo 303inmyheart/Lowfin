@@ -9,6 +9,13 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.7
+
+- Continue Watching movies use 16:9 Thumb/backdrop artwork, matching episodes and the More card. Library movie posters retain 2:3 frames.
+- Optional 2160p playback limit with the corresponding 3840-pixel width; density-aware artwork requests improve sharpness on higher-density TV displays. UI dimensions continue to use Android dp/sp scaling.
+- Additional optional streaming bitrate limits: 16, 25, 40 and 60 Mbit/s. Existing HD defaults are preserved.
+- Verified with 153 unit/UI tests, debug/release lint and a signed release build; physical 4K TV playback has not been verified.
+
 ## 0.7.6
 
 - Live TV identity displays the Jellyfin channel logo, preferring Logo artwork and falling back to Primary. Missing images retain the channel name.

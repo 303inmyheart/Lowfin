@@ -4,6 +4,7 @@ import org.json.*;
 
 /** Pure playback decisions, shared by the player and unit tests. */
 final class PlaybackPolicy {
+    static int width(int height) { return height>=2160?3840:height>=1080?1920:1280; }
     static boolean automatic(String type) { return "Intro".equalsIgnoreCase(type)||"Outro".equalsIgnoreCase(type); }
     static boolean active(JSONObject segment,long positionMs) {
         long start=segment.optLong("StartTicks")/10000, end=segment.optLong("EndTicks")/10000;
@@ -17,7 +18,7 @@ final class PlaybackPolicy {
                 "MaxAudioChannels",stereo?"2":"6","MinSegments",2,"SegmentLength",4,"BreakOnNonKeyFrames",false,"Context","Streaming")),
             "CodecProfiles",Json.arr(
                 Json.obj("Type","Video","Codec","h264","Conditions",Json.arr(
-                    condition("Width","LessThanEqual",height==720?"1280":"1920"), condition("Height","LessThanEqual",""+height),
+                    condition("Width","LessThanEqual",String.valueOf(width(height))), condition("Height","LessThanEqual",""+height),
                     condition("VideoBitDepth","LessThanEqual","8"),condition("VideoFramerate","LessThanEqual","30"))),
                 Json.obj("Type","VideoAudio","Conditions",Json.arr(condition("AudioChannels","LessThanEqual",stereo?"2":"6")))),
             "SubtitleProfiles",Json.arr(Json.obj("Format","srt","Method","External"),Json.obj("Format","vtt","Method","External"),

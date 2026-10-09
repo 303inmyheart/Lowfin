@@ -187,6 +187,21 @@ public class TvUiTest {
         findButton(root,"▶ Abspielen").performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity();
         assertEquals(3,intent.getIntExtra("audioStreamIndex",-1)); assertEquals("file-de",intent.getStringExtra("mediaSourceId"));
     }
+    @Test public void resumedMoviesUseLandscapeThumbsWithoutChangingLibraryPosters() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&((HomeAdapter)recycler().getAdapter()).rows.get(0).size()==1);
+        HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();
+        JSONObject movie=Json.obj("Id","resume-film","Type","Movie","Name","Film","ImageTags",Json.obj("Primary","poster","Thumb","thumb"));
+        adapter.rows.get(0).clear(); adapter.rows.get(0).add(movie); adapter.notifyItemChanged(0); layout();
+        HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);
+        ArtworkView cover=(ArtworkView)find(shelf.list.getChildAt(0),v->v instanceof ArtworkView); assertNotNull(cover);
+        assertEquals(16.0/9,(double)cover.getMeasuredWidth()/cover.getMeasuredHeight(),.015);
+        ImageView expected=new ImageView(activity.get()); app.images.show(expected,movie,true); assertEquals(expected.getTag(),cover.getTag());
+        assertEquals(2.0/3,Artwork.ratio(movie,false),.001);
+        assertEquals(1,shelf.list.getAdapter().getItemViewType(0));
+        assertEquals(3,shelf.list.getAdapter().getItemViewType(1));
+    }
     @Test public void episodeThumbnailsKeepTheirLandscapeRatio() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
