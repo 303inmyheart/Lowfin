@@ -35,6 +35,7 @@ final class Images {
     }
     void show(ImageView view,JSONObject item) { show(view,item,false,240); }
     void show(ImageView view,JSONObject item,boolean wide) { show(view,item,wide,240); }
+    void logo(ImageView view,JSONObject item) { JSONObject logo=Artwork.logo(item); if(logo==null) { view.setTag(null); view.setImageDrawable(null); } else show(view,logo,false,320); }
     void backdrop(ImageView view,JSONObject item) { JSONObject backdrop=Artwork.backdrop(item); if(backdrop==null) { view.setTag(null); view.setImageDrawable(null); } else show(view,backdrop,true,720); }
     private void show(ImageView view,JSONObject item,boolean wide,int width) {
         String key=key(item,wide,width); if(key.equals(view.getTag())&&view.getDrawable()!=null) return;

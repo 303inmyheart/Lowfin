@@ -33,6 +33,8 @@ public final class PlayerActivity extends Activity {
     private BufferBar bufferBar;
     private final SeekGesture seekGesture=new SeekGesture();
     private int seekDirection;
+    private String logoRequest="";
+    private JSONObject logoSeries;
     private Button skip;
     private long skipTarget,requestedPosition;
     private int audio=-1,subtitle=-1;
@@ -87,7 +89,7 @@ public final class PlayerActivity extends Activity {
             @Override public void next() { nextEpisode(false); }
             @Override public void channels() { PlayerActivity.this.channels(); }
         });
-        FrameLayout.LayoutParams bottom=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(chrome,bottom); updateChromeTitle();
+        FrameLayout.LayoutParams bottom=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(chrome,bottom); root.addView(chrome.identity,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP|Gravity.LEFT)); updateChromeTitle();
         message=Ui.text(this,I18n.text("Stream wird geöffnet …"),14,Color.WHITE); message.setGravity(Gravity.CENTER); message.setPadding(Ui.dp(this,20),Ui.dp(this,12),Ui.dp(this,20),Ui.dp(this,12)); message.setBackground(Ui.background(0xe619191c,0));
         FrameLayout.LayoutParams center=new FrameLayout.LayoutParams(Ui.dp(this,420),-2,Gravity.CENTER); root.addView(message,center);
         bufferBar=new BufferBar(this); bufferBar.setVisibility(View.GONE); root.addView(bufferBar,new FrameLayout.LayoutParams(Ui.dp(this,240),Ui.dp(this,20),Gravity.CENTER));
@@ -97,13 +99,20 @@ public final class PlayerActivity extends Activity {
     }
     private void updateChromeTitle() {
         chrome.title.setText(item.optString("Type").equals("Episode")?item.optString("SeriesName",item.optString("Name")):item.optString("Name"));
+        JSONObject artwork=Artwork.logo(item)!=null?item:logoSeries!=null&&logoSeries.optString("Id").equals(item.optString("SeriesId"))?logoSeries:null;
+        if(artwork!=null&&app.images!=null) app.images.logo(chrome.logo,artwork); else chrome.logo.setImageDrawable(null);
+        String series=item.optString("SeriesId");
+        if(!series.isEmpty()&&Artwork.logo(item)==null&&!series.equals(logoRequest)) {
+            logoRequest=series; final Api logoApi=app.api;
+            app.io.execute(()-> { try { JSONObject data=logoApi.item(series); runOnUiThread(()-> { if(!released&&series.equals(item.optString("SeriesId"))) { logoSeries=data; app.images.logo(chrome.logo,data); } }); } catch(Exception ignored) {} });
+        }
         chrome.caption.setText(live?"Live TV":item.optString("Type").equals("Episode")?Json.label(item):item.optString("ProductionYear",""));
     }
     private void showChrome(boolean focus) {
-        chrome.setVisibility(View.VISIBLE); if(player!=null&&!seekGesture.active()) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
+        chrome.setVisibility(View.VISIBLE); chrome.identity.setVisibility(View.VISIBLE); if(player!=null&&!seekGesture.active()) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
         if(focus) chrome.play.requestFocus(); handler.removeCallbacks(hideControls); handler.postDelayed(hideControls,app.settings.getInt("controlsSeconds",5)*1000L);
     }
-    private void hideChrome() { chrome.setVisibility(View.GONE); handler.removeCallbacks(hideControls); view.requestFocus(); }
+    private void hideChrome() { chrome.setVisibility(View.GONE); chrome.identity.setVisibility(View.GONE); handler.removeCallbacks(hideControls); view.requestFocus(); }
     private void seekTo(long target) {
         if(player==null||live) return; long duration=player.getDuration(); player.seekTo(Math.max(0,duration>0?Math.min(target,duration):target)); showChrome(false);
     }
@@ -229,7 +238,7 @@ public final class PlayerActivity extends Activity {
                     liveBuffer.reset();
                     bufferBar.setVisibility(View.GONE); message.setVisibility(View.GONE);
                     showChrome(false);
-                    if(!started) { started=true; report("",player.getCurrentPosition()); lastReport=SystemClock.elapsedRealtime(); }
+                    if(!started) { if(live&&lastReport==0) chrome.resetLiveClock(); started=true; report("",player.getCurrentPosition()); lastReport=SystemClock.elapsedRealtime(); }
                 }
                 if(state==Player.STATE_ENDED&&!live) {
                     if(app.settings.getBoolean("nextEpisode",true)&&"Episode".equals(item.optString("Type"))) nextEpisode(true);
@@ -367,7 +376,7 @@ public final class PlayerActivity extends Activity {
             runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Sender wechseln")).setItems(labels,(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
         } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Senderliste nicht verfügbar"))); } });
     }
-    private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; live=true; audio=-1; sourceId=null; forceHls=false; load(0,false); }
+    private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; chrome.resetLiveClock(); live=true; audio=-1; sourceId=null; forceHls=false; load(0,false); }
     private void zap(int direction) {
         int g=generation; String id=item.optString("Id");
         network.execute(()-> { try {

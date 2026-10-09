@@ -9,6 +9,13 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.5
+
+- Series logo and episode identity appear at top left, with a fixed proportional logo frame and text fallback.
+- Position/duration above the timeline on the left; estimated finish clock time on the right while playing.
+- Options precedes Next episode at the far right beneath the timeline.
+- Live TV displays elapsed viewing time instead of a media position.
+
 ## 0.7.4
 
 - Home entry focuses the first Continue watching item instead of its More card after asynchronous loading.

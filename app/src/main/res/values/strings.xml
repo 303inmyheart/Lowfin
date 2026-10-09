@@ -302,4 +302,5 @@
     <string name="all_series">All series</string>
     <string name="started_episodes">Continue episodes</string>
     <string name="dynamic_seek_help">Seeking starts at 5 seconds and accelerates while held.</string>
+    <string name="ends_at">"Ends at "</string>
 </resources>

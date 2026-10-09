@@ -302,4 +302,5 @@
     <string name="all_series">Alle Serien</string>
     <string name="started_episodes">Begonnene Folgen</string>
     <string name="dynamic_seek_help">Seeken startet bei 5 Sekunden und beschleunigt beim Halten.</string>
+    <string name="ends_at">"Ende um "</string>
 </resources>
