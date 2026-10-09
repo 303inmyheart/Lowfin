@@ -89,6 +89,45 @@ public class HomeChannelsTest {
         assertEquals("Weil du „Ein anderer Film“ gesehen hast",provider.byProviderId("channel","lowfin-recommendation-0").getAsString("display_name"));
         assertNull(provider.byProviderId("preview_program",account.scope()+":recommendation4"));
     }
+    @Test public void launcherHeadingsRefreshFromBadBoysToAsterixWithoutRecreatingChannel() throws Exception {
+        ContentResolver resolver=app.getContentResolver(); java.util.concurrent.atomic.AtomicReference<String> launcherTitle=new java.util.concurrent.atomic.AtomicReference<>();
+        java.util.concurrent.atomic.AtomicInteger refreshes=new java.util.concurrent.atomic.AtomicInteger();
+        ContentObserver launcher=new ContentObserver(null) {
+            @Override public void onChange(boolean selfChange,Uri uri) {
+                // A cached channel-list heading only reloads on collection notifications.
+                if(!TvContractCompat.Channels.CONTENT_URI.equals(uri)) return;
+                ContentValues row=provider.byProviderId("channel","lowfin-recommendation-0");
+                if(row!=null) { launcherTitle.set(row.getAsString("display_name")); refreshes.incrementAndGet(); }
+            }
+        };
+        resolver.registerContentObserver(TvContractCompat.Channels.CONTENT_URI,false,launcher);
+        try {
+            JSONArray rows=recommendationRows(1); rows.getJSONObject(0).put("BaselineItemName","Bad Boys"); app.library.state("homeRecommendations",rows.toString());
+            app.channels.publish(); await(()->"Weil du „Bad Boys“ gesehen hast".equals(launcherTitle.get()));
+            ContentValues channel=provider.byProviderId("channel","lowfin-recommendation-0"); long channelId=channel.getAsLong("_id"); Set<Long> ids=provider.ids("channel");
+            provider.browse("channel","lowfin-recommendation-0",false);
+            // Titles must refresh even if the preview program keeps the same item identity.
+            rows.getJSONObject(0).put("BaselineItemName","Asterix"); rows.getJSONObject(0).getJSONArray("Items").getJSONObject(0).put("Name","Asterix-Empfehlung");
+            app.library.state("homeRecommendations",rows.toString()); app.channels.publish();
+            await(()->"Weil du „Asterix“ gesehen hast".equals(launcherTitle.get()));
+            assertEquals(ids,provider.ids("channel")); ContentValues updated=provider.byProviderId("channel","lowfin-recommendation-0"); assertEquals(channelId,(long)updated.getAsLong("_id")); assertEquals(Integer.valueOf(0),updated.getAsInteger("browsable"));
+            assertEquals("Asterix-Empfehlung",provider.byProviderId("preview_program",account.scope()+":recommendation0").getAsString("title"));
+            int before=refreshes.get(); app.channels.publish(); Thread.sleep(100); assertEquals(before,refreshes.get());
+        } finally { resolver.unregisterContentObserver(launcher); }
+    }
+    @Test public void upgradeNotifiesAnAlreadyCorrectStoredHeadingOnce() throws Exception {
+        app.library.state("homeRecommendations",recommendationRows(1).toString()); app.channels.publish(); await(()->provider.count("watch_next_program")==2);
+        long channel=provider.byProviderId("channel","lowfin-recommendation-0").getAsLong("_id");
+        await(()->app.getSharedPreferences("tv-home",0).contains("notified-channel-label-v1-"+channel));
+        // Simulate an installed older build whose TV provider was correct but launcher cache stale.
+        app.getSharedPreferences("tv-home",0).edit().remove("notified-channel-label-v1-"+channel).apply();
+        java.util.concurrent.atomic.AtomicInteger refreshed=new java.util.concurrent.atomic.AtomicInteger(); ContentObserver observer=new ContentObserver(null) {
+            @Override public void onChange(boolean selfChange,Uri uri) { if(TvContractCompat.Channels.CONTENT_URI.equals(uri)) refreshed.incrementAndGet(); }
+        };
+        ContentResolver resolver=app.getContentResolver(); resolver.registerContentObserver(TvContractCompat.Channels.CONTENT_URI,false,observer);
+        try { app.channels.publish(); await(()->refreshed.get()>0); assertEquals(channel,(long)provider.byProviderId("channel","lowfin-recommendation-0").getAsLong("_id")); }
+        finally { resolver.unregisterContentObserver(observer); }
+    }
     @Test public void actorAndDirectorBucketsNeverBecomeTvChannels() throws Exception {
         app.library.state("homeRecommendations",Json.arr(Json.obj("BaselineItemName","Schauspieler","RecommendationType","HasActorFromRecentlyPlayed","Items",Json.arr(Json.obj("Id","film","Type","Movie"))),Json.obj("BaselineItemName","Regisseur","RecommendationType","HasDirectorFromRecentlyPlayed","Items",Json.arr(Json.obj("Id","other","Type","Movie")))).toString());
         app.channels.publish(); await(()->provider.count("watch_next_program")==2); assertEquals(4,provider.count("channel")); assertNull(provider.byProviderId("channel","lowfin-recommendation-0"));
@@ -147,7 +186,7 @@ public class HomeChannelsTest {
         synchronized void foreign(String table) { ContentValues v=new ContentValues(); v.put("_id",next++); v.put("package_name","another.app"); v.put("internal_provider_id","foreign"); v.put("browsable",1); rows(table).put(v.getAsLong("_id"),v); }
         synchronized void browse(String table,String id,boolean enabled) { for(ContentValues v:rows(table).values()) if(id.equals(v.getAsString("internal_provider_id"))) v.put("browsable",enabled?1:0); }
         @Override public synchronized Uri insert(Uri uri,ContentValues values) { ContentValues v=new ContentValues(values); v.put("_id",next++); v.put("package_name","de.lowfin.tv"); v.put("browsable",1); rows(table(uri)).put(v.getAsLong("_id"),v); return ContentUris.withAppendedId(uri,v.getAsLong("_id")); }
-        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; v.putAll(values); return 1; }
+        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return 1; }
         @Override public synchronized int delete(Uri uri,String where,String[] args) { return rows(table(uri)).remove(ContentUris.parseId(uri))==null?0:1; }
         @Override public synchronized Cursor query(Uri uri,String[] projection,String where,String[] args,String sort) {
             MatrixCursor out=new MatrixCursor(projection); String channel=uri.getQueryParameter("channel"); Long id=uri.getPathSegments().size()>1?ContentUris.parseId(uri):null;

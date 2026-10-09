@@ -20,6 +20,7 @@ final class HomeChannels {
     private final android.content.SharedPreferences prefs;
     private final java.util.concurrent.atomic.AtomicBoolean publishing=new java.util.concurrent.atomic.AtomicBoolean();
     private final java.util.concurrent.atomic.AtomicBoolean publishAgain=new java.util.concurrent.atomic.AtomicBoolean();
+    private final Map<Long,String> changedChannelLabels=new LinkedHashMap<>();
     HomeChannels(LowfinApp app) { this.app=app; prefs=app.getSharedPreferences("tv-home",0); }
     boolean supported() { return app.getPackageManager().resolveContentProvider(TvContractCompat.AUTHORITY,0)!=null; }
     void schedule() {
@@ -86,6 +87,7 @@ final class HomeChannels {
     private void publishNow(Account expected) {
         if(!same(expected)||!supported()||!app.settings.getBoolean("homeChannels",true)) return;
         try {
+            changedChannelLabels.clear();
             Library db=app.library; Images images=app.images;
             List<JSONObject> resume=row(db,0),next=row(db,1);
             resume.removeIf(j->Json.position(j)<=0||Json.object(j,"UserData").optBoolean("Played"));
@@ -113,6 +115,7 @@ final class HomeChannels {
                 preview(expected,images,key,(bucket==null?I18n.text("Film-Empfehlungen"):HomeRecommendations.title(bucket)),items,"open",false);
             }
             watchNext(expected,images,resume,next);
+            notifyChannelLabels();
             prefs.edit().putString("status",I18n.text("Android-TV-Kanäle aktualisiert")).apply();
         } catch(Exception e) { prefs.edit().putString("status",I18n.text("TV-Launcher unterstützt die Veröffentlichung nicht vollständig")).apply(); }
     }
@@ -147,6 +150,9 @@ final class HomeChannels {
             Uri inserted=resolver.insert(uri,settings.toContentValues()); if(inserted==null) throw new IllegalStateException(I18n.text("TV-Kanal konnte nicht angelegt werden"));
             id=ContentUris.parseId(inserted); prefs.edit().putLong("channel-"+key,id).apply();
         }
+        // A channel-row update alone can leave a launcher's channel-list cache unchanged.
+        // The persisted marker also repairs already-correct provider names after an upgrade.
+        if(!label.equals(prefs.getString("notified-channel-label-v1-"+id,null))) changedChannelLabels.put(id,label);
         if(defaultChannel) TvContractCompat.requestChannelBrowsable(app,id);
         String logoKey="logo-"+key+"-0.5.2"; if(existing&&prefs.getBoolean(logoKey,false)) return id;
         Bitmap logo=BitmapFactory.decodeResource(app.getResources(),R.mipmap.ic_launcher); if(logo==null) {
@@ -155,6 +161,21 @@ final class HomeChannels {
         }
         ChannelLogoUtils.storeChannelLogo(app,id,logo); logo.recycle(); prefs.edit().putBoolean(logoKey,true).apply();
         return id;
+    }
+    private void notifyChannelLabels() {
+        if(changedChannelLabels.isEmpty()) return;
+        try {
+            // Notify the collection after the programs, so channel-list observers refresh
+            // both the heading and cards from the same recommendation snapshot. No sync job.
+            app.getContentResolver().notifyChange(TvContractCompat.Channels.CONTENT_URI,null,false);
+            android.content.SharedPreferences.Editor edit=prefs.edit();
+            for(Map.Entry<Long,String> entry:changedChannelLabels.entrySet()) edit.putString("notified-channel-label-v1-"+entry.getKey(),entry.getValue());
+            edit.apply();
+        } catch(SecurityException e) {
+            // Some OEM providers disallow app notifications. Keep the marker pending for retry;
+            // the normal provider update and program publishing still succeed.
+            android.util.Log.w("LowfinChannels","Launcher channel-name notification was denied");
+        } finally { changedChannelLabels.clear(); }
     }
     // Public concrete TV-provider builders inherit setters from restricted AndroidX base classes.
     @SuppressLint("RestrictedApi")
