@@ -13,7 +13,4 @@ public class TrailersTest {
     @Test public void remoteTrailersAreFilteredAndDeduplicated() {
         assertEquals(1,Trailers.youtube(Json.obj("RemoteTrailers",Json.arr(Json.obj("Url","https://youtu.be/M7lc1UVf-VE"),Json.obj("Url","https://youtube.com/watch?v=M7lc1UVf-VE"),Json.obj("Url","https://vimeo.com/123")))).size());
     }
-    @Test public void embeddedPlayerProvidesAppIdentityAndKeepsOfficialControls() {
-        String html=Trailers.html("M7lc1UVf-VE","https://de.lowfin.tv"); assertTrue(html.contains("https://www.youtube.com/iframe_api")); assertTrue(html.contains("controls:1")); assertTrue(html.contains("origin:\"https://de.lowfin.tv\"")); assertTrue(html.contains("strict-origin-when-cross-origin"));
-    }
 }

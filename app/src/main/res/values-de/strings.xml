@@ -318,4 +318,14 @@
     <string name="action_saved">Gespeichert</string>
     <string name="action_failed">Aktion fehlgeschlagen</string>
     <string name="no_playable_episode">Keine abspielbare Folge gefunden</string>
+    <string name="key_file_title">API-Keys aus TXT-Datei</string>
+    <string name="key_file_check">Download-Datei jetzt prüfen</string>
+    <string name="key_file_select">TXT-Datei auswählen</string>
+    <string name="key_file_configured">API-Keys sind bereits gespeichert. Automatischer TXT-Import ist deaktiviert.</string>
+    <string name="key_file_invalid">TXT-Format ungültig. Datei bleibt erhalten: UTF-8, Feldnamen und Werte prüfen.</string>
+    <string name="key_file_error">TXT-Import nicht möglich. Datei und vorhandene Keys bleiben erhalten.</string>
+    <string name="key_file_delete_pending">API-Keys gespeichert. Die TXT-Datei konnte noch nicht gelöscht werden.</string>
+    <string name="key_file_imported">API-Keys verschlüsselt importiert und TXT-Datei gelöscht.</string>
+    <string name="key_file_waiting">Download/Lowfin-API-Keys.txt ausfüllen und speichern. Leere Anbieter sind optional.</string>
+    <string name="key_file_no_picker">Kein Dateiauswahldialog verfügbar. Die Download-Datei verwenden.</string>
 </resources>

@@ -1,0 +1,25 @@
+# LOWFIN - AUTOMATIC API KEY IMPORT
+# Fill in the value AFTER the = on the appropriate line, then save this file.
+# Use UTF-8 plain text. Keep the field names unchanged. No quotes or Bearer prefix.
+# Leave providers you do not use EMPTY. One filled-in provider is sufficient.
+# Example (format only): OMDB_API_KEY=your_real_key
+# Lowfin checks this file when opened and while its main UI is visible.
+# After encrypted storage succeeds, Lowfin deletes this text file.
+# Automatic creation/import only runs when NO API keys are already configured.
+# Additional keys can later be entered in Settings > Ratings.
+# Values are checked for formatting; provider acceptance is checked when ratings load.
+
+# OMDb: IMDb, Rotten Tomatoes and Metacritic ratings.
+# Get an OMDb API key at https://www.omdbapi.com/apikey.aspx
+# Put ONLY your OMDb key after the = below:
+OMDB_API_KEY=
+
+# MDBList: additional rating sources, including Trakt and Letterboxd.
+# Get your MDBList API key from your account at https://mdblist.com/
+# Put ONLY your MDBList key after the = below:
+MDBLIST_API_KEY=
+
+# TMDB: The Movie Database user ratings.
+# Get credentials from your account at https://www.themoviedb.org/settings/api
+# Put your API key OR API Read Access Token here, without the word Bearer:
+TMDB_API_KEY=

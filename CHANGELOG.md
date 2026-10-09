@@ -9,6 +9,14 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.10
+
+- Native Media3 trailer playback replaces the YouTube WebView, with Lowfin transport, buffering animation, hardware-friendly video preference and a 720p ceiling. Public stream resolution follows Moonfin's approach; no Jellyfin credentials are sent to YouTube. YouTube availability and physical-TV playback still require device verification.
+- Automatically creates an explanatory `Download/Lowfin-API-Keys.txt` only when no rating keys are configured. Imports stable UTF-8 contents into encrypted storage and deletes the file after verification; empty providers are optional. Includes manual TXT selection, failed-deletion recovery and Android 11 scoped-storage support.
+- Sidebar focus no longer scales beyond its card frame, native pressed overlays are disabled, and the dimming overlay disappears immediately when closing the drawer.
+- Enter/Done closes the keyboard; search, password login, season jump and key/cache dialogs also run their corresponding action.
+- Verified with 178 passing unit/UI tests, debug/release lint and a signed release build. Physical-TV trailer availability remains unverified.
+
 ## 0.7.9
 
 - Explicitly notify the Android TV channel collection after publishing changed headings and their recommendation cards, so channel-list observers can refresh cached “Because you watched” names.

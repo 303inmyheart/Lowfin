@@ -21,14 +21,4 @@ final class Trailers {
             if(id!=null&&seen.add(id)) trailers.add(Json.obj("Id",id,"Name",link.optString("Name","Trailer "+(trailers.size()+1))));
         } return trailers;
     }
-    static String html(String id,String origin) {
-        if(id==null||!id.matches("[A-Za-z0-9_-]{11}")) throw new IllegalArgumentException("Invalid YouTube ID");
-        return "<!doctype html><html><head><meta name='viewport' content='width=device-width,initial-scale=1'><meta name='referrer' content='strict-origin-when-cross-origin'>"
-            +"<style>html,body,#player{margin:0;width:100%;height:100%;background:#000;overflow:hidden}</style></head><body><div id='player'></div>"
-            +"<script>var player,lf={ready:false,state:-1,error:0,blocked:false};function onYouTubeIframeAPIReady(){player=new YT.Player('player',{width:'100%',height:'100%',videoId:"
-            +JSONObject.quote(id)+",playerVars:{autoplay:1,playsinline:1,controls:1,fs:0,origin:"+JSONObject.quote(origin)+"},events:{onReady:function(e){lf.ready=true;e.target.playVideo();},onStateChange:function(e){lf.state=e.data;},onError:function(e){lf.error=e.data;},onAutoplayBlocked:function(){lf.blocked=true;}}});}"
-            +"function lowfinToggle(){if(lf.ready){if(player.getPlayerState()===1)player.pauseVideo();else player.playVideo();}}"
-            +"function lowfinSeek(delta){if(lf.ready)player.seekTo(Math.max(0,player.getCurrentTime()+delta),true);}"
-            +"</script><script src='https://www.youtube.com/iframe_api'></script></body></html>";
-    }
 }

@@ -2,7 +2,7 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.9.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.10.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -11,7 +11,7 @@ A native Jellyfin client for low-end Android TV devices. Designed for Android 11
 Download the APK from [the latest GitHub release](https://github.com/303inmyheart/Lowfin/releases/latest), transfer it to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-0.7.9.apk
+adb install -r Lowfin-0.7.10.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -27,7 +27,7 @@ Sign in with your Jellyfin server URL, username and password. The encrypted sess
 - Live TV opens directly into the channel list. Live-stream negotiation follows Moonfin's opening behavior, with native audio decoding, bounded reconnect handling and subtitles disabled by default.
 - Local playback, stereo downmix, configurable disk video cache and adaptive RAM buffers that preserve memory headroom. Optional server transcoding remains disabled by default. Direct playback requires codecs supported by the device or bundled audio decoder.
 - Intro Skipper through Jellyfin MediaSegments on Jellyfin 10.10 or later: automatic intro/outro skipping and manual skip controls for other segments.
-- In-app YouTube trailers through Android System WebView; availability depends on the video's embedding restrictions.
+- Full-screen YouTube trailers in Lowfin’s native Media3 player, with native controls and no YouTube interface. Stream lookup follows the approach used by [Moonfin](https://github.com/Moonfin-Client/Moonfin-Core/blob/main/lib/data/services/youtube_stream_resolver.dart); availability depends on YouTube returning playable media. Trailer quality is capped at 720p for low-end devices.
 - Persistent account/server-scoped library metadata and artwork cache. Cached library browsing survives restarts and connection failures.
 - OMDb, MDBList and TMDB API keys encrypted on device, selectable rating badges and permanent **on-demand** ratings storage. Ratings are never queried as part of library preloading.
 - Android TV preview channels for Continue watching, Next up, movies, shows and watched-movie recommendations. Separate movie/show library selection mixes cards across chosen libraries. Launcher support and channel visibility depend on Android TV / Google TV.
@@ -40,6 +40,18 @@ English is the default language regardless of the device language. Select **Lang
 - **Home screen and appearance:** Continue watching and Next up visibility, 0–5 recommendation rows, poster columns, roulette duration, random/fixed muted accent colors, foreground-time color interval, automatic preloading and cache refresh interval.
 - **Advanced playback:** individual intro/outro skipping, default subtitles, preferred audio language, seek interval, controls timeout and separate VOD/live RAM buffer ceilings. Buffers always remain adaptive to available memory.
 - Existing controls include playback resolution/bitrate, stereo downmix, optional transcoding, disk cache size, artwork budget, rating sources/API keys, Android TV channels and their library sources.
+
+## Import rating API keys
+
+When no rating API keys are saved, Lowfin creates **Download/Lowfin-API-Keys.txt** on launch. Fill the provider fields, save as UTF-8 and return to Lowfin. The app checks the file every five seconds while open, encrypts the supplied keys and deletes the file after successful storage. Leave unused providers empty. Existing keys disable automatic import; individual keys remain editable in rating settings. A TXT picker is available if your editor replaces the original Download entry.
+
+```ini
+OMDB_API_KEY=
+MDBLIST_API_KEY=
+TMDB_API_KEY=
+```
+
+Use the raw key/token after `=` without quotes or a `Bearer` prefix. The generated file explains each provider.
 
 ## Build and verify
 

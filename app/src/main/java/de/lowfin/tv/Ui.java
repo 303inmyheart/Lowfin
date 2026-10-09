@@ -46,7 +46,7 @@ final class Ui {
         Accent.bind(button,(view,color)->view.setBackground(background(view.isFocused()?0xff38383c:selected?0xff252528:Color.TRANSPARENT,view.isFocused()?color:0)));
         button.setOnFocusChangeListener((view,focused)-> {
             view.setBackground(background(focused?0xff38383c:selected?0xff252528:Color.TRANSPARENT,focused?Accent.color:0));
-            button.setTextColor(focused||selected?Color.WHITE:MUTED); Motion.focus(view,focused,false);
+            button.setTextColor(focused||selected?Color.WHITE:MUTED); view.animate().withEndAction(null).cancel(); view.setScaleX(1); view.setScaleY(1); view.setAlpha(1); view.setPressed(false);
         });
     }
     static Button quiet(Context c,String label,Runnable action) {
@@ -71,7 +71,20 @@ final class Ui {
         EditText e=new EditText(c); e.setSingleLine(true); e.setTextSize(17); e.setTextColor(Color.WHITE); e.setHintTextColor(MUTED); e.setHint(hint);
         e.setPadding(dp(c,16),dp(c,12),dp(c,16),dp(c,12)); e.setBackground(background(PANEL,0));
         e.setInputType(password?android.text.InputType.TYPE_CLASS_TEXT|android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD:android.text.InputType.TYPE_CLASS_TEXT);
-        return e;
+        editorAction(e,null); return e;
+    }
+    static void editorAction(EditText input,Runnable action) {
+        input.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_DONE);
+        input.setOnEditorActionListener((view,id,event)-> {
+            boolean enter=event!=null&&event.getKeyCode()==KeyEvent.KEYCODE_ENTER;
+            boolean done=id==android.view.inputmethod.EditorInfo.IME_ACTION_DONE||id==android.view.inputmethod.EditorInfo.IME_ACTION_GO||id==android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH;
+            if(!enter&&!done) return false;
+            if(event==null||event.getAction()==KeyEvent.ACTION_UP) {
+                android.view.inputmethod.InputMethodManager ime=(android.view.inputmethod.InputMethodManager)view.getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
+                if(ime!=null) ime.hideSoftInputFromWindow(view.getWindowToken(),0);
+                if(action!=null) action.run();
+            } return true;
+        });
     }
     static void space(LinearLayout l,int height) { View v=new View(l.getContext()); l.addView(v,new LinearLayout.LayoutParams(1,dp(l.getContext(),height))); }
     static void immersive(android.app.Activity a) { a.getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY); }

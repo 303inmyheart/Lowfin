@@ -33,7 +33,12 @@ public final class MainActivity extends Activity {
         if(status!=null) status.setText(app.syncing?app.syncStatus:screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.account==null?"":app.account.name+"  ·  HD");
         handler.postDelayed(this,2000);
     }};
-    private static final int PAGE=60;
+    private static final int PAGE=60,KEY_FILE_REQUEST=1201,KEY_STORAGE_REQUEST=1202;
+    private boolean importActive,importBusy;
+    private String lastImportNotice="",pendingKeyDocument;
+    private TextView importStatus;
+    private final Runnable importTick=new Runnable() { public void run() { if(!importActive) return; if(app.keyImport.needsCheck()) checkKeyFile(false,null); handler.postDelayed(this,5000); } };
+
     private static final class Screen {
         final String kind,title,type,parent; final JSONObject item;
         int page; Parcelable scroll;
@@ -50,8 +55,8 @@ public final class MainActivity extends Activity {
         }
     }
     private boolean savedNone(Bundle state) { return state==null; }
-    @Override protected void onResume() { super.onResume(); Ui.immersive(this); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
-    @Override protected void onPause() { handler.removeCallbacks(statusTick); super.onPause(); }
+    @Override protected void onResume() { super.onResume(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
+    @Override protected void onPause() { importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
     @Override protected void onDestroy() { generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void checkSession() {
         final Api api=app.api;
@@ -102,7 +107,7 @@ public final class MainActivity extends Activity {
                 } catch(Exception e) { runOnUiThread(()-> { if(g==generation) hint.setText(e instanceof Api.Failure?e.getMessage():I18n.text("Verbindung fehlgeschlagen. Adresse und Netzwerk prüfen.")); }); }
             });
         });
-        form.addView(signIn); Ui.space(form,12); form.addView(hint);
+        Ui.editorAction(password,signIn::performClick); form.addView(signIn); Ui.space(form,12); form.addView(hint);
         status=null; setContentView(outer); server.requestFocus();
     }
     private BackdropView detailBackdrop;
@@ -140,7 +145,7 @@ public final class MainActivity extends Activity {
     }
     private void setDrawer(boolean open) {
         if(drawer==null||drawerOpen==open) return; drawerOpen=open; boolean animate=app.settings.getBoolean("animations",true);
-        drawer.animate().cancel(); drawerShade.animate().cancel();
+        drawer.animate().withEndAction(null).cancel(); drawerShade.animate().withEndAction(null).cancel();
         if(open) {
             drawerReturnFocus=root.findFocus()==menuButton?lastContentFocus:root.findFocus(); contentStage.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
             drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
@@ -159,7 +164,8 @@ public final class MainActivity extends Activity {
             }
         } else {
             contentStage.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
-            drawer.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+            drawer.clearFocus(); drawer.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+            drawerShade.setVisibility(View.GONE); drawerShade.setAlpha(0);
             if(animate) {
                 drawer.animate().translationX(-Ui.dp(this,214)).setInterpolator(new android.view.animation.DecelerateInterpolator()).setDuration(app.settings.getBoolean("smoothNavigation",true)?200:120).withEndAction(()-> { if(!drawerOpen) { drawer.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); } }).start();
                 drawerShade.animate().alpha(0).setDuration(120).withEndAction(()-> { if(!drawerOpen) drawerShade.setVisibility(View.GONE); }).start();
@@ -205,10 +211,10 @@ public final class MainActivity extends Activity {
         return super.dispatchKeyEvent(event);
     }
     private void sideButton(String label,Runnable action) {
-        Button button=Ui.button(this,label,action); button.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); button.setMaxLines(2); button.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        Button button=Ui.button(this,label,action); button.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); button.setSingleLine(true); button.setStateListAnimator(null); button.setElevation(0); button.setEllipsize(android.text.TextUtils.TruncateAt.END);
         boolean selected=screen!=null&&(label.equals(screen.title)||label.equals(I18n.text("Start"))&&screen.kind.equals("home")||label.equals(I18n.text("Suche"))&&screen.kind.equals("search")&&screen.type.equals("term"));
         selected=selected||label.equals("Genres")&&screen!=null&&screen.kind.startsWith("genre");
-        button.setTag(selected); Ui.navigation(button,selected); sidebar.addView(button,new LinearLayout.LayoutParams(-1,Ui.dp(this,39))); Ui.space(sidebar,3);
+        button.setTag(selected); Ui.navigation(button,selected); sidebar.addView(button,new LinearLayout.LayoutParams(-1,Ui.dp(this,44))); Ui.space(sidebar,3);
     }
     private void buildSidebar() {
         String focusedLabel=sidebar.findFocus() instanceof Button?((Button)sidebar.findFocus()).getText().toString():null;
@@ -496,6 +502,7 @@ public final class MainActivity extends Activity {
             for(int i=0;i<data.size();i++) if(data.get(i).optInt("IndexNumber")==target) { int pos=i; layout.scrollToPositionWithOffset(pos,0); seasons.post(()-> { View v=layout.findViewByPosition(pos); if(v!=null) v.requestFocus(); }); return; }
             toast(I18n.text("Staffel nicht gefunden"));
         }));
+        Ui.editorAction(number,()->controls.getChildAt(controls.getChildCount()-1).performClick());
         final int g=generation; final Api api=app.api; final Library db=app.library; final String id=series.optString("Id"); final boolean[] fresh={false};
         app.io.execute(()-> {
             List<JSONObject> cached=db.query("type='Season' AND (parent=? OR series=?)",new String[]{id,id},"episode",500,0);
@@ -660,7 +667,7 @@ public final class MainActivity extends Activity {
     }
     private void search() {
         EditText input=Ui.input(this,I18n.text("Titel suchen"),false);
-        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(I18n.text("Bibliothek durchsuchen")).setView(input).setPositiveButton(I18n.text("Suchen"),(d,w)->show(new Screen("search",input.getText().toString(),"term",null,null),true)).setNegativeButton(I18n.text("Abbrechen"),null).create(); dialog.show(); input.requestFocus();
+        AlertDialog dialog=new AlertDialog.Builder(this).setTitle(I18n.text("Bibliothek durchsuchen")).setView(input).setPositiveButton(I18n.text("Suchen"),(d,w)->show(new Screen("search",input.getText().toString(),"term",null,null),true)).setNegativeButton(I18n.text("Abbrechen"),null).create(); Ui.editorAction(input,()->dialog.getButton(AlertDialog.BUTTON_POSITIVE).performClick()); dialog.show(); input.requestFocus();
     }
     private void results() {
         final Screen s=screen; final Api api=app.api; final Library db=app.library;
@@ -735,6 +742,10 @@ public final class MainActivity extends Activity {
     }
     private void ratingSettings() {
         ScrollView scroll=new ScrollView(this); LinearLayout content=Ui.column(this); scroll.addView(content); body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        content.addView(Ui.title(this,I18n.text("API-Keys aus TXT-Datei"),18)); Ui.space(content,8);
+        importStatus=Ui.text(this,app.keyImport.status(),13,Ui.MUTED); content.addView(importStatus); Ui.space(content,8);
+        content.addView(Ui.button(this,I18n.text("Download-Datei jetzt prüfen"),()->checkKeyFile(true,null))); Ui.space(content,8);
+        content.addView(Ui.button(this,I18n.text("TXT-Datei auswählen"),this::selectKeyFile)); Ui.space(content,18);
         content.addView(Ui.title(this,I18n.text("Bewertungsanbieter"),18)); Ui.space(content,8);
         for(String provider:new String[]{"omdb","mdblist","tmdb"}) {
             String name=provider.equals("omdb")?"OMDb":provider.equals("mdblist")?"MDBList":"TMDB";
@@ -751,6 +762,54 @@ public final class MainActivity extends Activity {
         Ui.space(content,16); content.addView(Ui.text(this,app.ratings.status,12,Ui.MUTED));
         Ui.space(content,14); content.addView(Ui.text(this,I18n.text("This product uses the TMDB API but is not endorsed or certified by TMDB.\nOMDb · www.omdbapi.com · Daten: CC BY-NC 4.0\nMDBList · mdblist.com"),11,Ui.MUTED));
     }
+    private void checkKeyFile(boolean explicit,String document) {
+        if(app==null) return;
+        if(importBusy) { if(document!=null) pendingKeyDocument=document; return; }
+        if(document==null&&Build.VERSION.SDK_INT<29&&!app.keyImport.configured()&&checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)!=android.content.pm.PackageManager.PERMISSION_GRANTED) {
+            if(explicit||!app.settings.getBoolean("keyStorageAsked",false)) { app.settings.edit().putBoolean("keyStorageAsked",true).apply(); requestPermissions(new String[]{android.Manifest.permission.READ_EXTERNAL_STORAGE,android.Manifest.permission.WRITE_EXTERNAL_STORAGE},KEY_STORAGE_REQUEST); }
+            return;
+        }
+        importBusy=true;
+        app.io.execute(()-> {
+            RatingKeyImport.Result result=document==null?app.keyImport.check():app.keyImport.selected(document);
+            runOnUiThread(()-> {
+                importBusy=false; if(result.changed&&app.account!=null) restartRatings();
+                if(pendingKeyDocument!=null&&!isFinishing()) { String pending=pendingKeyDocument; pendingKeyDocument=null; checkKeyFile(true,pending); }
+                if(isFinishing()||!importActive) return;
+                if(result.changed&&app.account!=null) {
+                    if(screen!=null&&screen.kind.equals("ratings")) refreshOptions();
+                    else if(screen!=null&&screen.kind.equals("detail")) reloadRatingRows(body,screen.item);
+                    else if(ratingFocusUpdate!=null) ratingFocusUpdate.run();
+                }
+                String notice=app.keyImport.status(); if(importStatus!=null&&importStatus.isAttachedToWindow()) importStatus.setText(notice);
+                boolean important=result.state==RatingKeyImport.State.CREATED||result.state==RatingKeyImport.State.IMPORTED||result.state==RatingKeyImport.State.INVALID||result.state==RatingKeyImport.State.DELETE_PENDING;
+                if(explicit||important&&!notice.equals(lastImportNotice)) { toast(notice); lastImportNotice=notice; }
+            });
+        });
+    }
+    private void reloadRatingRows(View view,JSONObject item) {
+        if(view instanceof RatingsRow) ((RatingsRow)view).load(app,item);
+        else if(view instanceof ViewGroup) { ViewGroup group=(ViewGroup)view; for(int i=0;i<group.getChildCount();i++) reloadRatingRows(group.getChildAt(i),item); }
+    }
+    private void selectKeyFile() {
+        if(app.keyImport.configured()) { toast(I18n.text("API-Keys sind bereits gespeichert. Automatischer TXT-Import ist deaktiviert.")); return; }
+        try { startActivityForResult(new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("text/plain")
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION),KEY_FILE_REQUEST); }
+        catch(ActivityNotFoundException e) { toast(I18n.text("Kein Dateiauswahldialog verfügbar. Die Download-Datei verwenden.")); }
+    }
+    @Override protected void onActivityResult(int request,int result,Intent data) {
+        super.onActivityResult(request,result,data);
+        if(request!=KEY_FILE_REQUEST||result!=RESULT_OK||data==null||data.getData()==null) return;
+        int flags=data.getFlags()&(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+        try { if(flags==(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION)) getContentResolver().takePersistableUriPermission(data.getData(),Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            else if((flags&Intent.FLAG_GRANT_READ_URI_PERMISSION)!=0) getContentResolver().takePersistableUriPermission(data.getData(),Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            else if((flags&Intent.FLAG_GRANT_WRITE_URI_PERMISSION)!=0) getContentResolver().takePersistableUriPermission(data.getData(),Intent.FLAG_GRANT_WRITE_URI_PERMISSION); } catch(SecurityException ignored) { }
+        checkKeyFile(true,data.getData().toString());
+    }
+    @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
+        super.onRequestPermissionsResult(request,permissions,grants);
+        if(request==KEY_STORAGE_REQUEST&&checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)==android.content.pm.PackageManager.PERMISSION_GRANTED) checkKeyFile(true,null);
+    }
     private void restartRatings() { if(app.ratings!=null) app.ratings.close(); app.ratings=new Ratings(this,app.library,app.api); }
     private void ratingKeyDialog(String provider,String name) {
         LinearLayout form=Ui.column(this); form.setPadding(Ui.dp(this,16),Ui.dp(this,8),Ui.dp(this,16),0);
@@ -761,7 +820,7 @@ public final class MainActivity extends Activity {
         dialog.setOnShowListener(ignored->dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(button->{ String value=input.getText().toString(); dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
             app.io.execute(()-> { try { keys.put(provider,value); runOnUiThread(()-> { dialog.dismiss(); restartRatings(); if(screen.kind.equals("ratings")) show(screen,false); toast(I18n.text("API-Key gespeichert")); }); }
                 catch(Exception e) { runOnUiThread(()-> { hint.setText(I18n.text("API-Key konnte nicht sicher gespeichert werden.")); dialog.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true); }); } });
-        })); dialog.show();
+        })); Ui.editorAction(input,()-> { Button save=dialog.getButton(AlertDialog.BUTTON_POSITIVE); if(save!=null&&save.isEnabled()) save.performClick(); }); dialog.show();
     }
     private void videoCacheChoice() {
         int[] values={0,128,256,500,1024,2048};
@@ -773,7 +832,7 @@ public final class MainActivity extends Activity {
                 try { int size=Integer.parseInt(input.getText().toString()); if(size<16||size>16384) { input.setError(I18n.text("16 bis 16384 MB eingeben")); return; }
                     app.settings.edit().putInt("videoCacheMb",size).apply(); dialog.dismiss(); show(screen,false);
                 } catch(NumberFormatException e) { input.setError(I18n.text("Eine Größe in MB eingeben")); }
-            })); dialog.show();
+            })); Ui.editorAction(input,()-> { Button save=dialog.getButton(AlertDialog.BUTTON_POSITIVE); if(save!=null&&save.isEnabled()) save.performClick(); }); dialog.show();
         });
     }
     private void toggle(LinearLayout parent,String label,String key,boolean defaultValue) {
