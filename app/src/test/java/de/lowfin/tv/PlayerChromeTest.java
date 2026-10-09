@@ -27,7 +27,7 @@ public class PlayerChromeTest {
         chrome=new PlayerChrome(context,live,!live,new PlayerChrome.Actions() {
             public void toggle() { toggles++; } public void seek(long value) { seek=value; } public void seekTo(long value) { seek=value; }
             public void options() { options++; } public void next() {} public void channels() {}
-        }); root.addView(chrome,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM)); context.setContentView(root);
+        }); root.addView(chrome,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM)); root.addView(chrome.identity,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP)); context.setContentView(root);
         chrome.title.setText(live?"Sender Eins":"Die lange Serie"); chrome.caption.setText(live?"Live TV":"Staffel 40 · Folge 5 · Der Rückweg");
         chrome.update(615000,640000,2700000,true,live); return root;
     }
@@ -36,14 +36,24 @@ public class PlayerChromeTest {
     }
     @Test public void hdTransportIsCompactAndButtonsInvokeTheirActions() throws Exception {
         setup(false); layout(); assertTrue(chrome.getMeasuredHeight()<230);
-        assertEquals("10:15",chrome.current.getText().toString()); assertEquals("−34:45",chrome.remaining.getText().toString());
+        assertEquals("10:15 / 45:00",chrome.current.getText().toString()); assertTrue(chrome.remaining.getText().toString().contains(":"));
         assertTrue(chrome.timeline.getSecondaryProgress()>chrome.timeline.getProgress());
         assertTrue(chrome.options.getTop()+((View)chrome.options.getParent()).getTop()>chrome.timeline.getTop());
         chrome.play.performClick(); chrome.options.performClick(); assertEquals(1,toggles); assertEquals(1,options);
         screenshot("player-hd.png");
     }
     @Test public void liveTransportHasNoFakeSeekBar() throws Exception {
-        setup(true); layout(); assertEquals(View.GONE,chrome.timeline.getVisibility()); assertEquals("● LIVE",chrome.current.getText().toString()); screenshot("player-live-hd.png");
+        setup(true); layout(); assertEquals(View.GONE,chrome.timeline.getVisibility()); assertEquals("0:00",chrome.current.getText().toString()); screenshot("player-live-hd.png");
+    }
+    @Test public void logoUsesFixedFrameWithoutStretchingAndFallsBackToTitle() {
+        setup(false); chrome.logo.setImageBitmap(Bitmap.createBitmap(400,80,Bitmap.Config.ARGB_8888)); layout();
+        assertEquals(View.VISIBLE,chrome.logo.getVisibility()); assertEquals(View.GONE,chrome.title.getVisibility());
+        int width=chrome.logo.getWidth(),height=chrome.logo.getHeight();
+        assertEquals(ImageView.ScaleType.FIT_START,chrome.logo.getScaleType());
+        chrome.logo.setImageBitmap(Bitmap.createBitmap(80,400,Bitmap.Config.ARGB_8888)); layout();
+        assertEquals(width,chrome.logo.getWidth()); assertEquals(height,chrome.logo.getHeight());
+        float[] matrix=new float[9]; chrome.logo.getImageMatrix().getValues(matrix); assertEquals(matrix[Matrix.MSCALE_X],matrix[Matrix.MSCALE_Y],.001f);
+        chrome.logo.setImageDrawable(null); assertEquals(View.VISIBLE,chrome.title.getVisibility());
     }
     @Test public void backdropRetainsColorWhileReducingSaturation() {
         setup(false); BackdropView view=new BackdropView(activity.get()); Bitmap original=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888); original.eraseColor(Color.rgb(30,80,160)); view.setImageBitmap(original);

@@ -7,6 +7,7 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("Ende um ",R.string.ends_at);
         IDS.put("Seeken startet bei 5 Sekunden und beschleunigt beim Halten.",R.string.dynamic_seek_help);
         IDS.put("Alle Serien",R.string.all_series); IDS.put("Begonnene Folgen",R.string.started_episodes);
         IDS.put("Automatisch",R.string.audio_automatic);
