@@ -2,7 +2,7 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.11.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.12.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -11,7 +11,7 @@ A native Jellyfin client for low-end Android TV devices. Designed for Android 11
 Download the APK from [the latest GitHub release](https://github.com/303inmyheart/Lowfin/releases/latest), transfer it to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-0.7.11.apk
+adb install -r Lowfin-0.7.12.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
