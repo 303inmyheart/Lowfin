@@ -9,6 +9,12 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.9
+
+- Explicitly notify the Android TV channel collection after publishing changed headings and their recommendation cards, so channel-list observers can refresh cached “Because you watched” names.
+- Persist the last notified label per existing channel ID; upgrades also refresh already-correct provider names once. Unchanged titles do not trigger additional collection notifications. Channel IDs, launcher visibility and ordering are preserved.
+- Regression tests cover Bad Boys → Asterix with a cached launcher heading and unchanged recommendation item identity, plus the one-time upgrade refresh. Verified with 164 unit/UI tests, debug/release lint and a signed release build; the physical launcher still needs verification.
+
 ## 0.7.8
 
 - Holding remote OK/Enter on home or library cards opens Continue, Restart, watched/unwatched, Watch later and favorite actions, plus series details for shows and episodes. Release after a hold never launches the normal click action; remotes without repeat events are supported.
