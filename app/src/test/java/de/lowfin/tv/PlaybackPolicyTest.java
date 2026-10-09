@@ -5,6 +5,14 @@ import org.json.*;
 import static org.junit.Assert.*;
 
 public class PlaybackPolicyTest {
+    @Test public void uhdProfileDoesNotKeepAFullHdWidthLimit() {
+        JSONObject conditions=PlaybackPolicy.profile(2160,25000000).optJSONArray("CodecProfiles").optJSONObject(0);
+        JSONArray limits=conditions.optJSONArray("Conditions");
+        assertEquals("3840",limits.optJSONObject(0).optString("Value"));
+        assertEquals("2160",limits.optJSONObject(1).optString("Value"));
+        assertEquals(1280,PlaybackPolicy.width(720));
+        assertEquals(1920,PlaybackPolicy.width(1080));
+    }
     @Test public void onlyIntroAndOutroAreAutomatic() {
         assertTrue(PlaybackPolicy.automatic("Intro")); assertTrue(PlaybackPolicy.automatic("Outro"));
         for(String type:new String[]{"Recap","Preview","Commercial","Unknown","Credits",""}) assertFalse(type,PlaybackPolicy.automatic(type));

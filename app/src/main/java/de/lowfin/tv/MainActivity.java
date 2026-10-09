@@ -282,7 +282,7 @@ public final class MainActivity extends Activity {
     private MediaAdapter cards(boolean compact) {
         grid=new RecyclerView(this); int columns=app.settings.getInt("gridColumns",8);
         GridLayoutManager layout=new GridLayoutManager(this,columns); grid.setLayoutManager(layout); grid.setItemAnimator(null); grid.setHasFixedSize(true); grid.setItemViewCacheSize(4);
-        MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
+        MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.wide=screen!=null&&"resume".equals(screen.type); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
         layout.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() { @Override public int getSpanSize(int position) { return adapter.span(position); } });
         body.addView(grid,new LinearLayout.LayoutParams(-1,0,1)); return adapter;
     }
@@ -626,8 +626,8 @@ public final class MainActivity extends Activity {
         content.addView(Ui.button(this,I18n.text("Erweiterte Wiedergabe"),()->show(new Screen("playbackSettings",I18n.text("Erweiterte Wiedergabe"),null,null,null),true))); Ui.space(content,8);
         content.addView(Ui.button(this,I18n.text("Bewertungen · Anbieter und API-Keys"),()->show(new Screen("ratings",I18n.text("Bewertungen"),null,null,null),true))); Ui.space(content,18);
         content.addView(Ui.text(this,I18n.text("Wiedergabe"),16,Ui.MUTED)); Ui.space(content,10);
-        content.addView(Ui.button(this,I18n.text("Auflösung: ")+app.settings.getInt("height",720)+"p",()->choice(I18n.text("Maximale Auflösung"),new String[]{I18n.text("720p · HD, empfohlen"),"1080p · Full HD"},i->{ app.settings.edit().putInt("height",i==0?720:1080).apply(); show(screen,false); })));
-        Ui.space(content,8); content.addView(Ui.button(this,"Bitrate: "+app.settings.getInt("bitrate",4000000)/1000000+" Mbit/s",()->choice(I18n.text("Maximale Bitrate"),new String[]{"2 Mbit/s","4 Mbit/s","6 Mbit/s","8 Mbit/s"},i->{ app.settings.edit().putInt("bitrate",new int[]{2000000,4000000,6000000,8000000}[i]).apply(); show(screen,false); })));
+        content.addView(Ui.button(this,I18n.text("Auflösung: ")+app.settings.getInt("height",720)+"p",()->choice(I18n.text("Maximale Auflösung"),new String[]{I18n.text("720p · HD, empfohlen"),"1080p · Full HD","2160p · 4K UHD"},i->{ app.settings.edit().putInt("height",new int[]{720,1080,2160}[i]).apply(); show(screen,false); })));
+        Ui.space(content,8); content.addView(Ui.button(this,"Bitrate: "+app.settings.getInt("bitrate",4000000)/1000000+" Mbit/s",()->choice(I18n.text("Maximale Bitrate"),new String[]{"2 Mbit/s","4 Mbit/s","6 Mbit/s","8 Mbit/s","16 Mbit/s","25 Mbit/s","40 Mbit/s","60 Mbit/s"},i->{ app.settings.edit().putInt("bitrate",new int[]{2000000,4000000,6000000,8000000,16000000,25000000,40000000,60000000}[i]).apply(); show(screen,false); })));
         Ui.space(content,8); toggle(content,I18n.text("Audio auf Stereo (2.0) heruntermischen"),"stereo",true);
         Ui.space(content,8); toggle(content,I18n.text("Server-Transcoding bei Bedarf zulassen"),"serverFallback",false);
         Ui.space(content,8); int videoBudget=app.settings.getInt("videoCacheMb",500);

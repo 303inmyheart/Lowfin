@@ -165,7 +165,7 @@ public final class PlayerActivity extends Activity {
                     stream=resolve(Json.str(chosen,"TranscodingUrl")); playMethod=chosen.optString("TranscodingSubProtocol").equals("hls")||stream.contains("m3u8")?"Transcode":"DirectStream"; hls=stream.contains("m3u8");
                     HttpUrl.Builder url=HttpUrl.get(stream).newBuilder();
                     if(!isLive) { url.removeAllQueryParameters("startTimeTicks"); url.setQueryParameter("StartTimeTicks","0"); }
-                    if(force||app.settings.getBoolean("serverFallback",false)) { int height=app.settings.getInt("height",720); url.setQueryParameter("MaxWidth",height==720?"1280":"1920"); url.setQueryParameter("MaxHeight",""+height); }
+                    if(force||app.settings.getBoolean("serverFallback",false)) { int height=app.settings.getInt("height",720); url.setQueryParameter("MaxWidth",String.valueOf(PlaybackPolicy.width(height))); url.setQueryParameter("MaxHeight",""+height); }
                     if(force&&app.settings.getBoolean("stereo",true)) { url.setQueryParameter("MaxAudioChannels","2"); url.setQueryParameter("AudioChannels","2"); }
                     stream=url.build().toString();
                 } else if(!force&&(chosen.optBoolean("SupportsDirectPlay")||chosen.optBoolean("SupportsDirectStream"))) {
@@ -210,7 +210,7 @@ public final class PlayerActivity extends Activity {
         androidx.media3.extractor.DefaultExtractorsFactory extractors=new androidx.media3.extractor.DefaultExtractorsFactory();
         if(live) extractors.setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES);
         player=new ExoPlayer.Builder(this,LocalPlayback.renderers(this,app.settings.getBoolean("stereo",true)).setExtensionRendererMode(live?DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON:DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)).setMediaSourceFactory(new DefaultMediaSourceFactory(data,extractors).setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(6))).setLoadControl(control).build();
-        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(app.settings.getInt("height",720)==720?1280:1920,app.settings.getInt("height",720))
+        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(PlaybackPolicy.width(app.settings.getInt("height",720)),app.settings.getInt("height",720))
             .setMaxVideoFrameRate(30).setMaxAudioChannelCount(6).setPreferredAudioLanguages(app.settings.getString("audioLanguage",I18n.language())).setPreferredTextLanguages(I18n.language()).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,subtitle<0&&(subtitleChosen||!app.settings.getBoolean("defaultSubtitles",false))).setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT|C.SELECTION_FLAG_FORCED).build());
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),true);
         player.setHandleAudioBecomingNoisy(true); view.setPlayer(player);

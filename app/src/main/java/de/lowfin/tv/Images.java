@@ -33,15 +33,16 @@ final class Images {
             StringBuilder b=new StringBuilder(); for(byte v:hash) b.append(String.format("%02x",v)); return b.toString();
         } catch(Exception e) { throw new IllegalStateException(e); }
     }
-    void show(ImageView view,JSONObject item) { show(view,item,false,240); }
-    void show(ImageView view,JSONObject item,boolean wide) { show(view,item,wide,240); }
+    private int displayWidth(int dp) { return Math.min(1440,Math.max(dp,Ui.dp(context,dp))); }
+    void show(ImageView view,JSONObject item) { show(view,item,false,displayWidth(240)); }
+    void show(ImageView view,JSONObject item,boolean wide) { show(view,item,wide,displayWidth(240)); }
     void channelLogo(ImageView view,JSONObject item) {
         if(Artwork.logo(item)!=null) logo(view,item);
         else if(api.hasImage(item)) show(view,item,false,320);
         else { view.setTag(null); view.setImageDrawable(null); }
     }
     void logo(ImageView view,JSONObject item) { JSONObject logo=Artwork.logo(item); if(logo==null) { view.setTag(null); view.setImageDrawable(null); } else show(view,logo,false,320); }
-    void backdrop(ImageView view,JSONObject item) { JSONObject backdrop=Artwork.backdrop(item); if(backdrop==null) { view.setTag(null); view.setImageDrawable(null); } else show(view,backdrop,true,720); }
+    void backdrop(ImageView view,JSONObject item) { JSONObject backdrop=Artwork.backdrop(item); if(backdrop==null) { view.setTag(null); view.setImageDrawable(null); } else show(view,backdrop,true,displayWidth(720)); }
     private void show(ImageView view,JSONObject item,boolean wide,int width) {
         String key=key(item,wide,width); if(key.equals(view.getTag())&&view.getDrawable()!=null) return;
         view.setTag(key); view.setImageDrawable(null); if(!api.hasImage(item,wide)) return;

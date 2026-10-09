@@ -2,7 +2,7 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays; supports Android 8 or later. **Current version: 0.7.6.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.7.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
