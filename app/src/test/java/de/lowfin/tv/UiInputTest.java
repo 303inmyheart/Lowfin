@@ -22,4 +22,13 @@ public class UiInputTest {
         assertEquals(1f,button.getScaleX(),0); assertEquals(1f,button.getScaleY(),0);
         button.setPressed(true); button.clearFocus(); assertFalse(button.isPressed());
     }
+    @Test public void activePageHasNoSecondHighlightAfterCursorMoves() {
+        Activity activity=Robolectric.buildActivity(Activity.class).setup().get(); LinearLayout menu=Ui.column(activity);
+        Button home=Ui.button(activity,"Start",()->{}),search=Ui.button(activity,"Search",()->{}); Ui.navigation(home,true); Ui.navigation(search,false);
+        menu.addView(home); menu.addView(search); activity.setContentView(menu); home.requestFocus();
+        assertEquals(0xff38383c,backgroundColor(home)); search.requestFocus();
+        assertFalse(home.isFocused()); assertEquals(android.graphics.Color.TRANSPARENT,backgroundColor(home)); assertEquals(0xff38383c,backgroundColor(search));
+        home.requestFocus(); assertEquals(android.graphics.Color.TRANSPARENT,backgroundColor(search)); assertEquals(0xff38383c,backgroundColor(home));
+    }
+    private int backgroundColor(Button button) { return ((android.graphics.drawable.GradientDrawable)button.getBackground()).getColor().getDefaultColor(); }
 }

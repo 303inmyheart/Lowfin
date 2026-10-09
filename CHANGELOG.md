@@ -9,6 +9,14 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.11
+
+- Sidebar gray background now follows keyboard/remote focus exclusively. The current page retains its brighter label but no longer displays a second persistent selection box after the cursor moves.
+- Completing a trailer closes its player automatically and returns to the existing detail page.
+- Playback position/duration and estimated end time above the seekbar use larger 15sp text, with a brighter end-time label.
+- Seekbar focus uses an accent outline and tinted background, a larger white marker and a thicker brighter track. Shared by media and native trailer playback; focusing the bar does not seek.
+- Regression tests cover exclusive sidebar highlighting and seekbar focus appearance/restoration. Verified with 180 passing unit/UI tests, debug/release lint and a signed release build; physical-TV verification remains pending.
+
 ## 0.7.10
 
 - Native Media3 trailer playback replaces the YouTube WebView, with Lowfin transport, buffering animation, hardware-friendly video preference and a 720p ceiling. Public stream resolution follows Moonfin's approach; no Jellyfin credentials are sent to YouTube. YouTube availability and physical-TV playback still require device verification.

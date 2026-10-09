@@ -25,15 +25,23 @@ final class PlayerChrome extends LinearLayout {
         identity.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xb009090b,0x0009090b}));
         logo=new PlayerLogo(context,title); identity.addView(logo,new LayoutParams(Ui.dp(context,200),Ui.dp(context,64))); identity.addView(heading);
         caption=Ui.text(context,"",11,Ui.MUTED); caption.setSingleLine(true); identity.addView(caption);
-        LinearLayout times=Ui.row(context); current=Ui.text(context,"0:00",11,Color.WHITE); remaining=Ui.text(context,"",11,Ui.MUTED); remaining.setGravity(Gravity.END);
+        LinearLayout times=Ui.row(context); current=Ui.text(context,"0:00",15,Color.WHITE); remaining=Ui.text(context,"",15,0xffd4d4da); remaining.setGravity(Gravity.END);
         times.addView(current,new LayoutParams(0,-2,1)); times.addView(remaining,new LayoutParams(0,-2,1)); addView(times); Ui.space(this,4);
-        timeline=new SeekBar(context); timeline.setMax(10000); timeline.setPadding(Ui.dp(context,5),0,Ui.dp(context,5),0);
+        timeline=new SeekBar(context); timeline.setMax(10000); timeline.setPadding(Ui.dp(context,12),0,Ui.dp(context,12),0);
         GradientDrawable track=Ui.background(0xff48484f,0),buffer=Ui.background(0xff85858d,0),progress=Ui.background(Accent.color,0);
         LayerDrawable layers=new LayerDrawable(new Drawable[]{track,new ClipDrawable(buffer,Gravity.LEFT,ClipDrawable.HORIZONTAL),new ClipDrawable(progress,Gravity.LEFT,ClipDrawable.HORIZONTAL)});
         for(int layer=0;layer<3;layer++) { layers.setLayerHeight(layer,Ui.dp(context,3)); layers.setLayerGravity(layer,Gravity.CENTER_VERTICAL); }
         layers.setId(0,android.R.id.background); layers.setId(1,android.R.id.secondaryProgress); layers.setId(2,android.R.id.progress); timeline.setProgressDrawable(layers);
-        GradientDrawable thumb=Ui.background(Accent.color,0); thumb.setSize(Ui.dp(context,10),Ui.dp(context,10)); timeline.setThumb(thumb); timeline.setSplitTrack(false); Accent.bind(timeline,(view,color)-> { progress.setColor(color); thumb.setColor(color); view.invalidate(); });
-        addView(timeline,new LayoutParams(-1,Ui.dp(context,14))); timeline.setEnabled(!live); timeline.setContentDescription(I18n.text("Wiedergabeposition"));
+        timeline.setSplitTrack(false);
+        java.util.function.BiConsumer<View,Integer> seekStyle=(view,color)-> {
+            boolean focused=view.isFocused(); int size=Ui.dp(context,focused?20:10);
+            progress.setColor(focused?Color.WHITE:color); track.setColor(focused?0xff8a8a93:0xff48484f);
+            GradientDrawable marker=Ui.background(focused?Color.WHITE:color,0); marker.setCornerRadius(Ui.dp(context,20)); marker.setStroke(focused?Ui.dp(context,2):0,color); marker.setSize(size,size); timeline.setThumb(marker); timeline.setThumbOffset(size/2);
+            for(int layer=0;layer<3;layer++) layers.setLayerHeight(layer,Ui.dp(context,focused?5:3));
+            view.setBackground(Ui.background(focused?(color&0x00ffffff)|0x26000000:Color.TRANSPARENT,focused?color:0)); view.invalidate();
+        };
+        Accent.bind(timeline,seekStyle); timeline.setOnFocusChangeListener((view,focused)->seekStyle.accept(view,Accent.color));
+        addView(timeline,new LayoutParams(-1,Ui.dp(context,28))); timeline.setEnabled(!live); timeline.setFocusable(!live); timeline.setFocusableInTouchMode(!live); timeline.setContentDescription(I18n.text("Wiedergabeposition"));
         timeline.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
             @Override public void onStartTrackingTouch(SeekBar bar) { dragging=true; }
             @Override public void onStopTrackingTouch(SeekBar bar) { dragging=false; if(duration>0) actions.seekTo(duration*bar.getProgress()/10000); }
