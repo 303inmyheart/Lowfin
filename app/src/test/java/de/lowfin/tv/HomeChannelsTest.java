@@ -71,6 +71,18 @@ public class HomeChannelsTest {
         for(int i=0;i<count;i++) rows.put(Json.obj("BaselineItemName","Gesehener Film "+(i+1),"RecommendationType","SimilarToRecentlyPlayed","Items",Json.arr(Json.obj("Id","recommendation"+i,"Type","Movie","Name","Filmvorschlag "+i))));
         return rows;
     }
+    @Test public void zeroUpdateCountKeepsActivatedRecommendationChannelAndRecoversMissingPreference() throws Exception {
+        app.library.state("homeRecommendations",recommendationRows(1).toString()); app.channels.publish(); await(()->provider.count("watch_next_program")==2);
+        ContentValues original=provider.byProviderId("channel","lowfin-recommendation-0"); long id=original.getAsLong("_id"); Set<Long> ids=provider.ids("channel");
+        provider.zeroChannelUpdates=true;
+        app.getSharedPreferences("tv-home",0).edit().remove("channel-recommendation-0").commit();
+        JSONArray rows=recommendationRows(1); rows.getJSONObject(0).put("BaselineItemName","Neuer Film"); rows.getJSONObject(0).getJSONArray("Items").getJSONObject(0).put("Id","new-recommendation");
+        app.library.state("homeRecommendations",rows.toString()); app.channels.publish();
+        await(()->provider.byProviderId("preview_program",account.scope()+":new-recommendation")!=null);
+        assertEquals(ids,provider.ids("channel")); ContentValues updated=provider.byProviderId("channel","lowfin-recommendation-0");
+        assertEquals(id,(long)updated.getAsLong("_id")); assertEquals(Integer.valueOf(1),updated.getAsInteger("browsable"));
+        assertEquals("Weil du „Neuer Film“ gesehen hast",updated.getAsString("display_name"));
+    }
     @Test public void publishesFiveMovieRecommendationChannelsAfterContinueAndNextWithDetailLinks() throws Exception {
         app.library.state("homeRecommendations",recommendationRows(5).toString()); app.channels.publish(); await(()->provider.count("watch_next_program")==2);
         assertEquals(9,provider.count("channel")); assertEquals(9,provider.count("preview_program"));
@@ -112,7 +124,7 @@ public class HomeChannelsTest {
             await(()->"Weil du „Asterix“ gesehen hast".equals(launcherTitle.get()));
             assertEquals(ids,provider.ids("channel")); ContentValues updated=provider.byProviderId("channel","lowfin-recommendation-0"); assertEquals(channelId,(long)updated.getAsLong("_id")); assertEquals(Integer.valueOf(0),updated.getAsInteger("browsable"));
             assertEquals("Asterix-Empfehlung",provider.byProviderId("preview_program",account.scope()+":recommendation0").getAsString("title"));
-            int before=refreshes.get(); app.channels.publish(); Thread.sleep(100); assertEquals(before,refreshes.get());
+            int before=refreshes.get(); app.channels.publish(); await(()->refreshes.get()>before);
         } finally { resolver.unregisterContentObserver(launcher); }
     }
     @Test public void upgradeNotifiesAnAlreadyCorrectStoredHeadingOnce() throws Exception {
@@ -175,6 +187,7 @@ public class HomeChannelsTest {
     private void await(BooleanSupplier condition) throws Exception { long end=System.currentTimeMillis()+8000; while(System.currentTimeMillis()<end) { if(condition.getAsBoolean()) return; Thread.sleep(20); } fail("TV provider update timed out"); }
 
     public static final class FakeTvProvider extends ContentProvider {
+        volatile boolean zeroChannelUpdates;
         private final Map<String,Map<Long,ContentValues>> tables=new HashMap<>(); private long next=1;
         @Override public boolean onCreate() { return true; }
         private String table(Uri uri) { return uri.getPathSegments().get(0); }
@@ -186,7 +199,7 @@ public class HomeChannelsTest {
         synchronized void foreign(String table) { ContentValues v=new ContentValues(); v.put("_id",next++); v.put("package_name","another.app"); v.put("internal_provider_id","foreign"); v.put("browsable",1); rows(table).put(v.getAsLong("_id"),v); }
         synchronized void browse(String table,String id,boolean enabled) { for(ContentValues v:rows(table).values()) if(id.equals(v.getAsString("internal_provider_id"))) v.put("browsable",enabled?1:0); }
         @Override public synchronized Uri insert(Uri uri,ContentValues values) { ContentValues v=new ContentValues(values); v.put("_id",next++); v.put("package_name","de.lowfin.tv"); v.put("browsable",1); rows(table(uri)).put(v.getAsLong("_id"),v); return ContentUris.withAppendedId(uri,v.getAsLong("_id")); }
-        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return 1; }
+        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return zeroChannelUpdates&&table(uri).equals("channel")?0:1; }
         @Override public synchronized int delete(Uri uri,String where,String[] args) { return rows(table(uri)).remove(ContentUris.parseId(uri))==null?0:1; }
         @Override public synchronized Cursor query(Uri uri,String[] projection,String where,String[] args,String sort) {
             MatrixCursor out=new MatrixCursor(projection); String channel=uri.getQueryParameter("channel"); Long id=uri.getPathSegments().size()>1?ContentUris.parseId(uri):null;
