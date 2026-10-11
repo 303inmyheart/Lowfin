@@ -27,7 +27,7 @@ public final class LowfinApp extends Application {
         if(a!=null) { api=new Api(a); library=new Library(this,a.scope()); images=new Images(this,api,a.scope()); ratings=new Ratings(this,library,api); }
         else { api=null; library=null; images=null; ratings=null; }
         if(a!=null&&channels!=null) channels.schedule();
-        if(a!=null) { final Library db=library; cacheIo.execute(()->backfill(db)); }
+        if(a!=null) { final Library db=library; cacheIo.execute(()-> { try { String saved=db.state("cacheStatus"); if(library==db&&!syncing&&!saved.isEmpty()) syncStatus=saved; } catch(Exception ignored) {} backfill(db); }); }
     }
     private void backfill(Library db) {
         if(library!=db) return;

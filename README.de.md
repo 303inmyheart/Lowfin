@@ -4,7 +4,7 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.12**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.13**.
 
 ## Installieren
 
@@ -197,3 +197,9 @@ TMDB_API_KEY=
 ```
 
 Ohne Anführungszeichen und ohne `Bearer`-Präfix eintragen.
+
+## Persistenter Bildcache ab 0.7.13
+
+Gecachte Bilder werden unabhängig von Downloads gelesen und decodiert. Oberfläche und Precache verwenden dieselben Bildgrößen; vorhandene 240-Pixel-Cover können auf HD-Geräten weiterverwendet werden. Langsame einzelne Bildanfragen blockieren andere Cover nicht mehr. Bei vollem Speicherbudget ersetzen neue sichtbare Cover die am längsten nicht verwendeten Dateien; der Hintergrund-Precache lädt dann keine weiteren Bilder hinzu.
+
+Automatisches Vorladen ist eine Aktualisierung, kein Löschen des Caches. Standardmäßig prüft Lowfin nach 24 Stunden erneut. Noch nicht vollständig abgeschlossene Metadatenläufe werden beim nächsten Start wieder versucht. Der gespeicherte Status bzw. vorhandene Cover werden nach einem App-Neustart wieder angezeigt.

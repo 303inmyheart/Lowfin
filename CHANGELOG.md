@@ -9,6 +9,14 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.13
+
+- Separates foreground disk reads/bitmap decoding from network downloads. Removes the image-cache monitor held across HTTP requests; slow preload requests no longer serialize all cover loads. Concurrent requests for the same artwork share one download.
+- Preload and UI use matching density-aware artwork sizes. Existing 240px HD covers remain usable, and cache files survive loader/app restarts. Image requests have dedicated, bounded timeouts and do not share cancellation with playback/API calls.
+- Restores saved cache status or existing artwork counts on startup instead of falsely displaying an empty cache. Automatic metadata refresh remains controlled by the configured interval; existing cache files are reused.
+- Uses allocation-light image-key encoding, bounded bitmap decoding, atomic image writes, and cache-clear generation checks. At a full artwork budget, visible misses evict least-recently-used artwork while preload avoids churning the cache.
+- Verified with 185 passing tests, debug/release lint and a signed release build. Installed as an update on the authorized Android 11 HD TV; 27,898 artwork files (524 MB) remained present after the update and a full app-process restart, and cached library pages rendered their covers.
+
 ## 0.7.12
 
 - Automatic next-episode playback keeps player controls and title/logo overlays hidden during opening and startup. Remote input still opens controls normally; manually starting media or choosing Next episode retains the existing startup controls.
