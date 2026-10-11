@@ -109,6 +109,25 @@ public class TvUiTest {
         await(()->cover.getDrawable()!=null); screenshot("seasons-40-hd.png"); row.performClick(); layout();
         assertNotNull(findText(activity.get().findViewById(android.R.id.content),"Staffel 40"));
     }
+    @Test public void holdingOkOnSeasonTogglesWatchedForSeasonAndCachedEpisodes() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis()); app.library.put(series);
+        app.library.put(Json.obj("Id","season-episode","Type","Episode","ParentId","s1","UserData",Json.obj("Played",false,"PlaybackPositionTicks",9000000)));
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Serien")!=null);
+        findButton(activity.get().findViewById(android.R.id.content),"Serien").performClick(); await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1); layout(); recycler().getChildAt(0).performClick();
+        await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==45); layout(); View card=recycler().getChildAt(0); card.requestFocus();
+        activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_CENTER));
+        shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(ViewConfiguration.getLongPressTimeout()+20));
+        android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertTrue(dialog.isShowing()); assertEquals(1,dialog.getListView().getAdapter().getCount()); assertEquals("Als gesehen markieren",dialog.getListView().getAdapter().getItem(0));
+        dialog.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_CENTER)); assertTrue(dialog.isShowing()); assertNull(shadowOf(activity.get()).getNextStartedActivity());
+        dialog.getListView().performItemClick(null,0,0);
+        await(()->Json.object(app.library.item("season-episode"),"UserData").optBoolean("Played")); layout(); assertEquals(0,Json.position(app.library.item("season-episode")));
+        card.performLongClick(); dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog(); assertEquals("Als ungesehen markieren",dialog.getListView().getAdapter().getItem(0)); dialog.getListView().performItemClick(null,0,0);
+        await(()->!Json.object(app.library.item("s1"),"UserData").optBoolean("Played")&&!Json.object(app.library.item("season-episode"),"UserData").optBoolean("Played"));
+        boolean post=false,delete=false; RecordedRequest request;
+        while((request=server.takeRequest(100,java.util.concurrent.TimeUnit.MILLISECONDS))!=null) if(request.getRequestUrl().encodedPath().equals("/Users/user/PlayedItems/s1")) { post|="POST".equals(request.getMethod()); delete|="DELETE".equals(request.getMethod()); }
+        assertTrue(post); assertTrue(delete);
+    }
     @Test public void holdingRemoteConfirmOnHomeOpensActionsWithoutLaunchingPlayback() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
@@ -294,7 +313,9 @@ public class TvUiTest {
         activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->recycler()!=null&&((HomeAdapter)recycler().getAdapter()).rows.get(2).size()==24&&((HomeAdapter)recycler().getAdapter()).rows.get(3).size()==1);
         HomeAdapter adapter=(HomeAdapter)recycler().getAdapter(); assertEquals("Als Nächstes",adapter.labels.get(1)); assertEquals("Weil du „Alien“ gesehen hast",adapter.labels.get(2)); assertEquals("Weil du „The Thing“ gesehen hast",adapter.labels.get(3)); assertEquals("Horror",adapter.labels.get(7)); assertEquals("Weil du „The Shining“ gesehen hast",adapter.labels.get(6)); assertEquals(1,adapter.rows.get(6).size());
-        adapter.requestRow(1); layout(); HomeAdapter.Shelf next=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);
+        adapter.requestRow(1); layout();
+        await(()-> { HomeAdapter.Shelf h=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1); return h!=null&&h.list.findFocus()!=null; });
+        HomeAdapter.Shelf next=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);
         next.list.findFocus().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN));
         await(()-> { HomeAdapter.Shelf h=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2); return h!=null&&h.itemView.isShown()&&h.list.hasFocus(); });
         HomeAdapter.Shelf first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2); ArtworkView cover=(ArtworkView)find(first.list.getChildAt(0),v->v instanceof ArtworkView);
