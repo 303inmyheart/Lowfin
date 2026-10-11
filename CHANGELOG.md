@@ -11,6 +11,7 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 
 ## 0.7.16
 
+- Holding OK on a season poster opens a watched/unwatched action for the whole season. Successful server changes update the season card and locally cached episodes, including clearing resume positions.
 - Preserves existing TV channel identities even when an OEM provider returns zero from an update; recovers channels by their stable provider key when a saved ID is missing, preserving launcher activation.
 - Notifies channel collection, individual channel and channel-program observers after publishing, including updates with unchanged recommendation titles. Existing recommendation rows receive new titles and cards without recreation.
 - Marking media watched/unwatched from detail pages or the long-press menu requests a fresh server recommendation/channel refresh.

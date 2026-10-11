@@ -593,15 +593,30 @@ public final class MainActivity extends Activity {
         return result;
     }
     private void itemActions(JSONObject item) {
-        if(app.account==null||!Arrays.asList("Movie","Series","Episode","Video").contains(item.optString("Type"))) return;
+        if(app.account==null||!Arrays.asList("Movie","Series","Season","Episode","Video").contains(item.optString("Type"))) return;
+        final boolean season="Season".equals(item.optString("Type"));
         final Api api=app.api; final Library db=app.library; final int g=generation;
         final WatchLater later=new WatchLater(this,api.account); final View origin=root.findFocus();
         boolean played=Json.object(item,"UserData").optBoolean("Played"),favorite=Json.object(item,"UserData").optBoolean("IsFavorite"),saved=later.contains(item.optString("Id"));
         List<String> labels=new ArrayList<>(Arrays.asList(I18n.text("Fortsetzen"),I18n.text("Von vorn"),I18n.text(played?"Als ungesehen markieren":"Als gesehen markieren"),I18n.text(saved?"Aus Später ansehen entfernen":"Zu Später ansehen hinzufügen"),I18n.text(favorite?"Aus Favoriten entfernen":"Zu Favoriten hinzufügen")));
         String seriesId="Series".equals(item.optString("Type"))?item.optString("Id"):item.optString("SeriesId");
         if(!seriesId.isEmpty()) labels.add(I18n.text("Zur Serienseite"));
+        if(season) labels=new ArrayList<>(Collections.singletonList(I18n.text(played?"Als ungesehen markieren":"Als gesehen markieren")));
         AlertDialog dialog=new AlertDialog.Builder(this).setTitle(Json.label(item)).setItems(labels.toArray(new String[0]),(d,which)-> {
             if(app.api!=api||g!=generation) return;
+            if(season) {
+                app.io.execute(()-> { try {
+                    api.call(played?"DELETE":"POST","/Users/"+api.account.user+"/PlayedItems/"+item.optString("Id"),null);
+                    JSONObject updated=new JSONObject(item.toString()),user=Json.object(updated,"UserData"); user.put("Played",!played); user.put("PlaybackPositionTicks",0); updated.put("UserData",user); db.put(updated);
+                    int offset=0; while(true) {
+                        List<JSONObject> episodes=db.query("type='Episode' AND parent=?",new String[]{item.optString("Id")},"id",100,offset); if(episodes.isEmpty()) break;
+                        for(JSONObject episode:episodes) { JSONObject data=Json.object(episode,"UserData"); data.put("Played",!played); data.put("PlaybackPositionTicks",0); episode.put("UserData",data); db.put(episode); } offset+=episodes.size();
+                    }
+                    if(app.api==api) app.channels.refresh(null);
+                    runOnUiThread(()-> { if(app.api!=api||g!=generation) return; try { item.put("UserData",user); } catch(JSONException ignored) { } rebindActionCard(origin); Motion.feedback(origin); toast(I18n.text("Gespeichert")); });
+                } catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&g==generation) toast(I18n.text("Aktion fehlgeschlagen")); }); } });
+                return;
+            }
             if(which==0||which==1) { actionPlay(item,which==1,api,g); return; }
             if(which==3) { later.set(item,!saved); toast(I18n.text(saved?"Aus Später ansehen entfernt":"Zu Später ansehen hinzugefügt")); if(screen!=null&&"watchLater".equals(screen.type)) refreshActionCards(); else Motion.feedback(origin); return; }
             if(which==5) { actionSeries(seriesId,api,g); return; }
