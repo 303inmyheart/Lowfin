@@ -9,6 +9,10 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.15
+
+- Removes the redundant Pin genres entry from the sidebar. Genre row configuration remains available in Settings.
+
 ## 0.7.14
 
 - The bottom-left status distinguishes an initial cache build from refreshing an existing library. Refreshing displays that cached data remains available rather than a counter restarting from zero. Detailed per-run progress remains available in Settings and the background notification.

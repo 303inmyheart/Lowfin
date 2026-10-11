@@ -221,7 +221,6 @@ public final class MainActivity extends Activity {
         sidebar.removeAllViews(); sideButton(I18n.text("Start"),()->show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false)); sideButton(I18n.text("Suche"),this::search); sideButton("Genres",()->show(new Screen("genres","Genres",null,null,null),false));
         Ui.space(sidebar,12); sideButton("Live TV",()->show(new Screen("live","Live TV",null,null,null),false));
         sideButton(I18n.text("Zufälliger Film"),()-> { String parent=screen.kind.equals("browse")&&screen.type.contains("Movie")?screen.parent:null; setDrawer(false); randomMovie(parent); });
-        sideButton(I18n.text("Genres anheften"),()->show(new Screen("genres","Genres",null,null,null),false));
         if(screen.kind.equals("genre")) sideButton(HomeGenres.read(app.settings,app.account).contains(screen.parent)?I18n.text("Von Startseite lösen"):I18n.text("Auf Startseite anheften"),()-> { HomeGenres.toggle(app.settings,app.account,screen.parent); show(screen,false); });
         Ui.space(sidebar,12); sidebar.addView(Ui.text(this,I18n.text("BIBLIOTHEKEN"),11,Ui.MUTED)); Ui.space(sidebar,10);
         if(views.isEmpty()) {
