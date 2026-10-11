@@ -190,7 +190,7 @@ public class TvUiTest {
         await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&((HomeAdapter)recycler().getAdapter()).rows.get(1).size()==1);
         layout(); View root=activity.get().findViewById(android.R.id.content);
         assertNull(findText(recycler(),"Neu in deiner Bibliothek"));
-        assertFalse(findButton(root,"Zufälliger Film").isShown()); assertFalse(findButton(root,"Genres anheften").isShown());
+        assertFalse(findButton(root,"Zufälliger Film").isShown()); assertNull(findButton(root,"Genres anheften"));
         HomeAdapter adapter=(HomeAdapter)recycler().getAdapter(); adapter.requestRow(1); layout();
         HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);
         assertEquals(2,shelf.list.getAdapter().getItemCount()); View more=shelf.list.getLayoutManager().findViewByPosition(1); assertNotNull(more);
@@ -404,7 +404,7 @@ public class TvUiTest {
         card.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_LEFT)); layout();
         assertSame(findButton(activity.get().findViewById(android.R.id.content),"Meine Filme"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP));
-        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Genres anheften"),activity.get().findViewById(android.R.id.content).findFocus());
+        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Zufälliger Film"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN));
         assertSame(findButton(activity.get().findViewById(android.R.id.content),"Meine Filme"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT)); activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_RIGHT));

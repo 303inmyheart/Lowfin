@@ -584,7 +584,7 @@ public final class MainActivity extends Activity {
     }
     private void mutate(JSONObject item,String path,String method,Runnable after) {
         final Api api=app.api; int g=generation;
-        app.io.execute(()-> { try { api.call(method,path,null); runOnUiThread(()-> { if(g==generation) after.run(); }); }
+        app.io.execute(()-> { try { api.call(method,path,null); if(app.api==api&&path.contains("/PlayedItems/")) app.channels.refresh(null); runOnUiThread(()-> { if(g==generation) after.run(); }); }
             catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(e.getMessage()); }); } });
     }
     private List<JSONObject> watchLaterItems(int page,Api api,Library db) {
@@ -609,6 +609,7 @@ public final class MainActivity extends Activity {
             app.io.execute(()-> { try {
                 api.call(value?"POST":"DELETE","/Users/"+api.account.user+"/"+category+"/"+item.optString("Id"),null);
                 JSONObject updated=new JSONObject(item.toString()),user=Json.object(updated,"UserData"); user.put(flag,value); updated.put("UserData",user); db.put(updated);
+                if(app.api==api&&which==2) app.channels.refresh(null);
                 runOnUiThread(()-> { if(app.api!=api||g!=generation) return; try { item.put("UserData",user); } catch(JSONException ignored) { } toast(I18n.text("Gespeichert")); rebindActionCard(origin); Motion.feedback(origin); app.channels.publish(); if(screen!=null&&"favorites".equals(screen.type)) refreshActionCards(); });
             } catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&g==generation) toast(I18n.text("Aktion fehlgeschlagen")); }); } });
         }).setNegativeButton(I18n.text("Abbrechen"),null).create();

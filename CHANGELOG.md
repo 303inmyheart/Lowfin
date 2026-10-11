@@ -9,6 +9,13 @@ All Lowfin versions, starting with the first test version, **0.1.0**. Historical
 - Dedicated complete version history linked from both documentation languages.
 - Release APKs preserve the existing signing certificate for installation updates; release lint is checked alongside debug lint.
 
+## 0.7.16
+
+- Preserves existing TV channel identities even when an OEM provider returns zero from an update; recovers channels by their stable provider key when a saved ID is missing, preserving launcher activation.
+- Notifies channel collection, individual channel and channel-program observers after publishing, including updates with unchanged recommendation titles. Existing recommendation rows receive new titles and cards without recreation.
+- Marking media watched/unwatched from detail pages or the long-press menu requests a fresh server recommendation/channel refresh.
+- Adds a regression covering changed recommendations, missing saved IDs, zero update counts and preserved visibility. Updates the sidebar test for the removed Pin genres button.
+
 ## 0.7.15
 
 - Removes the redundant Pin genres entry from the sidebar. Genre row configuration remains available in Settings.

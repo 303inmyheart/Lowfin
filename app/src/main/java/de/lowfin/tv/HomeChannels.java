@@ -145,14 +145,24 @@ final class HomeChannels {
         ContentResolver resolver=app.getContentResolver(); Uri uri=TvContractCompat.Channels.CONTENT_URI; long id=prefs.getLong("channel-"+key,-1);
         Channel settings=new Channel.Builder().setType(TvContractCompat.Channels.TYPE_PREVIEW).setDisplayName(label)
             .setInternalProviderId("lowfin-"+key).setAppLinkIntent(new Intent(app,MainActivity.class).setPackage(app.getPackageName())).build();
-        boolean existing=id>=0&&resolver.update(TvContractCompat.buildChannelUri(id),settings.toContentValues(),null,null)==1;
+        // An OEM provider may return zero for an unchanged update. That is not
+        // evidence that the channel disappeared: recreating it loses user approval.
+        boolean existing=id>=0&&ownsChannel(id);
+        if(!existing) {
+            try(Cursor c=resolver.query(uri,new String[]{"_id","package_name","internal_provider_id"},null,null,null)) {
+                if(c!=null) while(c.moveToNext()) if(app.getPackageName().equals(c.getString(1))&&("lowfin-"+key).equals(c.getString(2))) {
+                    id=c.getLong(0); existing=true; prefs.edit().putLong("channel-"+key,id).apply(); break;
+                }
+            }
+        }
+        if(existing) resolver.update(TvContractCompat.buildChannelUri(id),settings.toContentValues(),null,null);
         if(!existing) {
             Uri inserted=resolver.insert(uri,settings.toContentValues()); if(inserted==null) throw new IllegalStateException(I18n.text("TV-Kanal konnte nicht angelegt werden"));
             id=ContentUris.parseId(inserted); prefs.edit().putLong("channel-"+key,id).apply();
         }
         // A channel-row update alone can leave a launcher's channel-list cache unchanged.
         // The persisted marker also repairs already-correct provider names after an upgrade.
-        if(!label.equals(prefs.getString("notified-channel-label-v1-"+id,null))) changedChannelLabels.put(id,label);
+        changedChannelLabels.put(id,label);
         if(defaultChannel) TvContractCompat.requestChannelBrowsable(app,id);
         String logoKey="logo-"+key+"-0.5.2"; if(existing&&prefs.getBoolean(logoKey,false)) return id;
         Bitmap logo=BitmapFactory.decodeResource(app.getResources(),R.mipmap.ic_launcher); if(logo==null) {
@@ -169,7 +179,11 @@ final class HomeChannels {
             // both the heading and cards from the same recommendation snapshot. No sync job.
             app.getContentResolver().notifyChange(TvContractCompat.Channels.CONTENT_URI,null,false);
             android.content.SharedPreferences.Editor edit=prefs.edit();
-            for(Map.Entry<Long,String> entry:changedChannelLabels.entrySet()) edit.putString("notified-channel-label-v1-"+entry.getKey(),entry.getValue());
+            for(Map.Entry<Long,String> entry:changedChannelLabels.entrySet()) {
+                app.getContentResolver().notifyChange(TvContractCompat.buildChannelUri(entry.getKey()),null,false);
+                app.getContentResolver().notifyChange(TvContractCompat.buildPreviewProgramsUriForChannel(entry.getKey()),null,false);
+                edit.putString("notified-channel-label-v1-"+entry.getKey(),entry.getValue());
+            }
             edit.apply();
         } catch(SecurityException e) {
             // Some OEM providers disallow app notifications. Keep the marker pending for retry;
