@@ -2,7 +2,7 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.12.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 0.7.13.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -11,7 +11,7 @@ A native Jellyfin client for low-end Android TV devices. Designed for Android 11
 Download the APK from [the latest GitHub release](https://github.com/303inmyheart/Lowfin/releases/latest), transfer it to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-0.7.12.apk
+adb install -r Lowfin-0.7.13.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -28,7 +28,8 @@ Sign in with your Jellyfin server URL, username and password. The encrypted sess
 - Local playback, stereo downmix, configurable disk video cache and adaptive RAM buffers that preserve memory headroom. Optional server transcoding remains disabled by default. Direct playback requires codecs supported by the device or bundled audio decoder.
 - Intro Skipper through Jellyfin MediaSegments on Jellyfin 10.10 or later: automatic intro/outro skipping and manual skip controls for other segments.
 - Full-screen YouTube trailers in Lowfin’s native Media3 player, with native controls and no YouTube interface. Stream lookup follows the approach used by [Moonfin](https://github.com/Moonfin-Client/Moonfin-Core/blob/main/lib/data/services/youtube_stream_resolver.dart); availability depends on YouTube returning playable media. Trailer quality is capped at 720p for low-end devices.
-- Persistent account/server-scoped library metadata and artwork cache. Cached library browsing survives restarts and connection failures.
+- Persistent account/server-scoped library metadata and artwork cache. Cached library browsing survives restarts and connection failures. Foreground disk reads/decoding are separate from downloads; preload and UI request matching artwork sizes. Existing 240px HD artwork remains reusable. The artwork budget is bounded: visible uncached covers can replace the least recently used files when it is full, while background preload stops adding files.
+- Automatic preload checks the last successful metadata refresh (24 hours by default); interrupted first metadata passes are retried on launch. A refresh reuses stored covers and does not clear the cache. Saved cache status/file counts are restored on startup.
 - OMDb, MDBList and TMDB API keys encrypted on device, selectable rating badges and permanent **on-demand** ratings storage. Ratings are never queried as part of library preloading.
 - Android TV preview channels for Continue watching, Next up, movies, shows and watched-movie recommendations. Separate movie/show library selection mixes cards across chosen libraries. Launcher support and channel visibility depend on Android TV / Google TV.
 

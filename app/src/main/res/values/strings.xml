@@ -1,4 +1,5 @@
 <resources>
+    <string name="stored_covers" formatted="false">"Stored artwork: "</string>
     <string name="text_000" formatted="false">"Your library"</string>
     <string name="text_001" formatted="false">"Please sign in again"</string>
     <string name="text_002" formatted="false">"Server unavailable. Your cached library is still available."</string>

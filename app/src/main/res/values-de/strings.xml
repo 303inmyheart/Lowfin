@@ -1,4 +1,5 @@
 <resources>
+    <string name="stored_covers" formatted="false">"Gespeicherte Cover: "</string>
     <string name="text_000" formatted="false">"Deine Bibliothek"</string>
     <string name="text_001" formatted="false">"Bitte erneut anmelden"</string>
     <string name="text_002" formatted="false">"Server nicht erreichbar. Gespeicherte Bibliothek bleibt verfügbar."</string>

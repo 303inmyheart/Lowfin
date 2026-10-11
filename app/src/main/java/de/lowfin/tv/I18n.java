@@ -7,6 +7,7 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("Gespeicherte Cover: ",R.string.stored_covers);
         IDS.put("API-Keys aus TXT-Datei",R.string.key_file_title);
         IDS.put("Download-Datei jetzt prüfen",R.string.key_file_check);
         IDS.put("TXT-Datei auswählen",R.string.key_file_select);
