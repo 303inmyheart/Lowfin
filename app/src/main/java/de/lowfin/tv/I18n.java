@@ -8,6 +8,9 @@ final class I18n {
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
         IDS.put("Gespeicherte Cover: ",R.string.stored_covers);
+        IDS.put("Bibliothekscache wird geprüft …",R.string.cache_checking);
+        IDS.put("Bibliothek wird aktualisiert · Cache bleibt verfügbar",R.string.cache_refreshing);
+        IDS.put("Bibliothekscache wird erstmals erstellt …",R.string.cache_initial_build);
         IDS.put("API-Keys aus TXT-Datei",R.string.key_file_title);
         IDS.put("Download-Datei jetzt prüfen",R.string.key_file_check);
         IDS.put("TXT-Datei auswählen",R.string.key_file_select);

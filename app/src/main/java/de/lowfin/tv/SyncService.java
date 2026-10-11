@@ -21,7 +21,7 @@ public final class SyncService extends Service {
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
         startForeground(1,notification(I18n.text("Metadaten werden geladen")));
         if(app.account==null) { stopSelf(); return START_NOT_STICKY; }
-        if(!app.syncing) { app.syncing=true; worker.execute(this::sync); }
+        if(!app.syncing) { app.syncSummary=I18n.text("Bibliothekscache wird geprüft …"); app.syncing=true; worker.execute(this::sync); }
         return START_NOT_STICKY;
     }
     private void status(String s) { app.syncStatus=s; if(!cancelled) ((NotificationManager)getSystemService(NOTIFICATION_SERVICE)).notify(1,notification(s)); }
@@ -33,6 +33,7 @@ public final class SyncService extends Service {
         final Api api=app.api; final Library library=app.library; final Images images=app.images;
         long stamp=System.currentTimeMillis(); int offset=0,total=0;
         try {
+            app.syncSummary=I18n.text(library.count()>0?"Bibliothek wird aktualisiert · Cache bleibt verfügbar":"Bibliothekscache wird erstmals erstellt …");
             while(!cancelled) {
                 waitForPlayback();
                 JSONObject response=api.items(offset,150,"Movie,Series,Season,Episode,BoxSet,Video",null,null);

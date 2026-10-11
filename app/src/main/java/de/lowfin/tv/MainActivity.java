@@ -30,7 +30,7 @@ public final class MainActivity extends Activity {
     private boolean viewsLoading;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final Runnable statusTick=new Runnable() { public void run() {
-        if(status!=null) status.setText(app.syncing?app.syncStatus:screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.account==null?"":app.account.name+"  ·  HD");
+        if(status!=null) status.setText(app.syncing?(screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.syncSummary):screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.account==null?"":app.account.name+"  ·  HD");
         handler.postDelayed(this,2000);
     }};
     private static final int PAGE=60,KEY_FILE_REQUEST=1201,KEY_STORAGE_REQUEST=1202;

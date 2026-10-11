@@ -18,6 +18,7 @@ public final class LowfinApp extends Application {
     VideoCache videoCache;
     SharedPreferences settings;
     volatile String syncStatus=I18n.text("Cache noch nicht erstellt");
+    volatile String syncSummary="";
     volatile boolean syncing=false,playing=false;
     @Override public void onCreate() { super.onCreate(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
     synchronized void setAccount(Account a) {
