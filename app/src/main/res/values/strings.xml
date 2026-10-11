@@ -1,4 +1,7 @@
 <resources>
+    <string name="cache_checking">Checking library cache …</string>
+    <string name="cache_refreshing">Refreshing library · Cached data remains available</string>
+    <string name="cache_initial_build">Creating library cache for the first time …</string>
     <string name="stored_covers" formatted="false">"Stored artwork: "</string>
     <string name="text_000" formatted="false">"Your library"</string>
     <string name="text_001" formatted="false">"Please sign in again"</string>

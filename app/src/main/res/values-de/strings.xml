@@ -1,4 +1,7 @@
 <resources>
+    <string name="cache_checking">Bibliothekscache wird geprüft …</string>
+    <string name="cache_refreshing">Bibliothek wird aktualisiert · Cache bleibt verfügbar</string>
+    <string name="cache_initial_build">Bibliothekscache wird erstmals erstellt …</string>
     <string name="stored_covers" formatted="false">"Gespeicherte Cover: "</string>
     <string name="text_000" formatted="false">"Deine Bibliothek"</string>
     <string name="text_001" formatted="false">"Bitte erneut anmelden"</string>
