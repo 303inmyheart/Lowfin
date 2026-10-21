@@ -13,14 +13,15 @@ final class YouTubeStreams {
     private final OkHttpClient client;
     YouTubeStreams() { this(new OkHttpClient.Builder().connectTimeout(4,TimeUnit.SECONDS).readTimeout(4,TimeUnit.SECONDS).callTimeout(5,TimeUnit.SECONDS).build()); }
     YouTubeStreams(OkHttpClient client) { this.client=client; }
-    String resolve(String id) throws IOException {
+    String resolve(String id) throws IOException {return resolve(id,720);}
+    String resolve(String id,int height) throws IOException {
         if(id==null||!id.matches("[A-Za-z0-9_-]{11}")) throw new IOException("Invalid trailer ID");
         for(boolean vision:new boolean[]{true,false}) {
             try {
                 String sent=vision?visitor:null; JSONObject response=request(id,vision,sent);
                 String fresh=Json.object(response,"responseContext").optString("visitorData","");
                 if(vision&&!"OK".equals(Json.object(response,"playabilityStatus").optString("status"))&&!fresh.isEmpty()&&!fresh.equals(sent)) { visitor=fresh; response=request(id,true,fresh); }
-                String url=mediaUrl(response); if(url!=null) return url;
+                String url=mediaUrl(response,height); if(url!=null) return url;
             } catch(IOException|JSONException ignored) { }
         }
         throw new IOException("Trailer stream unavailable");
@@ -38,13 +39,15 @@ final class YouTubeStreams {
         if(vision&&visitorId!=null) request.header("X-Goog-Visitor-Id",visitorId);
         try(Response response=client.newCall(request.build()).execute()) { if(!response.isSuccessful()||response.body()==null) throw new IOException("Trailer lookup failed"); return new JSONObject(response.body().string()); }
     }
-    static String mediaUrl(JSONObject response) {
+    static String mediaUrl(JSONObject response) {return mediaUrl(response,720);}
+    static String mediaUrl(JSONObject response,int height) {
         JSONObject status=Json.object(response,"playabilityStatus"); if(!"OK".equals(status.optString("status"))) return null;
         JSONObject data=Json.object(response,"streamingData"); String manifest=data.optString("hlsManifestUrl"); if(allowed(manifest)) return manifest;
         JSONArray formats=Json.array(data,"formats"); String chosen=null; int best=Integer.MIN_VALUE;
         for(int i=0;i<formats.length();i++) { JSONObject format=formats.optJSONObject(i); if(format==null) continue;
             String url=format.optString("url"),mime=format.optString("mimeType"); if(!allowed(url)||!mime.contains("video/")||!(mime.contains("mp4a")||mime.contains("opus")||mime.contains("vorbis"))) continue;
-            int score=(mime.contains("avc1")?4000:0)+(mime.contains("video/mp4")?2000:0)-Math.abs(format.optInt("height",480)-720);
+            if(height>0&&format.optInt("height",480)>height) continue;
+            int score=(mime.contains("avc1")?4000:0)+(mime.contains("video/mp4")?2000:0)-Math.abs(format.optInt("height",480)-(height==0?2160:height));
             if(score>best) { best=score; chosen=url; }
         } return chosen;
     }

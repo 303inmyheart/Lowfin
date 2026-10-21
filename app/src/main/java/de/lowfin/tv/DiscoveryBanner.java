@@ -31,7 +31,9 @@ final class DiscoveryBanner extends FrameLayout {
     private ObjectAnimator zoom;
     private final Runnable observe=()-> {if(history!=null&&isAttachedToWindow()) render(history.current());};
     private final Rect visible=new Rect();
-    private final Runnable tick=()-> {if(active){next();main.postDelayed(this.tick,15000);}};
+    private long interval() {return Math.max(5,app.settings.getInt("bannerSeconds",15))*1000L;}
+    private boolean autoRotate() {return app.settings.getBoolean("bannerAutoRotate",true);}
+    private final Runnable tick=()-> {if(active&&autoRotate()){next();main.postDelayed(this.tick,interval());}};
     private final ViewTreeObserver.OnScrollChangedListener scroll=this::syncVisibility;
     private final ViewTreeObserver.OnGlobalLayoutListener layout=this::syncVisibility;
     DiscoveryBanner(android.content.Context context) {
@@ -53,7 +55,7 @@ final class DiscoveryBanner extends FrameLayout {
             if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) {
                 if(key==KeyEvent.KEYCODE_DPAD_RIGHT) next();
                 else if(history!=null&&history.canBack()&&!history.loading) render(history.back());else if(history==null||!history.loading) menu.run();
-                if(active) {main.removeCallbacks(tick);main.postDelayed(tick,15000);}
+                if(active) {main.removeCallbacks(tick);if(autoRotate()) main.postDelayed(tick,interval());}
             }
             return true;
         });
@@ -98,7 +100,7 @@ final class DiscoveryBanner extends FrameLayout {
     }
     void syncVisibility() {
         boolean visibleNow=isAttachedToWindow()&&getWindowVisibility()==VISIBLE&&hasWindowFocus()&&isShown()&&getGlobalVisibleRect(visible)&&allowed.getAsBoolean();
-        if(active!=visibleNow) {active=visibleNow;main.removeCallbacks(tick);main.removeCallbacks(loadRatings);if(active) {if(history!=null&&history.current()==null&&!history.empty) next();main.postDelayed(tick,15000);if(ratingItem!=null) main.postDelayed(loadRatings,250);}else ratings.cancelLoad();}
+        if(active!=visibleNow) {active=visibleNow;main.removeCallbacks(tick);main.removeCallbacks(loadRatings);if(active) {if(history!=null&&history.current()==null&&!history.empty) next();if(autoRotate()) main.postDelayed(tick,interval());if(ratingItem!=null) main.postDelayed(loadRatings,250);}else ratings.cancelLoad();}
         syncZoom();
     }
     private void syncZoom() {

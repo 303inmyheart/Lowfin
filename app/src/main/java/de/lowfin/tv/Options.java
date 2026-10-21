@@ -12,6 +12,16 @@ final class Options {
     private void button(String label,Runnable action) { Ui.space(content,8); content.addView(Ui.button(activity,label,action)); }
     private void toggle(String label,String key,boolean fallback) { Ui.space(content,8); content.addView(Ui.toggle(activity,I18n.text(label),app.settings.getBoolean(key,fallback),on-> { app.settings.edit().putBoolean(key,on).apply(); if(key.equals("randomAccent")||key.equals("rotateAccent")) app.accent.refresh(); })); }
     private void number(String label,String key,int fallback,int[] values,String[] names) { button(I18n.text(label)+": "+app.settings.getInt(key,fallback),()-> LowfinDialog.builder(activity).setTitle(I18n.text(label)).setItems(names,(d,w)-> { app.settings.edit().putInt(key,values[w]).apply(); if(key.equals("accentMinutes")) app.accent.refresh(); reload.run(); }).setNegativeButton(I18n.text("Abbrechen"),null).show()); }
+    private void selection(int label,String key,int fallback,int[] values,String[] names) {
+        int saved=app.settings.getInt(key,fallback),selected=0;for(int i=0;i<values.length;i++) if(values[i]==saved) selected=i;
+        button(I18n.resource(label)+": "+names[selected],()->LowfinDialog.builder(activity).setTitle(I18n.resource(label)).setItems(names,(d,w)->{app.settings.edit().putInt(key,values[w]).apply();reload.run();}).setNegativeButton(I18n.text("Abbrechen"),null).show());
+    }
+    private void subtitleLanguage() {
+        String[] values={"app","","en","de","fr","es","it","ja","pt","nl","ko","zh"};
+        String[] names={I18n.resource(R.string.language_follow_app),I18n.text("Original / automatisch"),"English","Deutsch","Français","Español","Italiano","日本語","Português","Nederlands","한국어","中文"};
+        String saved=app.settings.getString("subtitleLanguage","app");int selected=0;for(int i=0;i<values.length;i++)if(values[i].equals(saved))selected=i;
+        button(I18n.resource(R.string.subtitle_language)+": "+names[selected],()->LowfinDialog.builder(activity).setTitle(I18n.resource(R.string.subtitle_language)).setItems(names,(d,w)->{android.content.SharedPreferences.Editor edit=app.settings.edit();if(w==0)edit.remove("subtitleLanguage");else edit.putString("subtitleLanguage",values[w]);edit.apply();reload.run();}).setNegativeButton(I18n.text("Abbrechen"),null).show());
+    }
     private String[] numbers(int[] values) { String[] names=new String[values.length]; for(int i=0;i<values.length;i++) names[i]=""+values[i]; return names; }
     void genres() {
         toggle("Genre-Reihen anzeigen","genreRows",true); toggle("Nur die fokussierte Reihe anzeigen","singleShelf",true);
@@ -79,6 +89,8 @@ final class Options {
     }
     void home() {
         Ui.space(content,8);content.addView(Ui.toggle(activity,I18n.resource(R.string.discovery_banner),app.settings.getBoolean("discoveryBanner",false),on->app.settings.edit().putBoolean("discoveryBanner",on).apply()));
+        toggle(I18n.resource(R.string.banner_auto_rotate),"bannerAutoRotate",true);
+        number(I18n.resource(R.string.banner_interval),"bannerSeconds",15,new int[]{5,10,15,20,30,60},numbers(new int[]{5,10,15,20,30,60}));
         button(I18n.resource(R.string.banner_libraries),()->AmbientLibraries.choose(activity,app,"banner"));
         toggle(I18n.resource(R.string.home_show_libraries),"homeLibraries",false);
         button(I18n.resource(R.string.home_row_order),this::homeOrder);
@@ -103,7 +115,13 @@ final class Options {
         content.addView(Ui.text(activity,I18n.resource(R.string.hdr_hint),12,Ui.MUTED));
         toggle("Untertitel standardmäßig aktivieren","defaultSubtitles",false);
         toggle("Intros automatisch überspringen","skipIntro",true); toggle("Outros automatisch überspringen","skipOutro",true);
-        content.addView(Ui.text(activity,I18n.text("Seeken startet bei 5 Sekunden und beschleunigt beim Halten."),12,Ui.MUTED));
+        selection(R.string.video_fps,"videoFps",30,new int[]{0,30,60},new String[]{I18n.text("Original / automatisch"),"30 FPS","60 FPS"});
+        selection(R.string.audio_channels,"audioChannels",6,new int[]{0,2,6,8},new String[]{I18n.text("Original / automatisch"),"2.0","5.1","7.1"});
+        content.addView(Ui.text(activity,I18n.resource(R.string.audio_channels_hint),12,Ui.MUTED));
+        selection(R.string.trailer_quality,"trailerHeight",720,new int[]{0,480,720,1080,2160},new String[]{I18n.text("Original / automatisch"),"480p","720p","1080p","2160p"});
+        subtitleLanguage();
+        number(I18n.resource(R.string.seek_step),"seekSeconds",5,new int[]{5,10,15,30},numbers(new int[]{5,10,15,30}));
+        toggle(I18n.resource(R.string.seek_acceleration),"seekAcceleration",true);
         number("Player-Menü ausblenden · Sekunden","controlsSeconds",5,new int[]{3,5,8,12,30},numbers(new int[]{3,5,8,12,30}));
         number("RAM-Puffer · Maximum MB","bufferMb",48,new int[]{24,32,48,64},numbers(new int[]{24,32,48,64}));
         content.addView(Ui.text(activity,I18n.text("Der tatsächliche Puffer bleibt automatisch an freien RAM und Speicherreserve angepasst."),12,Ui.MUTED));

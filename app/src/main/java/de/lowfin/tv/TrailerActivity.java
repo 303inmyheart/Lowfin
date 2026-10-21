@@ -49,12 +49,13 @@ public final class TrailerActivity extends Activity {
         OkHttpDataSource.Factory http=new OkHttpDataSource.Factory(new OkHttpClient()).setUserAgent(YouTubeStreams.USER_AGENT)
             .setDefaultRequestProperties(Collections.singletonMap("Referer","https://www.youtube.com/"));
         player=new ExoPlayer.Builder(this).setMediaSourceFactory(new DefaultMediaSourceFactory(http)).build(); video.setPlayer(player);
-        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(1280,720).setPreferredVideoMimeType(MimeTypes.VIDEO_H264).build());
+        int trailerHeight=PlaybackOptions.trailerHeight(app.settings);
+        player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(trailerHeight==0?Integer.MAX_VALUE:trailerHeight==480?854:PlaybackPolicy.width(trailerHeight),trailerHeight==0?Integer.MAX_VALUE:trailerHeight).setPreferredVideoMimeType(MimeTypes.VIDEO_H264).build());
         player.addListener(new Player.Listener() {
             @Override public void onPlaybackStateChanged(int state) { if(state==Player.STATE_ENDED) { finish(); return; } buffer.setVisibility(state==Player.STATE_BUFFERING?View.VISIBLE:View.GONE); status.setText(state==Player.STATE_BUFFERING?I18n.text("Trailer wird gepuffert …"):state==Player.STATE_ENDED?I18n.text("Trailer beendet"):""); if(state==Player.STATE_READY) showChrome(true); }
             @Override public void onPlayerError(PlaybackException error) { buffer.setVisibility(View.GONE); status.setText(I18n.text("YouTube konnte nicht geladen werden")); showChrome(true); }
         });
-        app.io.execute(()-> { try { String url=new YouTubeStreams().resolve(id); runOnUiThread(()-> { if(destroyed) return; player.setMediaItem(MediaItem.fromUri(url)); player.prepare(); player.setPlayWhenReady(active); }); }
+        app.io.execute(()-> { try { String url=new YouTubeStreams().resolve(id,PlaybackOptions.trailerHeight(app.settings)); runOnUiThread(()-> { if(destroyed) return; player.setMediaItem(MediaItem.fromUri(url)); player.prepare(); player.setPlayWhenReady(active); }); }
             catch(Exception e) { runOnUiThread(()-> { if(destroyed) return; buffer.setVisibility(View.GONE); status.setText(I18n.text("YouTube konnte nicht geladen werden")); }); } });
     }
     private void showChrome(boolean visible) { chrome.setVisibility(visible?View.VISIBLE:View.GONE); chrome.identity.setVisibility(visible?View.VISIBLE:View.GONE); handler.removeCallbacks(hide); if(visible) handler.postDelayed(hide,5000); }

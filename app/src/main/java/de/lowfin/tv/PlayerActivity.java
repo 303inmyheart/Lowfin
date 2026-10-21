@@ -71,7 +71,7 @@ public final class PlayerActivity extends Activity {
         handler.removeCallbacks(this); handler.postDelayed(this,500);
     }};
     @Override public void onCreate(Bundle saved) {
-        super.onCreate(saved); app=(LowfinApp)getApplication(); library=app.library;
+        super.onCreate(saved); app=(LowfinApp)getApplication(); library=app.library; seekGesture.configure(app.settings.getInt("seekSeconds",5),app.settings.getBoolean("seekAcceleration",true));
         if(app.account==null) { released=true; finish(); return; }
         api=new Api(app.account);
         companion=app.companion;
@@ -176,6 +176,7 @@ public final class PlayerActivity extends Activity {
                 stage=SystemClock.elapsedRealtime();
                 JSONObject request=PlaybackPolicy.request(api.account.user,app.settings.getInt("height",720),app.settings.getInt("bitrate",4000000),isLive,force,startPosition,audioIndex,subtitleIndex,requestedSource,app.settings.getBoolean("stereo",true));
                 if(!force) { LocalPlayback.negotiate(request); request.put("EnableTranscoding",app.settings.getBoolean("serverFallback",false)); }
+                PlaybackOptions.negotiate(request,app.settings);
                 if(!isLive) HdrPolicy.configure(this,request,app.settings.getBoolean("hdrPlayback",false));
                 if(isLive) { LiveStreams.configure(request,force); }
                 android.util.Log.i("LowfinPlayer","Device profile preparation: "+(SystemClock.elapsedRealtime()-stage)+" ms");
@@ -248,7 +249,7 @@ public final class PlayerActivity extends Activity {
         if(denoiseActive) try { player.setVideoEffects(Collections.singletonList(new DenoiseEffect())); }
         catch(RuntimeException error) { denoiseActive=false;denoiseDisabled=true;android.util.Log.w("LowfinPlayer","Noise reduction setup unavailable");player.release();player=null;prepare(url,hls,position,g,data);return; }
         player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(PlaybackPolicy.width(app.settings.getInt("height",720)),app.settings.getInt("height",720))
-            .setMaxVideoFrameRate(30).setMaxAudioChannelCount(6).setPreferredAudioLanguages(app.settings.getString("audioLanguage",I18n.language())).setPreferredTextLanguages(I18n.language()).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,subtitle<0&&(subtitleChosen||!app.settings.getBoolean("defaultSubtitles",false))).setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT|C.SELECTION_FLAG_FORCED).build());
+            .setMaxVideoFrameRate(PlaybackOptions.fps(app.settings)==0?Integer.MAX_VALUE:PlaybackOptions.fps(app.settings)).setMaxAudioChannelCount(PlaybackOptions.channels(app.settings)==0?Integer.MAX_VALUE:PlaybackOptions.channels(app.settings)).setPreferredAudioLanguages(app.settings.getString("audioLanguage",I18n.language())).setPreferredTextLanguages(app.settings.getString("subtitleLanguage",I18n.language())).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,subtitle<0&&(subtitleChosen||!app.settings.getBoolean("defaultSubtitles",false))).setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT|C.SELECTION_FLAG_FORCED).build());
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),true);
         player.setHandleAudioBecomingNoisy(true); view.setPlayer(player);
         MediaItem.Builder media=new MediaItem.Builder().setUri(url); if(hls) media.setMimeType(MimeTypes.APPLICATION_M3U8);
@@ -495,7 +496,7 @@ public final class PlayerActivity extends Activity {
             if(!seekGesture.active()) { seekDirection=direction; seekGesture.begin(event.getKeyCode(),direction,position(),now,length); }
             else seekGesture.repeat(now,length);
             showChrome(false); handler.removeCallbacks(hideControls);
-            chrome.preview(seekGesture.target(),length,SeekGesture.step(Math.max(0,event.getEventTime()-event.getDownTime())),player.getPlayWhenReady());
+            chrome.preview(seekGesture.target(),length,seekGesture.currentStep(Math.max(0,event.getEventTime()-event.getDownTime())),player.getPlayWhenReady());
         } else if(event.getAction()==KeyEvent.ACTION_UP&&seekGesture.active()) {
             long target=seekGesture.target(); seekGesture.reset();
             if(!event.isCanceled()) seekTo(target); else showChrome(false);

@@ -66,9 +66,10 @@ final class PlayerChrome extends LinearLayout {
         });
         Ui.space(this,12);
         LinearLayout transport=Ui.row(context);
-        if(!live) transport.addView(Ui.quiet(context,"−5 s",()->actions.seek(-5000L)),new LayoutParams(-2,Ui.dp(context,36)));
+        int seekSeconds=context.getSharedPreferences("settings",0).getInt("seekSeconds",5);if(seekSeconds!=5&&seekSeconds!=10&&seekSeconds!=15&&seekSeconds!=30) seekSeconds=5;final long seekStep=seekSeconds*1000L;
+        if(!live) transport.addView(Ui.quiet(context,"−"+seekSeconds+" s",()->actions.seek(-seekStep)),new LayoutParams(-2,Ui.dp(context,36)));
         play=Ui.primary(context,"Ⅱ",actions::toggle); play.setTextSize(19); play.setContentDescription("Pause"); LayoutParams playParams=new LayoutParams(Ui.dp(context,48),Ui.dp(context,36)); playParams.setMargins(Ui.dp(context,8),0,Ui.dp(context,8),0); transport.addView(play,playParams);
-        if(!live) transport.addView(Ui.quiet(context,"+5 s",()->actions.seek(5000L)),new LayoutParams(-2,Ui.dp(context,36)));
+        if(!live) transport.addView(Ui.quiet(context,"+"+seekSeconds+" s",()->actions.seek(seekStep)),new LayoutParams(-2,Ui.dp(context,36)));
         View spacer=new View(context); transport.addView(spacer,new LayoutParams(0,1,1));
         transport.addView(options,new LayoutParams(-2,Ui.dp(context,36)));
         if(live) transport.addView(Ui.quiet(context,I18n.text("Sender"),actions::channels),new LayoutParams(-2,Ui.dp(context,36)));

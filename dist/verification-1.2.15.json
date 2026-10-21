@@ -1,0 +1,26 @@
+{
+  "version": "1.2.15",
+  "version_code": 101,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "tests": 452,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "english_resource_entries": 462,
+  "english_coverage_audit": "passed",
+  "apk_sha256": "749ebe10b75da5bd6773de606709ae707dfe371b68d4c17a31c689b8c49cf726",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installed_devices": [
+    "192.168.1.128:5555",
+    "192.168.1.87:5555",
+    "192.168.1.166:5555"
+  ],
+  "installation_authorization": "User requested installation on all three TVs; launched only on .128.",
+  "document": "docs/playback-options-1.2.15.md",
+  "created_at": "2026-10-21T15:18:01.889819+00:00",
+  "companion": "0.6.0 unchanged"
+}
