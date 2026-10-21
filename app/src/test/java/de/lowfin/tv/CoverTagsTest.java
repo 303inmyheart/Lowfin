@@ -24,15 +24,15 @@ public class CoverTagsTest {
     private static final String FIRST="11111111111111111111111111111111",SECOND="22222222222222222222222222222222";
     private LowfinApp app;private MockWebServer server;private Library db;private CompanionCoverTags tags;
     private final AtomicInteger batches=new AtomicInteger();
-    private volatile boolean feature=true;
+    private volatile boolean feature=true,expanded;
     private volatile int firstMask=3;
     private final AtomicInteger indexPending=new AtomicInteger();
     private volatile CountDownLatch entered,release;
     @Before public void setup() throws Exception {
         app=(LowfinApp)RuntimeEnvironment.getApplication();app.settings.edit().clear().commit();
         server=new MockWebServer();server.setDispatcher(new Dispatcher() { @Override public MockResponse dispatch(RecordedRequest request) {
-            if(request.getPath().contains("capabilities")) return new MockResponse().setBody(Json.obj("available",true,"apiVersion",1,"imageBadges",Json.obj("enabled",feature,"version",1,"dvd",true,"surround",true,"hdr",true)).toString());
-            if(request.getPath().contains("/badges?")) { batches.incrementAndGet();if(indexPending.getAndUpdate(n->Math.max(0,n-1))>0) return new MockResponse().setBody(Json.obj("items",new JSONArray(),"pending",true).toString());int current=firstMask;CountDownLatch wait=release;if(wait!=null) { entered.countDown();try { wait.await(4,TimeUnit.SECONDS); } catch(InterruptedException error) { Thread.currentThread().interrupt(); } }return new MockResponse().setBody(Json.obj("items",Json.arr(Json.obj("id",FIRST,"mask",current),Json.obj("id",SECOND,"mask",1))).toString()); }
+            if(request.getPath().contains("capabilities")) return new MockResponse().setBody(Json.obj("available",true,"apiVersion",1,"imageBadges",Json.obj("enabled",feature,"version",1,"dvd",true,"surround",true,"hdr",true,"labelVersion",expanded?1:0,"tags",expanded?Json.arr("dvd","5.1","hdr","4k","dv","hevc","languages","subtitles"):new JSONArray())).toString());
+            if(request.getPath().contains("/badges?")) { batches.incrementAndGet();if(indexPending.getAndUpdate(n->Math.max(0,n-1))>0) return new MockResponse().setBody(Json.obj("items",new JSONArray(),"pending",true).toString());int current=firstMask;CountDownLatch wait=release;if(wait!=null) { entered.countDown();try { wait.await(4,TimeUnit.SECONDS); } catch(InterruptedException error) { Thread.currentThread().interrupt(); } }return new MockResponse().setBody(Json.obj("items",Json.arr(Json.obj("id",FIRST,"mask",current,"tags",Json.arr("4k","dv","hevc","5.1","stereo","lang:en","vost:de")),Json.obj("id",SECOND,"mask",1,"tags",Json.arr("dvd")))).toString()); }
             return new MockResponse().setResponseCode(404);
         }});server.start();app.api=new Api(new Account(server.url("/").toString(),"user","token","name","device"));
         db=new Library(app,"cover-tag-test");app.library=db;app.companion=new CompanionApi(app,app.api,db);assertTrue(app.companion.refreshDiscovery());tags=new CompanionCoverTags(app,app.api);
@@ -66,6 +66,23 @@ public class CoverTagsTest {
         ArtworkView view=new ArtworkView(app);tags.bind(view,episode(FIRST),true);await(()->mask(view)==3);
         try(android.database.Cursor rows=db.getReadableDatabase().rawQuery("SELECT COUNT(*) FROM tag_write_audit",null)) {assertTrue(rows.moveToFirst());assertEquals(0,rows.getInt(0));}
         assertEquals(0,batches.get());
+    }
+    @Test public void ExpandedTagsRespectServerSelectionLocalHdrAndPersistWithoutAnotherRequest() throws Exception {
+        expanded=true;app.companion.refreshDiscovery();ArtworkView view=new ArtworkView(app);tags.bind(view,episode(FIRST),true);
+        await(()->((String[])org.robolectric.util.ReflectionHelpers.getField(view,"badgeLabels")).length>0);
+        java.util.List<String> labels=java.util.Arrays.asList((String[])org.robolectric.util.ReflectionHelpers.getField(view,"badgeLabels"));
+        assertTrue(labels.contains("4k"));assertTrue(labels.contains("lang:en"));assertFalse(labels.contains("dv"));assertFalse(labels.contains("stereo"));assertTrue(db.state("cover-tag-labels-v1-"+FIRST).contains("hevc"));
+        app.settings.edit().putBoolean("hdrPlayback",true).commit();await(()->java.util.Arrays.asList((String[])org.robolectric.util.ReflectionHelpers.getField(view,"badgeLabels")).contains("dv"));assertEquals(1,batches.get());
+        tags.close();tags=new CompanionCoverTags(app,app.api);ArtworkView restored=new ArtworkView(app);tags.bind(restored,episode(FIRST),true);
+        await(()->((String[])org.robolectric.util.ReflectionHelpers.getField(restored,"badgeLabels")).length>0);assertEquals(1,batches.get());
+        JSONArray changes=Json.arr(Json.obj("item",episode(FIRST),"libraries",new JSONArray()));tags.invalidate(changes);db.applyCacheChanges(Json.obj("cursor","new-labels","changes",changes));assertEquals("",db.state("cover-tag-labels-v1-"+FIRST));tags.changesApplied();
+    }
+    @Test public void DenseExpandedTagsFitCroppedAndFourKFramesWithoutCoveringTheWholeImage() {
+        String[] labels={"4k","dv","hevc","atmos","truehd","dtshdma","7.1","5.1","lang:en","lang:de","lang:fr","lang:ja","vost:es","vost:pt"};
+        for(int[] size:new int[][]{{160,90,1},{240,360,1},{640,360,4},{3840,2160,4}}) {
+            CoverTags overlay=new CoverTags();overlay.layout(size[0],size[1],0,size[2],labels);assertFalse(overlay.extraBoxes.isEmpty());assertTrue(overlay.extraBoxes.size()<=12);
+            for(RectF box:overlay.extraBoxes) {assertTrue(box.left>=0&&box.top>=0&&box.right<=size[0]&&box.bottom<=size[1]);assertTrue(box.top>=size[1]*.4f);}
+        }
     }
     @Test public void LocalSwitchImmediatelyHidesAndRestoresTagsWithoutAnotherRequest() throws Exception {
         ArtworkView one=new ArtworkView(app);tags.bind(one,episode(FIRST),true);await(()->mask(one)==3);

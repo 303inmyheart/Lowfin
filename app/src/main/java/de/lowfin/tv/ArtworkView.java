@@ -9,6 +9,7 @@ final class ArtworkView extends ImageView {
     private final CoverTags coverTags=new CoverTags();
     String badgeItem="";
     private int badgeMask;
+    private String[] badgeLabels=CoverTagLabels.EMPTY;
     private double ratio=2.0/3;
     private final android.graphics.drawable.GradientDrawable surface=Ui.background(0xff191919,0);
     private boolean transparent;
@@ -18,10 +19,11 @@ final class ArtworkView extends ImageView {
     void transparent(boolean value) { if(transparent!=value) { transparent=value;surface.setColor(value?android.graphics.Color.TRANSPARENT:0xff191919); } }
     void crop(boolean crop) { setScaleType(crop?ScaleType.CENTER_CROP:ScaleType.FIT_CENTER); }
     void ratio(double value) { if(ratio!=value) { ratio=value; requestLayout(); } }
-    void badges(String item,int mask) { badgeItem=item;if(badgeMask!=mask) { badgeMask=mask;invalidate(); } }
+    void badges(String item,int mask) {badges(item,mask,CoverTagLabels.EMPTY);}
+    void badges(String item,int mask,String[] labels) {badgeItem=item;if(badgeMask!=mask||!java.util.Arrays.equals(badgeLabels,labels)) {badgeMask=mask;badgeLabels=labels;invalidate();}}
     @Override protected void onDraw(android.graphics.Canvas canvas) {
         super.onDraw(canvas);
-        if(badgeMask!=0&&getDrawable()!=null) { coverTags.layout(getWidth(),getHeight(),badgeMask,getResources().getDisplayMetrics().density);coverTags.draw(canvas); }
+        if((badgeMask!=0||badgeLabels.length>0)&&getDrawable()!=null) { coverTags.layout(getWidth(),getHeight(),badgeMask,getResources().getDisplayMetrics().density,badgeLabels);coverTags.draw(canvas); }
     }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {
         int width=resolveSize(View.MeasureSpec.getSize(widthSpec),widthSpec);

@@ -2,7 +2,7 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.2.13.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.2.14.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -11,7 +11,7 @@ A native Jellyfin client for low-end Android TV devices. Designed for Android 11
 Locally built, signed release APKs are published directly without running GitHub Actions. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.2.13-release.apk
+adb install -r Lowfin-1.2.14-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -23,7 +23,7 @@ Version 1.2 reduces repeated local metadata writes, batches home-return and Comp
 - Optional native movie-discovery banner under Home settings: backdrop, logo/title, poster, synopsis, runtime, genres and compact rating badges from your selected sources; left/right browse, OK opens details. It is reorderable and off by default.
 - Optional animated startup logo without a status caption under Appearance (on by default), waiting for fresh Continue Watching and Next Up and visible artwork; remote dismissal and a 15-second network-failure fallback remain available.
 
-- Optional **Lowfin Companion 0.5.1** for Jellyfin 12.2.x: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
+- Optional **Lowfin Companion 0.6.0** for Jellyfin 12.2.x: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
 
 - Lightweight native UI, muted accent palette, optional small animations, compact 2:3 movie/show/season posters and 16:9 episode thumbnails.
 - Hold remote **OK/Enter** on home/library cards for Continue, Restart, watched/unwatched, Watch later, favorites and series details. **Watch later** is a persistent device-local list scoped to each account, separate from Jellyfin favorites.

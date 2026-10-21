@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.14
+
+- Display all Companion cover tag categories in compact, frame-aligned monochrome pills: resolution, HDR variants, 3D, video/audio formats and language/subtitle codes.
+- Respect server tag selection, the local tag visibility switch and the local HDR setting. Dense tag lists use a bounded overflow indicator.
+- Persist named tag facts independently of images and refresh them through existing Companion invalidations. Legacy Companion clients remain supported.
+
 ## 1.2.13
 
 - Center the episode caption directly under the series logo in the player. Share a fixed 200 dp frame with proportional centered artwork and a centered title fallback; long captions can use two lines. Live TV and movie headers retain their existing layout.

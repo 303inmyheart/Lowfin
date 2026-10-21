@@ -334,7 +334,7 @@ final class Library extends SQLiteOpenHelper {
             for(int i=0;i<changes.length();i++) {
                 JSONObject change=changes.getJSONObject(i),item=change.getJSONObject("item"); String id=item.getString("Id"); JSONObject previous=item(id);
                 if(!item.has("ImageTags")) item.put("ImageTags",new JSONObject()); if(!item.has("BackdropImageTags")) item.put("BackdropImageTags",new JSONArray());
-                for(String badgeId:Json.coverTagIds(item)) db.delete("state","key=?",new String[]{"cover-tags-v2-"+badgeId});
+                for(String badgeId:Json.coverTagIds(item)) {db.delete("state","key=?",new String[]{"cover-tags-v2-"+badgeId});db.delete("state","key=?",new String[]{"cover-tag-labels-v1-"+badgeId});}
                 put(db,item,System.currentTimeMillis()); updated.put(id,item); db.delete("members","item=?",new String[]{id});
                 JSONArray roots=change.getJSONArray("libraries"); for(int k=0;k<roots.length();k++) { ContentValues member=new ContentValues(); member.put("library",roots.getString(k)); member.put("item",id); member.put("stamp",System.currentTimeMillis()); db.insertWithOnConflict("members",null,member,SQLiteDatabase.CONFLICT_REPLACE); }
                 if(!"TvChannel".equals(item.optString("Type"))&&(previous==null||!artworkSignature(previous).equals(artworkSignature(item)))) { ContentValues work=new ContentValues(); work.put("item",id); work.put("retry",0); db.insertWithOnConflict("cache_artwork",null,work,SQLiteDatabase.CONFLICT_REPLACE); }
