@@ -358,5 +358,5 @@
     <string name="tracearr_15">"Tracearr verbunden"</string>
     <string name="tracearr_16">"Tracearr-Verbindung oder Benutzerzuordnung fehlgeschlagen"</string>
     <string name="tracearr_17">"Tracearr nicht erreichbar · Adresse, API-Token und API-v2-Unterstützung prüfen"</string>
-    <string name="show_cover_tags">DVD-/5.1-/HDR-Tags auf Covern anzeigen</string>
+    <string name="show_cover_tags">Format-Tags auf Covern anzeigen</string>
 </resources>

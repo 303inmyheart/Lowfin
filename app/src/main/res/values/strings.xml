@@ -358,5 +358,5 @@
     <string name="tracearr_15">"Connected to Tracearr"</string>
     <string name="tracearr_16">"Tracearr connection or user mapping failed"</string>
     <string name="tracearr_17">"Tracearr unavailable · Check URL, API token and API v2 support"</string>
-    <string name="show_cover_tags">Show DVD / 5.1 / HDR cover tags</string>
+    <string name="show_cover_tags">Show cover format tags</string>
 </resources>

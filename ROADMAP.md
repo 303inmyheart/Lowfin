@@ -384,3 +384,5 @@ Batch per-user Companion state reads in bounded chunks, preserve list order and 
 - [x] 1.2.12: Cover-Tag-Binding vom Datenbankschreiber entkoppelt, neue Tag-Daten gebündelt speichern und persistente Treffer nicht erneut schreiben; ereignisgesteuerter Schoner-Timer statt sekündlichem Polling.
 
 - [x] 1.2.13: Staffel-/Folgenzeile im Player mittig unter dem proportionalen Serienlogo, mit gemeinsamem festen Rahmen und zentriertem Titel-Fallback.
+
+- [x] 1.2.14 / Companion 0.6.0: Alle JellyTag-Kategorien als native, begrenzte Cover-Tags, serverseitig wählbar, sprachneutraler Index und abwärtskompatible API.

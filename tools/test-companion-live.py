@@ -173,13 +173,13 @@ assert 'serverProviders' in request('/Lowfin/Companion/v1/capabilities')['featur
 assert request('/Lowfin/Companion/v1/capabilities')['imageBadges']['version']==1
 config.update(ImageBadgesEnabled=True,ShowDvdBadge=True,ShowSurroundBadge=True)
 request(plugin_configuration,'POST',config,expected=204)
-assert request('/Lowfin/Companion/v1/capabilities')['imageBadges']=={'enabled':True,'dvd':True,'surround':True,'hdr':True,'version':1}
+assert {k:request('/Lowfin/Companion/v1/capabilities')['imageBadges'][k] for k in ('enabled','dvd','surround','hdr','version')}=={'enabled':True,'dvd':True,'surround':True,'hdr':True,'version':1}
 badge_path='/Lowfin/Companion/v1/badges?ids='
 for _ in range(30):
     facts=request(badge_path+item+','+item)['items']
     if facts: break
     time.sleep(.5)
-assert facts==[{'id':item,'mask':1}],facts
+assert len(facts)==1 and facts[0]['id']==item and facts[0]['mask']==1 and 'dvd' in facts[0]['tags'],facts
 request(badge_path+'invalid',expected=400)
 request(badge_path+','.join([item]*65),expected=400)
 saved_token=token; token=''; request(badge_path+item,expected=401); token=saved_token

@@ -35,18 +35,20 @@ try:
     call(path,'POST',config,expected=204)
     ids=[series['Id'],season['Id']]+[x['Id'] for x in episodes]
     for _ in range(40):
-        result,_=call('/Lowfin/Companion/v1/badges?ids='+','.join(ids));masks={x['id']:x['mask'] for x in result['items']}
+        result,_=call('/Lowfin/Companion/v1/badges?ids='+','.join(ids));masks={x['id']:x['mask'] for x in result['items']};labels={x['id']:x.get('tags',[]) for x in result['items']}
         if all(id in masks for id in ids): break
         time.sleep(.5)
     else: raise AssertionError('Background tag index did not populate')
     assert masks[series['Id']]==1 and masks[season['Id']]==1,masks
+    assert 'dvd' in labels[series['Id']] and 'h264' in labels[season['Id']],labels
     for episode in episodes:
         video=next(x for x in episode['MediaStreams'] if x['Type']=='Video');assert masks[episode['Id']]==(1 if video['Width']<=1024 else 0)
+        assert ('dvd' if video['Width']<=1024 else '720p') in labels[episode['Id']] and 'h264' in labels[episode['Id']],labels
         scores,headers=call('/Lowfin/Companion/v1/items/'+episode['Id']+'/ratings?sources=omdb,tmdb')
         assert scores['scores']=={} and headers.get('Cache-Control')=='no-store'
     status,_=call('/Lowfin/Companion/v1/badges/status');assert status['ready'] and status['items']>=5
     tasks,_=call('/ScheduledTasks');task=next(t for t in tasks if t['Key']=='LowfinCompanionBadgeIndex');assert any(t.get('IntervalTicks')==24*3600*10000000 for t in task['Triggers'])
     saved=token;token='';call('/Lowfin/Companion/v1/items/'+episodes[0]['Id']+'/ratings',expected=401);token=saved
 finally:call(path,'POST',original,expected=204)
-summary={'server':'12.2.0','plugin':'0.5.0','episodes':3,'sd':2,'hd':1,'seriesDvd':True,'seasonDvd':True,'episodeRatingsRouteAndNoStore':True,'noExternalCredentialsUsed':True}
+summary={'server':'12.2.0','plugin':'0.6.0','namedTagsVerified':True,'episodes':3,'sd':2,'hd':1,'seriesDvd':True,'seasonDvd':True,'episodeRatingsRouteAndNoStore':True,'noExternalCredentialsUsed':True}
 (ROOT/'companion/artifacts/episode-features-live-test.json').write_text(json.dumps(summary,indent=2)+'\n');print(json.dumps(summary))
