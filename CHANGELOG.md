@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.15
+
+- Add device-local frame-rate limits (automatic/30/60 FPS), audio channel limits (automatic/2.0/5.1/7.1) and trailer resolution selection. Stereo downmix retains priority.
+- Add an independent subtitle language, configurable banner rotation/interval and seek step/hold acceleration. Seek button labels follow the selected step.
+- Keep existing defaults and consistent settings control/helper spacing; include English and German labels.
+
 ## 1.2.14
 
 - Display all Companion cover tag categories in compact, frame-aligned monochrome pills: resolution, HDR variants, 3D, video/audio formats and language/subtitle codes.

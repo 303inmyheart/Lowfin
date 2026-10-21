@@ -9,6 +9,11 @@ public class SeekGestureTest {
         assertEquals(80000,seek.repeat(5000,120000)); assertEquals(120000,seek.repeat(8000,120000));
         seek.reset(); assertFalse(seek.active());
     }
+    @Test public void customStepAndDisabledAccelerationSurviveLongHolds() {
+        SeekGesture seek=new SeekGesture();seek.configure(15,false);
+        assertEquals(15000,seek.begin(22,1,0,0,300000));assertEquals(30000,seek.repeat(8000,300000));assertEquals(15000,seek.currentStep(8000));
+        seek.reset();seek.configure(10,true);assertEquals(10000,seek.begin(22,1,0,0,300000));assertEquals(130000,seek.repeat(8000,300000));
+    }
     @Test public void newGestureResetsSpeedAndClampsBothEnds() {
         SeekGesture seek=new SeekGesture(); assertEquals(0,seek.begin(21,-1,3000,0,10000));
         seek.repeat(8000,10000); seek.reset(); assertEquals(5000,seek.begin(22,1,0,9000,10000)); assertEquals(10000,seek.repeat(9250,10000));

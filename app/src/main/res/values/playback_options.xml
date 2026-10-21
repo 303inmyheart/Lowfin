@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="video_fps">Maximum video frame rate</string>
+    <string name="audio_channels">Maximum audio channels</string>
+    <string name="audio_channels_hint">Stereo downmix takes priority when enabled. Automatic uses device capabilities; formats still depend on the device and stream.</string>
+    <string name="trailer_quality">Maximum trailer resolution</string>
+    <string name="subtitle_language">Preferred subtitle language</string>
+    <string name="language_follow_app">Follow app language</string>
+    <string name="seek_step">Seek start step · seconds</string>
+    <string name="seek_acceleration">Accelerate seeking while holding</string>
+    <string name="banner_auto_rotate">Automatically change banner</string>
+    <string name="banner_interval">Banner interval · seconds</string>
+</resources>

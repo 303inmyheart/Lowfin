@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="video_fps">Maximale Video-Bildrate</string>
+    <string name="audio_channels">Maximale Audiokanäle</string>
+    <string name="audio_channels_hint">Aktiver Stereo-Downmix hat Vorrang. Automatisch nutzt die Gerätefähigkeiten; Formate hängen weiterhin von Gerät und Stream ab.</string>
+    <string name="trailer_quality">Maximale Trailer-Auflösung</string>
+    <string name="subtitle_language">Bevorzugte Untertitelsprache</string>
+    <string name="language_follow_app">App-Sprache verwenden</string>
+    <string name="seek_step">Spulschritt am Anfang · Sekunden</string>
+    <string name="seek_acceleration">Spulen beim Gedrückthalten beschleunigen</string>
+    <string name="banner_auto_rotate">Banner automatisch wechseln</string>
+    <string name="banner_interval">Banner-Wechsel · Sekunden</string>
+</resources>
