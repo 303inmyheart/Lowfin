@@ -1,0 +1,7 @@
+<resources>
+    <string name="jump_to_letter">Zu Buchstaben springen</string>
+    <string name="jump_letter_hint"># beginnt bei Zahlen und Sonderzeichen. Buchstaben folgen der Jellyfin-Sortierung.</string>
+    <string name="jump_letter_empty">Keine Titel ab diesem Buchstaben vorhanden.</string>
+    <string name="scroll_animations">Weiche Scrollanimationen</string>
+    <string name="scroll_animation_hint">Startseite und Bibliotheken gleiten beim Navigieren. Benötigt aktivierte UI-Animationen.</string>
+</resources>

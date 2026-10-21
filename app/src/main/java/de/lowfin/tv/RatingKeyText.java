@@ -21,11 +21,14 @@ final class RatingKeyText {
             line=line.trim(); if(line.isEmpty()||line.startsWith("#")) continue;
             int separator=line.indexOf('='); if(separator<0) throw new IOException("Invalid key file format");
             String field=line.substring(0,separator).trim().toUpperCase(Locale.ROOT),provider;
-            switch(field) { case "OMDB_API_KEY": provider="omdb"; break; case "MDBLIST_API_KEY": provider="mdblist"; break; case "TMDB_API_KEY": provider="tmdb"; break; default: throw new IOException("Unknown key file field"); }
+            switch(field) { case "OMDB_API_KEY": provider="omdb"; break; case "MDBLIST_API_KEY": provider="mdblist"; break; case "TMDB_API_KEY": provider="tmdb"; break; case "TRACEARR_API_KEY": provider="tracearr"; break; case "TRACEARR_URL": provider="tracearr_url"; break; case "TRACEARR_SERVER_ID": provider="tracearr_server_id"; break; default: throw new IOException("Unknown key file field"); }
             if(!seen.add(provider)) throw new IOException("Duplicate key file field");
             String value=line.substring(separator+1).trim(); if(value.isEmpty()) continue;
             if(value.length()>4096||value.startsWith("Bearer ")||value.startsWith("\"")||value.startsWith("'")||value.indexOf('<')>=0||value.indexOf('>')>=0) throw new IOException("Invalid key file value");
             for(int i=0;i<value.length();i++) if(Character.isWhitespace(value.charAt(i))||Character.isISOControl(value.charAt(i))) throw new IOException("Invalid key file value");
+            if(provider.equals("tracearr_url")) { try { Tracearr.validUrl(value); } catch(Exception e) { throw new IOException("Invalid Tracearr URL"); } }
+            if(provider.equals("tracearr")&&!value.startsWith("trr_pub_")) throw new IOException("Invalid Tracearr token");
+            if(provider.equals("tracearr_server_id")) { try { java.util.UUID.fromString(value); } catch(Exception e) { throw new IOException("Invalid Tracearr server ID"); } }
             result.put(provider,value);
         }
         return result;

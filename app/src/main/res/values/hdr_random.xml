@@ -1,0 +1,6 @@
+<resources>
+    <string name="hdr_playback">HDR playback</string>
+    <string name="hdr_hint">Off by default. Enables native HDR10 / HDR10+ / HLG only on compatible displays and decoders. Dolby Vision is not advertised. HDR sources require an SDR version or the existing server fallback when native HDR is unavailable. Changes apply on the next playback.</string>
+    <string name="random_all_movies">All movies</string>
+    <string name="random_by_genre">Choose genre…</string>
+</resources>

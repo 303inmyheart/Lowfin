@@ -11,6 +11,7 @@ import org.json.JSONObject;
 
 final class Account {
     final String server,user,token,name,device;
+    private volatile String cachedScope;
     Account(String server,String user,String token,String name,String device) {
         this.server=server.replaceAll("/+$", ""); this.user=user; this.token=token; this.name=name; this.device=device;
     }
@@ -47,8 +48,9 @@ final class Account {
     }
     static void clear(Context c) { c.getSharedPreferences("account",0).edit().remove("session").remove("iv").apply(); }
     String scope() {
+        String ready=cachedScope; if(ready!=null) return ready;
         try { byte[] b=MessageDigest.getInstance("SHA-256").digest((server+"|"+user).getBytes(StandardCharsets.UTF_8));
-            StringBuilder s=new StringBuilder(); for(byte x:b) s.append(String.format("%02x",x)); return s.substring(0,24);
+            StringBuilder s=new StringBuilder(64); char[] hex="0123456789abcdef".toCharArray(); for(byte x:b) { s.append(hex[(x&255)>>>4]); s.append(hex[x&15]); } cachedScope=s.substring(0,24); return cachedScope;
         } catch(Exception e) { throw new IllegalStateException(e); }
     }
 }

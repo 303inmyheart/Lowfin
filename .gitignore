@@ -4,3 +4,20 @@ local.properties
 **/build/
 *.jks
 /ci-artifacts/
+
+companion/**/bin/
+companion/**/obj/
+companion/artifacts/
+
+# Local release deliveries: publish source only until explicitly authorized.
+/dist/*.apk
+/dist/*.aab
+/dist/*.zip
+/dist/*.apk.sha256
+/lowfin/
+__pycache__/
+*.py[cod]
+*.keystore
+
+# Independent private server-plugin repository (kept in this directory locally).
+/companion/

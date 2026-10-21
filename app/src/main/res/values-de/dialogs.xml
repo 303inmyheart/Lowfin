@@ -1,0 +1,4 @@
+<resources>
+    <string name="dialog_transparency">Dialog-Hintergrundtransparenz</string>
+    <string name="dialog_transparency_hint" formatted="false">0 % ist undurchsichtig; 100 % zeigt den Inhalt hinter dem Fenster. Links/rechts ändert die Vorschau. Speichern übernimmt die Einstellung für alle Lowfin-Dialoge.</string>
+</resources>

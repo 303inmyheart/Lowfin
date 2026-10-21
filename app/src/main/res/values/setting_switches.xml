@@ -1,0 +1,5 @@
+<resources>
+    <string name="settings_tv_channels">Publish films and series to TV home</string>
+    <string name="settings_tv_channel">TV channel</string>
+    <string name="settings_tv_channel_hint">Switches control which cards Lowfin publishes. Turning a channel off clears its cards and keeps its channel ID. The launcher controls whether the category is visible; enabling a channel may ask for approval.</string>
+</resources>

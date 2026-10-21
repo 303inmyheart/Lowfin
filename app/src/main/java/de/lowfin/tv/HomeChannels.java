@@ -49,26 +49,33 @@ final class HomeChannels {
             publishing.set(false); if(publishAgain.getAndSet(false)) publish();
         } });
     }
-    void refresh(Runnable done) {
+    void refresh(Runnable done) { refresh(done,false); }
+    /** MainActivity already refreshes resume, next-up, recommendations and views. */
+    void refreshLibraries() { refresh(null,true); }
+    private void refresh(Runnable done,boolean homeLoaded) {
         final Account expected=app.account;
         worker.execute(()-> { try {
             if(expected==null||!same(expected)||app.playing||!supported()||!app.settings.getBoolean("homeChannels",true)) return;
             Api api=new Api(expected); Library db=app.library;
-            for(int row=0;row<3;row++) {
+            for(int row=0;!homeLoaded&&row<2;row++) {
                 if(!same(expected)||app.playing) return;
                 JSONObject response;
                 if(row==0) response=api.get("/Users/"+expected.user+"/Items/Resume","MediaTypes","Video","Limit",18,"Fields","Overview,ParentId");
-                else if(row==1) response=api.get("/Shows/NextUp","UserId",expected.user,"Limit",18,"Fields","Overview,ParentId","EnableResumable",false);
-                else response=api.get("/Users/"+expected.user+"/Items","Recursive",true,"IncludeItemTypes","Movie,Series","Limit",36,"SortBy","DateCreated","SortOrder","Descending","Fields","Overview,ParentId,DateCreated");
-                if(!same(expected)) return; JSONArray items=Json.array(response,"Items"); db.put(items,System.currentTimeMillis()); db.state("home-"+row,items.toString());
+                else response=api.get("/Shows/NextUp","UserId",expected.user,"Limit",18,"Fields","Overview,ParentId","EnableResumable",false);
+                if(!same(expected)) return; JSONArray items=Json.array(response,"Items"); db.put(items,System.currentTimeMillis());
+                if(row==0&&app.companion!=null) {
+                    List<JSONObject> values=new ArrayList<>(); for(int index=0;index<items.length();index++) if(items.optJSONObject(index)!=null) values.add(items.optJSONObject(index));
+                    items=new JSONArray(app.companion.mergeResume(values,18));
+                }
+                db.state("home-"+row,items.toString());
             }
-            JSONArray views=Json.array(api.get("/Users/"+expected.user+"/Views"),"Items"); if(!same(expected)) return; db.state("views",views.toString());
+            if(!homeLoaded) { JSONArray views=Json.array(api.get("/Users/"+expected.user+"/Views"),"Items"); if(!same(expected)) return; db.state("views",views.toString()); }
             for(String type:new String[]{"Movie","Series"}) for(String parent:ChannelLibraries.libraries(db,app.settings,expected,type)) {
                 if(!same(expected)||app.playing) return;
                 try { JSONArray items=Json.array(api.get("/Users/"+expected.user+"/Items","Recursive",true,"ParentId",parent,"IncludeItemTypes",type,"SortBy","Random","Limit",24,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items"); if(!same(expected)) return; db.put(items,System.currentTimeMillis()); db.state("tv-library-"+type+"-"+parent,items.toString()); } catch(Exception ignored) { }
             }
             if(!same(expected)||app.playing) return;
-            try {
+            if(!homeLoaded) try {
                 List<JSONObject> recommendations=HomeRecommendations.load(api);
                 if(!same(expected)) return;
                 for(JSONObject bucket:recommendations) db.put(Json.array(bucket,"Items"),System.currentTimeMillis());
@@ -81,16 +88,16 @@ final class HomeChannels {
     private boolean same(Account expected) { return app.account!=null&&app.account.scope().equals(expected.scope()); }
     private List<JSONObject> row(Library db,int row) {
         List<JSONObject> out=new ArrayList<>(); try { JSONArray items=new JSONArray(db.state("home-"+row));
-            for(int i=0;i<items.length();i++) { JSONObject j=items.optJSONObject(i); if(j==null) continue; JSONObject cached=db.item(j.optString("Id")); out.add(cached==null?j:cached); }
-        } catch(JSONException ignored) {} return out;
+            for(int i=0;i<items.length();i++) { JSONObject j=items.optJSONObject(i); if(j==null) continue; out.add(j); }
+        } catch(JSONException ignored) {} return db.latestItems(out);
     }
     private void publishNow(Account expected) {
         if(!same(expected)||!supported()||!app.settings.getBoolean("homeChannels",true)) return;
         try {
             changedChannelLabels.clear();
             Library db=app.library; Images images=app.images;
-            List<JSONObject> resume=row(db,0),next=row(db,1);
-            resume.removeIf(j->Json.position(j)<=0||Json.object(j,"UserData").optBoolean("Played"));
+            List<JSONObject> resume=db.withCompanionItems(row(db,0)),next=row(db,1);
+            resume.removeIf(j->!Json.inContinue(j));
             List<JSONObject> movies=ChannelLibraries.cached(db,app.settings,expected,"Movie"),series=ChannelLibraries.cached(db,app.settings,expected,"Series");
             List<List<JSONObject>> lists=Arrays.asList(resume,next,movies,series);
             String[] keys={"resume","next","movies","series"},labels={I18n.text("Fortsetzen"),I18n.text("Als Nächstes"),I18n.text("Filme"),I18n.text("Serien")},modes={"resume","play","resume","open"};
@@ -109,10 +116,10 @@ final class HomeChannels {
                     JSONArray data=Json.array(bucket,"Items");
                     for(int i=0;i<data.length();i++) {
                         JSONObject item=data.optJSONObject(i); if(item==null) continue;
-                        JSONObject cached=db.item(item.optString("Id")); items.add(cached==null?item:cached);
+                        items.add(item);
                     }
                 }
-                preview(expected,images,key,(bucket==null?I18n.text("Film-Empfehlungen"):HomeRecommendations.title(bucket)),items,"open",false);
+                preview(expected,images,key,(bucket==null?I18n.text("Film-Empfehlungen"):HomeRecommendations.title(bucket)),db.latestItems(items),"open",false);
             }
             watchNext(expected,images,resume,next);
             notifyChannelLabels();
@@ -164,12 +171,12 @@ final class HomeChannels {
         // The persisted marker also repairs already-correct provider names after an upgrade.
         changedChannelLabels.put(id,label);
         if(defaultChannel) TvContractCompat.requestChannelBrowsable(app,id);
-        String logoKey="logo-"+key+"-0.5.2"; if(existing&&prefs.getBoolean(logoKey,false)) return id;
+        String logoKey="logo-"+key+"-companion-centered-v2"; if(existing&&prefs.getBoolean(logoKey,false)) return id;
         Bitmap logo=BitmapFactory.decodeResource(app.getResources(),R.mipmap.ic_launcher); if(logo==null) {
             logo=Bitmap.createBitmap(160,160,Bitmap.Config.ARGB_8888); Canvas canvas=new Canvas(logo); canvas.drawColor(0xff111111);
             android.graphics.drawable.Drawable mark=app.getDrawable(R.mipmap.ic_launcher); mark.setBounds(0,0,160,160); mark.draw(canvas);
         }
-        ChannelLogoUtils.storeChannelLogo(app,id,logo); logo.recycle(); prefs.edit().putBoolean(logoKey,true).apply();
+        boolean stored=ChannelLogoUtils.storeChannelLogo(app,id,logo); logo.recycle(); if(stored) prefs.edit().putBoolean(logoKey,true).apply();
         return id;
     }
     private void notifyChannelLabels() {
@@ -195,8 +202,8 @@ final class HomeChannels {
     @SuppressLint("RestrictedApi")
     private void preview(Account account,Images images,String key,String label,List<JSONObject> items,String mode,boolean defaultChannel) throws Exception {
         if(!same(account)) return; long channel=channel(key,label,defaultChannel);
-        ContentResolver resolver=app.getContentResolver(); Map<String,Long> old=new HashMap<>();
-        try(Cursor c=resolver.query(TvContractCompat.buildPreviewProgramsUriForChannel(channel),new String[]{"_id","internal_provider_id"},null,null,null)) { if(c!=null) while(c.moveToNext()) old.put(c.getString(1),c.getLong(0)); }
+        if(!enabled(key)) items=Collections.emptyList();
+        ContentResolver resolver=app.getContentResolver(); Map<String,ContentValues> old=programRows(resolver,TvContractCompat.buildPreviewProgramsUriForChannel(channel),false);
         for(int i=0;i<items.size();i++) {
             if(!same(account)||app.playing) return; JSONObject item=items.get(i); String id=account.scope()+":"+item.optString("Id");
             PreviewProgram.Builder b=new PreviewProgram.Builder().setChannelId(channel).setInternalProviderId(id).setTitle(programTitle(item))
@@ -204,35 +211,58 @@ final class HomeChannels {
                 .setPosterArtAspectRatio(aspect(item)).setIntent(link(app,account,item.optString("Id"),mode)).setWeight(items.size()-i)
                 .setDurationMillis(ms(item.optLong("RunTimeTicks")/10000)).setLastPlaybackPositionMillis(ms(Json.position(item)));
             if("Episode".equals(item.optString("Type"))) b.setEpisodeTitle(item.optString("Name")).setSeasonNumber(item.optInt("ParentIndexNumber")).setEpisodeNumber(item.optInt("IndexNumber"));
-            Long existing=old.remove(id); if(existing==null) resolver.insert(TvContractCompat.PreviewPrograms.CONTENT_URI,b.build().toContentValues());
-            else resolver.update(TvContractCompat.buildPreviewProgramUri(existing),b.build().toContentValues(),null,null);
+            ContentValues existing=old.remove(id),desired=b.build().toContentValues();
+            if(existing==null) resolver.insert(TvContractCompat.PreviewPrograms.CONTENT_URI,desired);
+            else if(!sameValues(existing,desired)) resolver.update(TvContractCompat.buildPreviewProgramUri(existing.getAsLong("_id")),desired,null,null);
         }
-        for(long id:old.values()) resolver.delete(TvContractCompat.buildPreviewProgramUri(id),null,null);
+        for(ContentValues row:old.values()) resolver.delete(TvContractCompat.buildPreviewProgramUri(row.getAsLong("_id")),null,null);
     }
     @SuppressLint("RestrictedApi")
     private void watchNext(Account account,Images images,List<JSONObject> resume,List<JSONObject> next) throws Exception {
-        ContentResolver resolver=app.getContentResolver(); Map<String,Long> old=new HashMap<>();
-        try(Cursor c=resolver.query(TvContractCompat.WatchNextPrograms.CONTENT_URI,new String[]{"_id","package_name","internal_provider_id","browsable"},null,null,null)) {
-            if(c!=null) while(c.moveToNext()) if(app.getPackageName().equals(c.getString(1))) {
-                String id=c.getString(2); old.put(id,c.getLong(0)); if(c.getInt(3)==0) prefs.edit().putBoolean("dismiss-"+id,true).apply();
-            }
-        }
-        Set<String> seen=new HashSet<>(); List<JSONObject> all=new ArrayList<>(resume); all.addAll(next);
+        ContentResolver resolver=app.getContentResolver();Map<String,ContentValues> old=programRows(resolver,TvContractCompat.WatchNextPrograms.CONTENT_URI,true);
+        for(Map.Entry<String,ContentValues> row:old.entrySet()) if(Integer.valueOf(0).equals(row.getValue().getAsInteger("browsable"))) prefs.edit().putBoolean("dismiss-"+row.getKey(),true).apply();
+        Set<String> seen=new HashSet<>(); List<JSONObject> all=new ArrayList<>(); if(enabled("resume")) all.addAll(resume); if(enabled("next")) all.addAll(next);
         for(JSONObject item:all) {
             if(!same(account)||app.playing) return;
             String id=account.scope()+":"+item.optString("Id"); if(!seen.add(id)||prefs.getBoolean("dismiss-"+id,false)) continue;
+            ContentValues existing=old.remove(id);
+            Long previousEngagement=existing==null?null:existing.getAsLong("last_engagement_time_utc_millis");
             boolean continuing=Json.position(item)>0;
             WatchNextProgram.Builder b=new WatchNextProgram.Builder().setInternalProviderId(id).setTitle(programTitle(item)).setType(type(item))
                 .setWatchNextType(continuing?TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_CONTINUE:TvContractCompat.WatchNextPrograms.WATCH_NEXT_TYPE_NEXT)
                 .setPosterArtUri(art(account,images,item)).setPosterArtAspectRatio(aspect(item)).setDescription(Json.str(item,"Overview"))
                 .setIntent(link(app,account,item.optString("Id"),continuing?"resume":"play"))
                 .setDurationMillis(ms(item.optLong("RunTimeTicks")/10000)).setLastPlaybackPositionMillis(ms(Json.position(item)))
-                .setLastEngagementTimeUtcMillis(prefs.getLong("engaged-"+id,System.currentTimeMillis()));
+                .setLastEngagementTimeUtcMillis(prefs.getLong("engaged-"+id,previousEngagement==null?System.currentTimeMillis():previousEngagement));
             if("Episode".equals(item.optString("Type"))) b.setEpisodeTitle(item.optString("Name")).setSeasonNumber(item.optInt("ParentIndexNumber")).setEpisodeNumber(item.optInt("IndexNumber"));
-            Long existing=old.remove(id); if(existing==null) resolver.insert(TvContractCompat.WatchNextPrograms.CONTENT_URI,b.build().toContentValues());
-            else resolver.update(TvContractCompat.buildWatchNextProgramUri(existing),b.build().toContentValues(),null,null);
+            ContentValues desired=b.build().toContentValues();
+            if(existing==null) resolver.insert(TvContractCompat.WatchNextPrograms.CONTENT_URI,desired);
+            else if(!sameValues(existing,desired)) resolver.update(TvContractCompat.buildWatchNextProgramUri(existing.getAsLong("_id")),desired,null,null);
         }
-        for(long id:old.values()) resolver.delete(TvContractCompat.buildWatchNextProgramUri(id),null,null);
+        for(ContentValues row:old.values()) resolver.delete(TvContractCompat.buildWatchNextProgramUri(row.getAsLong("_id")),null,null);
+    }
+    /** Compare actual provider data, so external edits/deleted rows are still repaired. */
+    private Map<String,ContentValues> programRows(ContentResolver resolver,Uri uri,boolean watch) {
+        Map<String,ContentValues> rows=new HashMap<>();
+        List<String> columns=new ArrayList<>(Arrays.asList("_id","package_name","internal_provider_id","title","type","short_description","poster_art_uri","poster_art_aspect_ratio","intent_uri","duration_millis","last_playback_position_millis","episode_title","season_display_number","episode_display_number"));
+        columns.addAll(watch?Arrays.asList("watch_next_type","last_engagement_time_utc_millis","browsable"):Arrays.asList("channel_id","weight"));String[] projection=columns.toArray(new String[0]);
+        try(Cursor cursor=resolver.query(uri,projection,null,null,null)) {
+            if(cursor!=null) while(cursor.moveToNext()) {
+                if(!app.getPackageName().equals(cursor.getString(cursor.getColumnIndexOrThrow("package_name")))) continue;
+                ContentValues values=new ContentValues();
+                for(int i=0;i<projection.length;i++) {
+                    if(cursor.isNull(i)) values.putNull(projection[i]);
+                    else if(cursor.getType(i)==Cursor.FIELD_TYPE_INTEGER) values.put(projection[i],cursor.getLong(i));
+                    else values.put(projection[i],cursor.getString(i));
+                }
+                rows.put(values.getAsString("internal_provider_id"),values);
+            }
+        }
+        return rows;
+    }
+    static boolean sameValues(ContentValues stored,ContentValues desired) {
+        for(String key:desired.keySet()) if(!stored.containsKey(key)||!java.util.Objects.equals(stored.getAsString(key),desired.getAsString(key))) return false;
+        return true;
     }
     private Uri art(Account a,Images images,JSONObject item) {
         try { java.io.File f=images.fetch(item); if(f!=null) return new Uri.Builder().scheme("content").authority("de.lowfin.tv.art").appendPath(a.scope()).appendPath(f.getName()).build(); } catch(Exception ignored) {}
@@ -248,6 +278,8 @@ final class HomeChannels {
             .putExtra(EXTRA_SCOPE,account.scope()).putExtra(EXTRA_ITEM,id).putExtra(EXTRA_MODE,mode);
     }
     void engaged(Account a,String item) { if(a!=null) { String key=a.scope()+":"+item; prefs.edit().remove("dismiss-"+key).putLong("engaged-"+key,System.currentTimeMillis()).apply(); } }
+    boolean enabled(String key) { return prefs.getBoolean("enabled-"+key,true); }
+    void setEnabled(String key,boolean enabled) { prefs.edit().putBoolean("enabled-"+key,enabled).apply(); publish(); }
     String status() { return supported()?prefs.getString("status",I18n.text("Android-TV-Kanäle werden nach dem Laden aktualisiert")):I18n.text("Dieser Launcher stellt keine Android-TV-Kanäle bereit"); }
     void requestVisible(android.app.Activity activity,String key) {
         long id=prefs.getLong("channel-"+key,-1); if(id<0) { publish(); android.widget.Toast.makeText(activity,I18n.text("Kanäle werden vorbereitet. Danach erneut auswählen."),android.widget.Toast.LENGTH_LONG).show(); return; }

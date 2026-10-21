@@ -1,0 +1,5 @@
+<resources>
+    <string name="denoise_title">Bildrauschunterdrückung</string>
+    <string name="denoise_hint">Standardmäßig aus. Sanfter lokaler GPU-Filter für SDR-Dateien bis 1080p mit bekannten Videodaten. Nicht bei Live-TV oder HDR. Kann feine Details glätten und die GPU stärker belasten. Gilt ab der nächsten Wiedergabe.</string>
+    <string name="denoise_fallback">Rauschunterdrückung für diese Wiedergabe deaktiviert; weiter ohne Filter.</string>
+</resources>

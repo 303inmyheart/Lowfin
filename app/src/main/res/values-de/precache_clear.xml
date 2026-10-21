@@ -1,0 +1,9 @@
+<resources>
+    <string name="precache_clear_all">Gesamten Bibliotheks-Precache löschen</string>
+    <string name="precache_clear_action">Precache löschen</string>
+    <string name="precache_clear_confirm">Gespeicherte Bibliotheks-Metadaten, Cover und Bibliothekslisten dieses Kontos löschen? Anmeldung, Einstellungen, API-Schlüssel, Bewertungen, Merkliste sowie Companion-Regeln und Fortschritt bleiben erhalten. Automatisches Vorladen kann die Bibliothek danach neu aufbauen.</string>
+    <string name="precache_cleared">Bibliotheks-Precache gelöscht. Metadaten und Cover können neu geladen werden.</string>
+    <string name="precache_clear_failed">Der Precache konnte nicht vollständig gelöscht werden. Bitte nach dem Stoppen des Vorladens erneut versuchen.</string>
+    <string name="precache_clearing">Precache wird gelöscht</string>
+    <string name="precache_clearing_hint">Hintergrundaufgaben werden gestoppt und lokale Bibliotheks-Metadaten und Cover entfernt …</string>
+</resources>

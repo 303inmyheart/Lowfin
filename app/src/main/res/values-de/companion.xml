@@ -1,0 +1,25 @@
+<resources>
+    <string name="companion_title">Smart Completion</string>
+    <string name="companion_long_videos">Lowfin Companion · lange Videos</string>
+    <string name="companion_default">Jellyfin-Standard</string>
+    <string name="companion_percentage">Eigener Prozentwert</string>
+    <string name="companion_remaining">Verbleibende Zeit</string>
+    <string name="companion_never">Nie automatisch als gesehen markieren</string>
+    <string name="companion_mode">Abschlussregel</string>
+    <string name="companion_resume">Fortsetzposition unabhängig behalten</string>
+    <string name="companion_inherit">Allgemeine Regel verwenden</string>
+    <string name="companion_reset">Fortschritt zurücksetzen</string>
+    <string name="companion_reset_confirm">Gespeicherte Fortsetzposition löschen? Der Gesehen-Status bleibt unverändert.</string>
+    <string name="companion_hint">Gilt für dein Konto und Wiedergabe in Lowfin. Manuelles Markieren bleibt möglich.</string>
+    <string name="companion_percent_hint">Prozentwert · z. B. 99,5</string>
+    <string name="companion_minutes_hint">Verbleibende Minuten · z. B. 2</string>
+    <string name="companion_hours_hint">Mindestdauer in Stunden · z. B. 4</string>
+    <string name="companion_enabled">Allgemeine Regel aktiv</string>
+    <string name="companion_invalid">Bitte einen gültigen Wert im angezeigten Bereich eingeben.</string>
+    <string name="companion_error">Speichern fehlgeschlagen. Einstellungen erneut öffnen und Serververbindung prüfen.</string>
+    <string name="companion_save">Speichern</string>
+    <string name="companion_cancel">Abbrechen</string>
+    <string name="companion_on">Ein</string>
+    <string name="companion_off">Aus</string>
+    <string name="companion_global_hint">Diese Regel gilt für dein Konto, wenn ein Film oder eine Folge keine individuelle Regel hat. Andere Clients behalten Jellyfins normales Verhalten.</string>
+</resources>

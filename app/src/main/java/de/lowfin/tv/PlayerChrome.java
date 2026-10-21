@@ -14,17 +14,34 @@ final class PlayerChrome extends LinearLayout {
     final SeekBar timeline;
     final LinearLayout identity;
     final PlayerLogo logo;
+    private java.text.SimpleDateFormat endFormatter;
+    private java.util.Locale endLocale;
+    private java.util.TimeZone endZone;
+    private long endMinute=Long.MIN_VALUE;
+    private String endText="";
     private long liveStarted=-1;
     private long duration;
     private boolean dragging;
-    PlayerChrome(Context context,boolean live,boolean episode,Actions actions) {
-        super(context); setOrientation(VERTICAL); setPadding(Ui.dp(context,32),Ui.dp(context,30),Ui.dp(context,32),Ui.dp(context,16));
-        GradientDrawable gradient=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0x0009090b,0xe609090b,0xf909090b}); setBackground(gradient);
+    private final java.util.function.LongSupplier wallClock;
+    PlayerChrome(Context context,boolean live,boolean episode,Actions actions) { this(context,live,episode,actions,System::currentTimeMillis); }
+    PlayerChrome(Context context,boolean live,boolean episode,Actions actions,java.util.function.LongSupplier wallClock) {
+        super(context); this.wallClock=wallClock; setOrientation(VERTICAL); setPadding(Ui.dp(context,32),Ui.dp(context,30),Ui.dp(context,32),Ui.dp(context,16));
+        SmoothGradient gradient=SmoothGradient.linear(GradientDrawable.Orientation.TOP_BOTTOM,0x0009090b,0xe609090b,0xf909090b); setBackground(gradient);
         LinearLayout heading=Ui.row(context); title=Ui.title(context,"",18); title.setSingleLine(true); title.setEllipsize(android.text.TextUtils.TruncateAt.END); heading.addView(title,new LayoutParams(-2,-2));
         options=Ui.quiet(context,I18n.text("⋯  Optionen"),actions::options); identity=Ui.column(context); identity.setPadding(Ui.dp(context,32),Ui.dp(context,24),Ui.dp(context,32),Ui.dp(context,12));
-        identity.setBackground(new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{0xb009090b,0x0009090b}));
+        identity.setBackground(SmoothGradient.linear(GradientDrawable.Orientation.TOP_BOTTOM,0xb009090b,0x0009090b));
         logo=new PlayerLogo(context,title); identity.addView(logo,new LayoutParams(Ui.dp(context,200),Ui.dp(context,64))); identity.addView(heading);
-        caption=Ui.text(context,"",11,Ui.MUTED); caption.setSingleLine(true); identity.addView(caption);
+        caption=Ui.text(context,"",11,Ui.MUTED);
+        if(episode&&!live) {
+            // One shared frame keeps the caption under the actual contained logo for every aspect ratio.
+            logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            heading.setLayoutParams(new LayoutParams(Ui.dp(context,200),-2));
+            title.setSingleLine(false);title.setMaxLines(2);title.setGravity(Gravity.CENTER);
+            title.setLayoutParams(new LayoutParams(-1,-2));
+            caption.setGravity(Gravity.CENTER);caption.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+            caption.setMaxLines(2);caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            identity.addView(caption,new LayoutParams(Ui.dp(context,200),-2));
+        } else { caption.setSingleLine(true);identity.addView(caption); }
         LinearLayout times=Ui.row(context); current=Ui.text(context,"0:00",15,Color.WHITE); remaining=Ui.text(context,"",15,0xffd4d4da); remaining.setGravity(Gravity.END);
         times.addView(current,new LayoutParams(0,-2,1)); times.addView(remaining,new LayoutParams(0,-2,1)); addView(times); Ui.space(this,4);
         timeline=new SeekBar(context); timeline.setMax(10000); timeline.setPadding(Ui.dp(context,12),0,Ui.dp(context,12),0);
@@ -47,6 +64,7 @@ final class PlayerChrome extends LinearLayout {
             @Override public void onStopTrackingTouch(SeekBar bar) { dragging=false; if(duration>0) actions.seekTo(duration*bar.getProgress()/10000); }
             @Override public void onProgressChanged(SeekBar bar,int value,boolean user) { if(user&&!dragging&&duration>0) actions.seekTo(duration*value/10000); }
         });
+        Ui.space(this,12);
         LinearLayout transport=Ui.row(context);
         if(!live) transport.addView(Ui.quiet(context,"−5 s",()->actions.seek(-5000L)),new LayoutParams(-2,Ui.dp(context,36)));
         play=Ui.primary(context,"Ⅱ",actions::toggle); play.setTextSize(19); play.setContentDescription("Pause"); LayoutParams playParams=new LayoutParams(Ui.dp(context,48),Ui.dp(context,36)); playParams.setMargins(Ui.dp(context,8),0,Ui.dp(context,8),0); transport.addView(play,playParams);
@@ -59,14 +77,26 @@ final class PlayerChrome extends LinearLayout {
         addView(transport);
     }
     void update(long position,long buffered,long length,boolean playing,boolean live) {
-        duration=length; play.setText(playing?"Ⅱ":"▶"); play.setContentDescription(playing?"Pause":I18n.text("Abspielen"));
-        if(live) { long now=android.os.SystemClock.elapsedRealtime(); if(liveStarted<0) liveStarted=now; current.setText(time(now-liveStarted)); remaining.setText(""); timeline.setVisibility(GONE); return; }
-        current.setText(time(position)+" / "+time(length)); remaining.setText(length>0?I18n.text("Ende um ")+new java.text.SimpleDateFormat("HH:mm",java.util.Locale.getDefault()).format(new java.util.Date(System.currentTimeMillis()+(playing?Math.max(0,length-position):0))):"");
-        if(!playing) remaining.setText("");
+        duration=length; setText(play,playing?"Ⅱ":"▶"); String playLabel=playing?"Pause":I18n.text("Abspielen");if(!android.text.TextUtils.equals(play.getContentDescription(),playLabel)) play.setContentDescription(playLabel);
+        if(live) { long now=android.os.SystemClock.elapsedRealtime(); if(liveStarted<0) liveStarted=now; setText(current,time(now-liveStarted)); setText(remaining,""); timeline.setVisibility(GONE); return; }
+        setText(current,time(position)+" / "+time(length)); setText(remaining,length>0?I18n.text("Ende um ")+endTime(wallClock.getAsLong()+Math.max(0,length-position)):"");
         if(!dragging) timeline.setProgress(length>0?(int)Math.min(10000,position*10000/length):0);
         timeline.setSecondaryProgress(length>0?(int)Math.min(10000,buffered*10000/length):0);
     }
     void resetLiveClock() { liveStarted=android.os.SystemClock.elapsedRealtime(); }
     void preview(long position,long length,long step,boolean playing) { update(position,position,length,playing,false); current.setText(time(position)+" / "+time(length)+" · ±"+step/1000+" s"); }
-    static String time(long millis) { long seconds=Math.max(0,millis)/1000; return seconds>=3600?String.format(java.util.Locale.ROOT,"%d:%02d:%02d",seconds/3600,seconds/60%60,seconds%60):String.format(java.util.Locale.ROOT,"%d:%02d",seconds/60,seconds%60); }
+    private static void setText(TextView view,String text) { if(!android.text.TextUtils.equals(view.getText(),text)) view.setText(text); }
+    private String endTime(long millis) {
+        java.util.Locale locale=java.util.Locale.getDefault();java.util.TimeZone zone=java.util.TimeZone.getDefault();
+        if(endFormatter==null||!locale.equals(endLocale)||!zone.equals(endZone)) {
+            endLocale=locale;endZone=zone;endFormatter=new java.text.SimpleDateFormat("HH:mm",locale);endFormatter.setTimeZone(zone);endMinute=Long.MIN_VALUE;
+        }
+        long minute=Math.floorDiv(millis,60000);
+        if(minute!=endMinute) { endText=endFormatter.format(new java.util.Date(millis));endMinute=minute; }
+        return endText;
+    }
+    static String time(long millis) {
+        long seconds=Math.max(0,millis)/1000,minutes=seconds/60,tail=seconds%60;
+        return (seconds>=3600?seconds/3600+":"+(minutes%60<10?"0":"")+minutes%60:Long.toString(minutes))+":"+(tail<10?"0":"")+tail;
+    }
 }

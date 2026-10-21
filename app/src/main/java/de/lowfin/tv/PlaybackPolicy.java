@@ -4,8 +4,23 @@ import org.json.*;
 
 /** Pure playback decisions, shared by the player and unit tests. */
 final class PlaybackPolicy {
+    static void migrateSkipSettings(android.content.SharedPreferences settings) {
+        if(!settings.contains("autoSkip")) return;
+        android.content.SharedPreferences.Editor edit=settings.edit();
+        if(!settings.getBoolean("autoSkip",true)) edit.putBoolean("skipIntro",false).putBoolean("skipOutro",false);
+        edit.remove("autoSkip").apply();
+    }
+    static boolean autoSkip(String type,org.json.JSONObject item,android.content.SharedPreferences settings) {
+        return automatic(type)&&settings.getBoolean("Intro".equalsIgnoreCase(type)?"skipIntro":"skipOutro",true)
+            &&!keepSeasonPremiereIntro(type,item,settings.getBoolean("keepSeasonPremiereIntro",false));
+    }
+
+    static long startPosition(JSONObject item,long requested,boolean homeResume,boolean restart,boolean keepPosition) { return restart?0:homeResume&&!keepPosition?Json.position(item):requested; }
     static int width(int height) { return height>=2160?3840:height>=1080?1920:1280; }
     static boolean automatic(String type) { return "Intro".equalsIgnoreCase(type)||"Outro".equalsIgnoreCase(type); }
+    static boolean keepSeasonPremiereIntro(String type,JSONObject item,boolean enabled) {
+        return enabled&&"Intro".equalsIgnoreCase(type)&&item!=null&&"Episode".equalsIgnoreCase(item.optString("Type"))&&item.optInt("IndexNumber",-1)==1;
+    }
     static boolean active(JSONObject segment,long positionMs) {
         long start=segment.optLong("StartTicks")/10000, end=segment.optLong("EndTicks")/10000;
         return end>start&&positionMs>=start&&positionMs<end;

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cache_channels_reconciled">Channel list updated · previous artwork check is out of date</string>
+    <string name="cache_baseline_ready">Metadata saved · remaining artwork checks resume automatically</string>
+    <string name="cache_artwork_ready">Metadata and artwork checks complete</string>
+    <string name="cache_history_gap">Cache retained · listening for plugin changes. Earlier changes could not be verified; refresh manually if needed.</string>
+    <string name="companion_update_toast">Show plugin update notifications</string>
+    <plurals name="companion_changes_received">
+        <item quantity="one">Companion: new metadata/image information for %d title</item>
+        <item quantity="other">Companion: new metadata/image information for %d titles</item>
+    </plurals>
+    <string name="precache_keep_awake">Prevent sleep during precache</string>
+    <string name="precache_keep_awake_hint">Keep the screen on while Lowfin is in the foreground and precache is running. Normal sleep resumes when the cache work finishes.</string>
+</resources>

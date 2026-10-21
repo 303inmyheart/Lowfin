@@ -1,0 +1,9 @@
+<resources>
+    <string name="person_title">Person</string>
+    <string name="cast_title">Cast</string>
+    <string name="person_more">About this person</string>
+    <string name="person_no_info">No biography available in Jellyfin.</string>
+    <string name="person_library">In your library</string>
+    <string name="person_born">Born</string>
+    <string name="person_died">Died</string>
+</resources>

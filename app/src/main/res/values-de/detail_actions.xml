@@ -1,0 +1,7 @@
+<resources>
+    <string name="detail_watch_later">Später ansehen</string>
+    <string name="detail_watch_later_saved">Vorgemerkt</string>
+    <string name="detail_favorite">Favorit hinzufügen</string>
+    <string name="detail_favorite_saved">Favorisiert</string>
+    <string name="detail_mark_unwatched">Als ungesehen</string>
+</resources>

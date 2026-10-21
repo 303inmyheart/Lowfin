@@ -23,3 +23,15 @@ MDBLIST_API_KEY=
 # Get credentials from your account at https://www.themoviedb.org/settings/api
 # Put your API key OR API Read Access Token here, without the word Bearer:
 TMDB_API_KEY=
+
+# Tracearr: completed plays using Tracearr Public API v2.
+# Generate a Public API token in Tracearr Settings > Data & API > API.
+# Root URL including any reverse-proxy path, without /api/v2/public.
+TRACEARR_URL=
+# Token must start with trr_pub_. No Bearer prefix.
+TRACEARR_API_KEY=
+# Optional: Tracearr's Jellyfin server UUID (not Jellyfin's server ID).
+# Leave empty and select the server in Lowfin's Tracearr settings.
+TRACEARR_SERVER_ID=
+# Manual import: filled fields update credentials; empty fields keep saved values.
+# No existing download file is overwritten by the recreation button.

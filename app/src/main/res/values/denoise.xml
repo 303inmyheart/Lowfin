@@ -1,0 +1,5 @@
+<resources>
+    <string name="denoise_title">Video noise reduction</string>
+    <string name="denoise_hint">Off by default. Gentle local GPU filtering for SDR files up to 1080p with known video metadata. Not applied to live TV or HDR. May soften fine detail or increase GPU load. Applies to the next playback.</string>
+    <string name="denoise_fallback">Noise reduction disabled for this playback; continuing without the filter.</string>
+</resources>

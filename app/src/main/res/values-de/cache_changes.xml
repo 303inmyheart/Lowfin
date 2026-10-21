@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="cache_channels_reconciled">Senderliste aktualisiert · bisheriger Cover-Prüfstand veraltet</string>
+    <string name="cache_baseline_ready">Metadaten gespeichert · offene Cover-Prüfungen werden fortgesetzt</string>
+    <string name="cache_artwork_ready">Metadaten und Cover-Prüfung abgeschlossen</string>
+    <string name="cache_history_gap">Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.</string>
+    <string name="companion_update_toast">Plugin-Aktualisierungen als Meldung anzeigen</string>
+    <plurals name="companion_changes_received">
+        <item quantity="one">Companion: neue Metadaten/Bildinfos für %d Titel</item>
+        <item quantity="other">Companion: neue Metadaten/Bildinfos für %d Titel</item>
+    </plurals>
+    <string name="precache_keep_awake">Standby während des Precache verhindern</string>
+    <string name="precache_keep_awake_hint">Hält den Bildschirm wach, solange Lowfin im Vordergrund ist und der Precache arbeitet. Danach gilt wieder das normale Standby-Verhalten.</string>
+</resources>

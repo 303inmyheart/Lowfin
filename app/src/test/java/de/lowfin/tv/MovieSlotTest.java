@@ -32,6 +32,16 @@ public class MovieSlotTest {
         assertEquals("Blade Runner",slot.rowTitle(2)); slot.measure(android.view.View.MeasureSpec.makeMeasureSpec(720,android.view.View.MeasureSpec.EXACTLY),android.view.View.MeasureSpec.makeMeasureSpec(480,android.view.View.MeasureSpec.EXACTLY)); slot.layout(0,0,720,480);
         android.graphics.Bitmap bitmap=android.graphics.Bitmap.createBitmap(720,480,android.graphics.Bitmap.Config.ARGB_8888); slot.draw(new android.graphics.Canvas(bitmap)); java.io.File dir=new java.io.File("build/qa"); dir.mkdirs(); try(java.io.OutputStream out=new java.io.FileOutputStream(new java.io.File(dir,"movie-slot.png"))) { bitmap.compress(android.graphics.Bitmap.CompressFormat.PNG,100,out); } bitmap.recycle(); slot.stop(); activity.pause().stop().destroy();
     }
+    @Test @Config(qualifiers="w960dp-h540dp") public void wideWindowSurvivesDialogStylingAndAttachment() {
+        ActivityController<Activity> activity=Robolectric.buildActivity(Activity.class).setup();
+        MovieSlot slot=new MovieSlot(activity.get(),Arrays.asList("The Lord of the Rings: The Fellowship of the Ring", "Alien"));
+        android.app.AlertDialog dialog=LowfinDialog.builder(activity.get(),MovieSlot.dialogWidth(activity.get())).setView(slot).setNegativeButton("Cancel",null).create();
+        dialog.show();shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(250));
+        int expected=Ui.dp(activity.get(),660);
+        assertEquals(expected,dialog.getWindow().getAttributes().width);
+        assertTrue(dialog.getWindow().getAttributes().width>Ui.dp(activity.get(),600));
+        dialog.dismiss();slot.stop();activity.pause().stop().destroy();
+    }
     private String text(android.view.View view) { String result=view instanceof android.widget.TextView?((android.widget.TextView)view).getText().toString():""; if(view instanceof android.view.ViewGroup) { android.view.ViewGroup group=(android.view.ViewGroup)view; for(int i=0;i<group.getChildCount();i++) result+=" " +text(group.getChildAt(i)); } return result; }
     @Test public void canceledRouletteCannotOpenItsPendingFilm() {
         ActivityController<Activity> activity=Robolectric.buildActivity(Activity.class).setup();
