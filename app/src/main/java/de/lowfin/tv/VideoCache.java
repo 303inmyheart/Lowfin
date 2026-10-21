@@ -29,6 +29,11 @@ final class VideoCache {
         if(cache==null) cache=new SimpleCache(new File(context.getCacheDir(),"video-streams"),new LeastRecentlyUsedCacheEvictor(limit),new StandaloneDatabaseProvider(context));
         return cache;
     }
+    /** Open only the local cache index while the user-requested stream is negotiating. No media fetch. */
+    void warmUp() {
+        try { SimpleCache storage=cache(); if(storage!=null) storage.getCacheSpace(); }
+        catch(RuntimeException error) { android.util.Log.w("LowfinPlayer","Video cache preparation postponed: "+error.getClass().getSimpleName()); }
+    }
     DataSource.Factory factory(Api api,boolean live,boolean hls) {
         okhttp3.OkHttpClient transport=api.http.newBuilder().callTimeout(0,java.util.concurrent.TimeUnit.MILLISECONDS).readTimeout(30,java.util.concurrent.TimeUnit.SECONDS).build();
         DataSource.Factory authorized=new OkHttpDataSource.Factory(transport).setDefaultRequestProperties(Collections.singletonMap("Authorization",api.authorization()));
@@ -50,7 +55,7 @@ final class VideoCache {
             for(String name:new ArrayList<>(parsed.queryParameterNames())) if(name.equalsIgnoreCase("PlaySessionId")||name.equalsIgnoreCase("DeviceId")) stable.removeAllQueryParameters(name);
             url=stable.build().toString();
         }
-        try { byte[] digest=MessageDigest.getInstance("SHA-256").digest((scope+":"+url).getBytes(StandardCharsets.UTF_8)); StringBuilder result=new StringBuilder(); for(byte b:digest) result.append(String.format("%02x",b)); return result.toString(); }
+        try { byte[] digest=MessageDigest.getInstance("SHA-256").digest((scope+":"+url).getBytes(StandardCharsets.UTF_8)); StringBuilder result=new StringBuilder(64); char[] hex="0123456789abcdef".toCharArray(); for(byte b:digest) { result.append(hex[(b&255)>>>4]); result.append(hex[b&15]); } return result.toString(); }
         catch(Exception e) { throw new IllegalStateException(e); }
     }
     synchronized void clear() throws Exception { if(cache!=null) for(String key:new HashSet<>(cache.getKeys())) cache.removeResource(key); }

@@ -4,19 +4,30 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **0.7.16**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.2.13**.
+
+Optionales **Lowfin Companion 0.5.1** für Jellyfin 12.2.x: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
+
+- Optionales natives Film-Entdeckungsbanner unter Startseite: Hintergrund, Logo/Titel, Poster, Beschreibung, Laufzeit, Genres und kompakte Bewertungen der gewählten Quellen. Links/rechts blättern, OK öffnet Details. Frei einsortierbar, standardmäßig aus.
+- Startanimation ausschließlich mit bestehendem Lowfin-Logo, ohne Statusschriftzug, unter Darstellung (standardmäßig an). Wartet auf frisches Weiterschauen und Next Up sowie sichtbare Bilder; per Fernbedienung überspringbar, bei Fehlern spätestens nach 15 Sekunden beendet.
+
+Version 1.2 reduziert wiederholte lokale Metadaten-Schreibvorgänge, bündelt Abfragen beim Zurückkehren zur Startseite und beim Companion-Fortsetzen-Abgleich und verringert Arbeit bei Cacheprüfungen und Cover-Verdrängung. Cacheinhalt, Kontodaten und Playerverhalten bleiben erhalten. [Optimierungsprüfung](docs/optimization-1.2.0.md).
 
 ## Installieren
 
-Die fertige APK liegt unter `dist/Lowfin-0.7.0.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.2.13-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r dist/Lowfin-0.7.0.apk
+adb install -r Lowfin-1.2.13-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.
 
-## Neu in 0.7.0
+## Lowfin 1.0.0
+
+Die Version 1.0 bündelt den bisherigen Funktionsumfang mit Companion-Unterstützung, persistentem Bibliothekscache, frei sortierbaren Startseitenzeilen und den geprüften UI-Optimierungen. Quellcode und lokal gebaute Releases werden auf GitHub veröffentlicht; Builds laufen nicht automatisch beim Push.
+
+## Frühere Erweiterungen ab 0.7.0
 
 - Englisch ist die Standardsprache, unabhängig von der TV-Systemsprache. Deutsch ist über **Einstellungen → Sprache** auswählbar; die Sprachwahl steht auch auf der Anmeldeseite bereit. Übersetzt sind Navigation, Player, Trailer, Dialoge, Fehler, Cache-Status und TV-Kanäle. Server-Medientitel und Beschreibungen bleiben unverändert.
 - **Genre-Reihen** ist ein eigenes Einstellungsmenü: einzelne Genres pro Konto an-/ausschalten, alle Genre-Reihen ausblenden und die Ansicht mit nur einer fokussierten Reihe wechseln.
@@ -47,7 +58,7 @@ Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzernam
 - Fünf Film-Empfehlungsreihen **„Weil du … gesehen hast“** stehen direkt unter **Als Nächstes** und vor den angehefteten Genres. Jede Reihe basiert auf einem anderen gesehenen Film. Vorschläge kommen aus [Jellyfins `/Movies/Recommendations`](https://raw.githubusercontent.com/jellyfin/jellyfin/master/Jellyfin.Api/Controllers/MoviesController.cs); fehlen passende Kategorien, werden für weitere gesehene Filme Jellyfins `/Items/{id}/Similar`-Vorschläge genutzt. Favoriten-Kategorien werden nicht als gesehen ausgegeben.
 - Empfehlungen werden dauerhaft pro Server/Account gespeichert und beim Start sofort aus dem Cache geladen. Serverfehler erhalten vorhandene Vorschläge. Ohne gesehenen Film beziehungsweise ohne passende Vorschläge bleiben die betreffenden Reihen ausgeblendet; Hoch/Runter überspringt sie.
 - Kleine 2:3-Poster öffnen die Film-Detailseite. **Mehr anzeigen** am Ende öffnet alle bis zu 24 Vorschläge der jeweiligen Reihe. Empfehlungen werden im Hintergrund und bei Rückkehr nach zwei Minuten aktualisiert.
-- Neues monochromes Logo: ein zurückhaltendes großes **L** hinter dem gut lesbaren **LowFin**-Schriftzug. Enthalten sind normale und adaptive Launcher-Icons, ein breites TV-Banner, hochauflösende PNGs und bearbeitbare SVG-Dateien unter `design/`.
+- Logo im Stil von Lowfin Companion: ein schlichtes weißes **L** mit lavendelfarbenem Fuß und gut lesbarem **Lowfin**-Schriftzug. Enthalten sind normale und adaptive Launcher-Icons, ein breites TV-Banner, hochauflösende PNGs und bearbeitbare SVG-Dateien unter `design/`.
 
 ## Neu in 0.5.1
 
@@ -109,7 +120,7 @@ Der Genre-Index wird beim Datenbank-Update nur angelegt und anschließend in Hin
 - **Audio auf Stereo (2.0) heruntermischen**, standardmäßig aktiv: Der Fernseher decodiert unterstützte 5.1-Tonspuren und mischt das PCM-Signal lokal auf Stereo, einschließlich Center/Dialog und Surround. Audio-Passthrough ist dabei deaktiviert. Erst ein Server-Fallback erhält eine Grenze von zwei Audiokanälen. Abschaltbar in den Wiedergabeeinstellungen; dann sind bis zu sechs Kanäle erlaubt.
 - Auswahl von Tonspuren, Untertiteln, Medienversionen und Kapiteln. Tonspurwechsel erfolgen bei direkter Wiedergabe lokal, sofern die Spur unterstützt wird; sonst wird die Wiedergabe über den Server neu ausgehandelt; Bild-/ASS-Untertitel können auf dem Server eingebrannt werden.
 - „Zufälliger Film“ im Menü: Auswahl aus der gesamten jeweiligen Bibliothek, Slot-Animation mit Treffer-Effekt mit Filmtiteln und anschließende Detailseite. Ohne Serververbindung Auswahl aus den gespeicherten Filmen. Abbrechen öffnet keinen Film.
-- Eigene schlanke Player-Steuerleiste am unteren Bildschirmrand, nach fünf Sekunden automatisch ausgeblendet; Pause, ±10 Sekunden, Zeitleiste, nächste Folge und Senderwahl. Ton/Untertitel/Version/Kapitel und optionale Serverwiedergabe über „Optionen“.
+- Eigene schlanke Player-Steuerleiste am unteren Bildschirmrand, nach fünf Sekunden automatisch ausgeblendet; Pause, ab 5 Sekunden beschleunigtes Seeken, Zeitleiste, nächste Folge und Senderwahl. Ton/Untertitel/Version/Kapitel und optionale Serverwiedergabe über „Optionen“.
 - Fortschrittsmeldungen, automatischer Start der nächsten Folge, optionales Abschalten.
 - Live-TV zeigt ausschließlich Sender, keinen Guide. Es startet beim Senderklick unmittelbar; `AutoOpenLiveStream=true`, längere Probe-Zeit für IPTV, Serverstream/Transcoding-Fallback und Freigabe von Live-Streams beim Verlassen. Senderauswahl und Kanal-Plus/Minus; optionale Programmvorschau/Aufnahmeplanung im Player. Vorhandene Aufnahmen sind über die Einstellungen erreichbar.
 - Intro Skipper über Jellyfins [MediaSegments-API](https://jellyfin.org/docs/general/server/metadata/media-segments/): **Intro und Outro automatisch**, alle übrigen Segmenttypen ausschließlich über die sichtbare Skip-Taste. Voraussetzung: Jellyfin 10.10 oder neuer und vorhandene Segmentdaten. Lowfin analysiert die Videos selbst nicht.
@@ -130,9 +141,9 @@ Pufferfenster: 30–90 Sekunden bei Filmen, 10–45 Sekunden bei Live-TV, durch 
 
 Nach Anmeldung startet ein Hintergrundlauf. Er lädt die Metadaten aller zugänglichen Filme, Serien, Staffeln und Folgen in SQLite und speichert deren verfügbare primäre Cover/Standbilder sowie vorhandene Thumb-/Backdrop-Varianten für die Startseite als kleine 240-Pixel-Vorschaubilder. Vorhandene Informationen erscheinen sofort, während Serverdaten aktualisiert werden. Die Standardreihen und angehefteten Genre-Reihen werden ebenfalls lokal gespeichert.
 
-Der Lauf arbeitet paketweise und pausiert während der Wiedergabe. Beim nächsten App-Start wird nach 24 Stunden ein neuer Lauf gestartet; manuelles Aktualisieren und Stoppen gibt es in den Einstellungen. Unterbrochene Läufe erhalten die vorhandenen Daten. Gelöschte Titel werden erst nach einem erfolgreich beendeten Metadatenlauf entfernt.
+Ohne kompatibles Companion-Plugin arbeitet der Lauf paketweise, pausiert während der Wiedergabe und wird nach 24 Stunden beim nächsten App-Start erneut gestartet. Mit erkanntem Plugin bleibt ein vollständiger Cache erhalten und erhält nur gemeldete Änderungen, auch während der Wiedergabe. Ein fehlender oder veralteter Plugin-Verlauf führt zu einem Hinweis statt einem automatischen Vollabgleich. Manuelles Aktualisieren und Stoppen gibt es in den Einstellungen. Unterbrochene Läufe erhalten die vorhandenen Daten. Gelöschte Titel werden erst nach einem erfolgreich beendeten Metadatenlauf entfernt.
 
-Standard: **1024 MB Covercache**, mindestens **64 MB freier Gerätespeicher** bleiben erhalten. Das Budget lässt sich bis „Ohne feste Grenze“ erhöhen. Ist der Platz knapp oder ein Cover nicht erreichbar, zeigt der Cache-Status die noch offenen Cover. Die gesamte Bibliothek ist deshalb erst dann vollständig bebildert, wenn genug Gerätespeicher verfügbar ist. Der Bildcache im RAM ist auf 6 MB begrenzt. Video-/Audiodateien werden vom Jellyfin-Server gestreamt.
+Standard: **1024 MB Covercache**, mindestens **64 MB freier Gerätespeicher** bleiben erhalten. Das Budget lässt sich bis „Ohne feste Grenze“ erhöhen. Ist der Platz knapp oder ein Cover nicht erreichbar, zeigt der Cache-Status die noch offenen Cover. Die gesamte Bibliothek ist deshalb erst dann vollständig bebildert, wenn genug Gerätespeicher verfügbar ist. Der Bildcache im RAM ist auf 6 MB begrenzt. Ein kleiner persistenter Bildbestand ersetzt die vollständige Dateizählung bei normalen Starts; nach unterbrochenen Dateiänderungen oder beschädigtem Bestand wird lokal neu gezählt. Video-/Audiodateien werden vom Jellyfin-Server gestreamt.
 
 ## TV-Hauptmenü aktivieren
 
@@ -164,9 +175,9 @@ Die Release-APK liegt anschließend unter `app/build/outputs/apk/release/app-rel
 
 ## Prüfung und verbleibender Gerätetest
 
-API-Tests mit einem lokalen Mockserver; Android-11-Tests mit Robolectric für SQLite, Staffelansicht, Startseiten-Karten, Deep Links und TV-Provider-Veröffentlichung. 143 automatisierte Tests bestehen in Version 0.7.0; Android Lint meldet keine Fehler. Zusätzlich ein durch R8 verkleinerter Build. Renderings mit Testdaten stehen unter `design/screenshots/`.
+API-Tests mit einem lokalen Mockserver; Android-11-Tests mit Robolectric für SQLite, Staffelansicht, Startseiten-Karten, Deep Links und TV-Provider-Veröffentlichung. Für 1.0.0 bestehen 357 Client- und 40 Companion-Tests sowie die Release-Lint-Prüfung. Die APK ist durch R8 samt Ressourcenverkleinerung gebaut. Prüfergebnisse, Prüfsumme und Installationsstatus stehen in `dist/verification-1.0.0.json`. Renderings mit Testdaten stehen unter `design/screenshots/`.
 
-**Version 0.5.2 ist lokal geprüft; die neuen Empfehlungsreihen und das aktualisierte Logo müssen noch auf dem Gerät bestätigt werden. Frühere Versionen wurden vom Nutzer auf dem Fernseher ausprobiert; Wiedergabe funktionierte. Version 0.3.0 zeigte auf dem Gerät Probleme beim Bibliotheksladen und Einfrieren der Einstellungen. Die Korrekturen in 0.3.1 und die neuen Funktionen in 0.4.0 werden lokal auf Android-11-Layouts und mit Regressionstests geprüft; ein erneuter Gerätetest einschließlich YouTube steht aus.** Die Tests bestätigen die lokale Logik, API-Anfragen, Seitenverhältnisse und das Layout; sie ersetzen keine Prüfung aller Decoder- und Live-TV-Varianten auf dem Gerät. Für den ersten Gerätetest:
+Die lokalen Tests bestätigen Logik, API-Anfragen, Seitenverhältnisse und Navigation. Sie garantieren nicht die Kompatibilität jedes Hardware-Decoders oder jeder Live-TV-Quelle. Die gemeldeten sporadischen langen Eingabeverzögerungen sind noch nicht abschließend einer einzelnen Ursache zugeordnet. Für den ersten Gerätetest:
 
 1. Anmelden, App neu öffnen und automatische Anmeldung prüfen.
 2. Einen Film direkt abspielen, pausieren, zurückgehen und fortsetzen.
@@ -203,3 +214,27 @@ Ohne Anführungszeichen und ohne `Bearer`-Präfix eintragen.
 Gecachte Bilder werden unabhängig von Downloads gelesen und decodiert. Oberfläche und Precache verwenden dieselben Bildgrößen; vorhandene 240-Pixel-Cover können auf HD-Geräten weiterverwendet werden. Langsame einzelne Bildanfragen blockieren andere Cover nicht mehr. Bei vollem Speicherbudget ersetzen neue sichtbare Cover die am längsten nicht verwendeten Dateien; der Hintergrund-Precache lädt dann keine weiteren Bilder hinzu.
 
 Automatisches Vorladen ist eine Aktualisierung, kein Löschen des Caches. Standardmäßig prüft Lowfin nach 24 Stunden erneut. Noch nicht vollständig abgeschlossene Metadatenläufe werden beim nächsten Start wieder versucht. Der gespeicherte Status bzw. vorhandene Cover werden nach einem App-Neustart wieder angezeigt.
+
+### Tracearr und API-Key-Datei
+
+Unter Einstellungen → API → Tracearr die Basisadresse und einen Public-API-Token eintragen, danach den passenden Jellyfin-Server wählen und die Verbindung prüfen. Benötigt Tracearr **Public API v2**. Die Zuordnung erfolgt über die Jellyfin-Benutzer-ID; jeder angemeldete Nutzer erhält seine eigenen Zahlen.
+
+Es zählen nur beendete, von Tracearr als `watched` eingestufte Durchläufe, nach dessen konfigurierter Abschlussregel. Seriendurchläufe entsprechen dem kleinsten Wiedergabezähler aller derzeit verfügbaren Folgen einschließlich Specials. Neu hinzugefügte Folgen können diesen Wert reduzieren. Fehlende oder unvollständige Historie wird nicht als Null ausgegeben.
+
+Die bestehende `Download/Lowfin-API-Keys.txt` unterstützt zusätzlich `TRACEARR_URL`, `TRACEARR_API_KEY` und optional `TRACEARR_SERVER_ID`. Der optionale Wert ist Tracearrs UUID für den Jellyfin-Server. Er kann leer bleiben; den Server anschließend in Lowfin wählen. Der Token beginnt mit `trr_pub_`, ohne `Bearer` davor.
+
+Mit **API-Key-Datei neu erstellen** in den API-Einstellungen lässt sich auch bei vorhandenen Keys eine leere Vorlage erzeugen. Bestehende Download-Dateien werden nicht überschrieben, gespeicherte Keys nicht exportiert. Ausgefüllte Felder eines bewusst angeforderten Imports ersetzen diese Werte; **leere Felder behalten bestehende Keys**. Erst nach verifiziertem, verschlüsseltem Speichern wird die Datei gelöscht.
+
+Ab Companion 0.3 werden API-Schlüssel im Jellyfin-Plugin-Dashboard verwaltet und für alle oder ausgewählte Nutzer freigegeben. Lowfin behält Anbieter- und Bewertungs-Schalter sowie den standardmäßig aktiven, abschaltbaren lokalen Bewertungscache. Für freigegebene Nutzer entfallen lokale Schlüssel-/TXT-/Tracearr-Verbindungsfelder.
+
+Startseite: Unter **Einstellungen → Startseite** lässt sich die Bibliothekszeile mit 16:9-Vorschaubildern einschalten. Über **Reihenfolge der Startseitenzeilen** jede Zeile auswählen und nach oben/unten verschieben. Die Reihenfolge wird pro Konto gespeichert; wechselnde Empfehlungstitel ändern die Position nicht.
+
+Optionale DVD-/5.1-Tags im sichtbaren Coverrahmen benötigen Companion 0.4.0. Im Plugin-Dashboard aktivieren, auf einzelnen TVs unter Einstellungen → Darstellung ausblenden. Covercache und Originalbilder bleiben unverändert; Tags bleiben auch bei auf 16:9 zugeschnittenen 4:3-Folgenbildern sichtbar.
+
+Companion 0.5.0 ergänzt einen persistenten Tag-Index mit Ereignisaktualisierung und 24-Stunden-Abgleich. HDR-Tags erscheinen nur bei eingeschalteter HDR-Wiedergabe auf dem jeweiligen TV. Folgenbewertungen bleiben ungecacht.
+
+## Veröffentlichung und Sprache
+
+Der Android-Workflow wird ausschließlich manuell gestartet. Quellcode-Pushes verbrauchen keine Build-Minuten; diese Releases werden lokal gebaut und direkt hochgeladen. [Companion-Quellcode, README und Changelog](https://github.com/303inmyheart/Lowfin-Companion) liegen in einem eigenen Repository.
+
+Die Standardsprache ist Englisch. Unter Einstellungen → Konto und Sprache kann zwischen Englisch und Deutsch gewechselt werden. Titel, Genres, Inhaltsbeschreibungen und Fehlermeldungen des Servers bleiben in der von Jellyfin gelieferten Sprache.

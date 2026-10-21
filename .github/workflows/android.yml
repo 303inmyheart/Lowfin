@@ -1,8 +1,7 @@
 name: Android build
 
 on:
-  push:
-    branches: [main]
+  # Builds are manual only; source pushes must not consume Actions minutes.
   workflow_dispatch:
 
 permissions:

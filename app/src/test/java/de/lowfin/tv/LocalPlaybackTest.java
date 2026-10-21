@@ -13,6 +13,13 @@ import static org.junit.Assert.*;
 @Config(sdk=30)
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 public class LocalPlaybackTest {
+    @Test public void RepeatedNegotiationKeepsFreshRequestValuesAndIdenticalCapabilities() throws Exception {
+        org.json.JSONObject first=PlaybackPolicy.request("a",720,4000000,false,false,0,1,-1,null,true);
+        org.json.JSONObject second=PlaybackPolicy.request("b",2160,25000000,false,false,120000,3,2,"source",false);
+        DeviceCodecs.warmUp();LocalPlayback.negotiate(first);LocalPlayback.negotiate(second);
+        assertEquals(first.getJSONObject("DeviceProfile").getJSONArray("DirectPlayProfiles").toString(),second.getJSONObject("DeviceProfile").getJSONArray("DirectPlayProfiles").toString());
+        assertEquals("b",second.getString("UserId"));assertEquals(1200000000L,second.getLong("StartTimeTicks"));assertEquals(3,second.getInt("AudioStreamIndex"));assertEquals(2,second.getInt("SubtitleStreamIndex"));assertEquals("source",second.getString("MediaSourceId"));
+    }
     @Test public void surroundCenterDialogueReachesBothStereoOutputs() throws Exception {
         ChannelMixingAudioProcessor processor=new ChannelMixingAudioProcessor();
         processor.putChannelMixingMatrix(LocalPlayback.stereoMatrix(6));

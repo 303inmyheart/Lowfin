@@ -1,0 +1,27 @@
+{
+  "version": "1.2.2",
+  "version_code": 88,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "scope": "targeted RatingsRow and HD/4K banner tests",
+    "tests": 10,
+    "failures": 0,
+    "errors": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "24854923b7529ca960142f7d1d8d8ce80a86d8b456f6d3cd0e4888daef915f3c",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-21T05:24:50.610562+00:00",
+  "document": "docs/mdblist-icon-1.2.2.md",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.2",
+      "version_code": 88,
+      "app_started": true,
+      "verified": true
+    }
+  ],
+  "github_pushed": false
+}

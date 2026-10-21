@@ -18,6 +18,7 @@ public final class TrailerActivity extends Activity {
     private LowfinApp app;
     private ExoPlayer player;
     private PlayerChrome chrome;
+    private final PlayerMenuPress menuPress=new PlayerMenuPress();
     private BufferBar buffer;
     private TextView status;
     private final Handler handler=new Handler(Looper.getMainLooper());
@@ -43,7 +44,7 @@ public final class TrailerActivity extends Activity {
         chrome.options.setVisibility(View.GONE); chrome.title.setText(getIntent().getStringExtra("title")); chrome.logo.setVisibility(View.GONE);
         root.addView(chrome.identity,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP)); root.addView(chrome,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM));
         LinearLayout loading=Ui.column(this); loading.setGravity(Gravity.CENTER); status=Ui.text(this,I18n.text("Trailer wird geladen …"),13,Ui.MUTED); loading.addView(status);
-        buffer=new BufferBar(this); loading.addView(buffer,new LinearLayout.LayoutParams(Ui.dp(this,240),Ui.dp(this,22))); root.addView(loading,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));
+        buffer=new BufferBar(this); loading.addView(buffer,new LinearLayout.LayoutParams(Ui.dp(this,160),Ui.dp(this,22))); root.addView(loading,new FrameLayout.LayoutParams(-2,-2,Gravity.CENTER));
         setContentView(root); chrome.play.requestFocus();
         OkHttpDataSource.Factory http=new OkHttpDataSource.Factory(new OkHttpClient()).setUserAgent(YouTubeStreams.USER_AGENT)
             .setDefaultRequestProperties(Collections.singletonMap("Referer","https://www.youtube.com/"));
@@ -63,7 +64,8 @@ public final class TrailerActivity extends Activity {
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
         int key=event.getKeyCode(); boolean confirm=key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER;
         boolean direction=key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT||key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_DOWN;
-        if(chrome!=null&&chrome.getVisibility()!=View.VISIBLE&&(confirm||direction)) { if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) { showChrome(true); chrome.play.requestFocus(); if(confirm&&player!=null) player.pause(); } return true; }
+        if(chrome!=null&&menuPress.handle(event,chrome.getVisibility()==View.VISIBLE,()-> { if(player!=null) player.pause(); },openingKey-> { showChrome(true); if(openingKey==KeyEvent.KEYCODE_DPAD_LEFT||openingKey==KeyEvent.KEYCODE_DPAD_RIGHT) chrome.timeline.requestFocus(); else chrome.play.requestFocus(); })) return true;
+        if(chrome!=null&&confirm&&(chrome.play.hasFocus()||chrome.timeline.hasFocus())) return menuPress.activate(event,()->chrome.play.performClick());
         if(key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE||key==KeyEvent.KEYCODE_MEDIA_PLAY||key==KeyEvent.KEYCODE_MEDIA_PAUSE||key==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD||key==KeyEvent.KEYCODE_MEDIA_REWIND) {
             if(event.getAction()==KeyEvent.ACTION_DOWN&&player!=null) { if(key==KeyEvent.KEYCODE_MEDIA_PLAY) player.play(); else if(key==KeyEvent.KEYCODE_MEDIA_PAUSE) player.pause(); else if(key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) { if(player.getPlayWhenReady()) player.pause(); else player.play(); } else player.seekTo(Math.max(0,player.getCurrentPosition()+(key==KeyEvent.KEYCODE_MEDIA_REWIND?-10000:10000))); showChrome(true); } return true;
         }

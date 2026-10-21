@@ -1,0 +1,30 @@
+{
+  "version": "1.2.4",
+  "version_code": 90,
+  "build_type": "release",
+  "tests": {
+    "tests": 3,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "tests_scope": "three targeted HD/4K discovery-banner UI regressions",
+  "lint_release": "passed",
+  "apk_sha256": "ed384bd98720abfc13fe6757df29b2654f5460f2ecc63b9ea96daafb4f230cd5",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "document": "docs/banner-layout-1.2.4.md",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.4",
+      "version_code": 90,
+      "verified": true,
+      "app_started": false,
+      "verified_at": "2026-10-21T08:02:16.275795+00:00"
+    }
+  ],
+  "installation_deferred": false,
+  "reason": "User subsequently authorized installation; prior do-not-start instruction retained",
+  "github_pushed": false,
+  "created_at": "2026-10-21T08:01:07.979684+00:00"
+}

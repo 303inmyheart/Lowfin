@@ -14,4 +14,17 @@ public class RatingsTest {
     @Test public void providerIdsMatchCaseInsensitively() { assertEquals("tt1234",Ratings.providerId(Json.obj("IMDB","tt1234"),"Imdb")); }
     @Test public void explicitScalesPreventPercentAndTenPointConfusion() { assertEquals("7,8/10",Ratings.format("imdb",7.8)); assertEquals("91%",Ratings.format("tomatoes",91)); assertEquals("83/100",Ratings.format("metacritic",83)); assertEquals("4,2/5",Ratings.format("letterboxd",4.2)); }
     @Test public void invalidNumbersAreNotShownAsRealRatings() { assertEquals(0,Ratings.parseOmdb(Json.obj("imdbRating",25,"Metascore",-1)).length()); }
+    @Test public void lighterFormattingMatchesPreviousRoundingAcrossScoresAndBoundaries() {
+        for(String source:Ratings.IDS) {
+            boolean decimal=source.equals("imdb")||source.equals("tmdb")||source.equals("letterboxd");
+            String suffix=decimal?(source.equals("letterboxd")?"/5":"/10"):source.equals("metacritic")||source.equals("mdblist")?"/100":"%";
+            for(int i=0;i<=2000;i++) {
+                double value=i/20.0;
+                for(double score:new double[]{Math.nextDown(value),value,Math.nextUp(value)})
+                    assertEquals(source+" "+score,String.format(java.util.Locale.GERMAN,decimal?"%.1f%s":"%.0f%s",score,suffix),Ratings.format(source,score));
+            }
+            for(double score:new double[]{Double.NaN,Double.POSITIVE_INFINITY,Double.NEGATIVE_INFINITY,-0.0,-1.25,101,1e20})
+                assertEquals(String.format(java.util.Locale.GERMAN,decimal?"%.1f%s":"%.0f%s",score,suffix),Ratings.format(source,score));
+        }
+    }
 }

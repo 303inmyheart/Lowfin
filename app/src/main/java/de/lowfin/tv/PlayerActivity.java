@@ -23,6 +23,9 @@ public final class PlayerActivity extends Activity {
     private LowfinApp app;
     private Api api;
     private Library library;
+    private CompanionApi companion;
+    private CompanionApi.Session companionSession;
+    private boolean explicitRestart,restoredPosition;
     private JSONObject item,source;
     private JSONArray segments=new JSONArray();
     private final Set<String> skipped=new HashSet<>();
@@ -32,6 +35,7 @@ public final class PlayerActivity extends Activity {
     private TextView message;
     private BufferBar bufferBar;
     private final SeekGesture seekGesture=new SeekGesture();
+    private final PlayerMenuPress menuPress=new PlayerMenuPress();
     private int seekDirection;
     private String logoRequest="";
     private JSONObject logoSeries;
@@ -44,7 +48,9 @@ public final class PlayerActivity extends Activity {
     private boolean live,started,forceHls,released,subtitleChosen,revealControlsOnStart=true;
     private final ExecutorService network=Executors.newSingleThreadExecutor();
     private final Handler handler=new Handler(Looper.getMainLooper());
-    private long lastReport;
+    private long lastReport,denoiseReadySince;
+    private long loadBegan;
+    private boolean firstFrameLogged,denoiseActive,denoiseDisabled;
     private List<String> liveCandidates=Collections.emptyList();
     private int liveCandidate;
     private final LiveBufferWatchdog liveBuffer=new LiveBufferWatchdog();
@@ -68,6 +74,8 @@ public final class PlayerActivity extends Activity {
         super.onCreate(saved); app=(LowfinApp)getApplication(); library=app.library;
         if(app.account==null) { released=true; finish(); return; }
         api=new Api(app.account);
+        companion=app.companion;
+        explicitRestart=saved==null&&getIntent().getBooleanExtra("restart",false); restoredPosition=saved!=null;
         try { item=new JSONObject(getIntent().getStringExtra("item")); } catch(Exception e) { finish(); return; }
         requestedPosition=saved!=null?saved.getLong("position"):getIntent().getLongExtra("position",0);
         audio=saved!=null?saved.getInt("audioStreamIndex",-1):getIntent().getIntExtra("audioStreamIndex",-1);
@@ -92,7 +100,7 @@ public final class PlayerActivity extends Activity {
         FrameLayout.LayoutParams bottom=new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM); root.addView(chrome,bottom); root.addView(chrome.identity,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP|Gravity.LEFT)); updateChromeTitle();
         message=Ui.text(this,I18n.text("Stream wird geöffnet …"),14,Color.WHITE); message.setGravity(Gravity.CENTER); message.setPadding(Ui.dp(this,20),Ui.dp(this,12),Ui.dp(this,20),Ui.dp(this,12)); message.setBackground(Ui.background(0xe619191c,0));
         FrameLayout.LayoutParams center=new FrameLayout.LayoutParams(Ui.dp(this,420),-2,Gravity.CENTER); root.addView(message,center);
-        bufferBar=new BufferBar(this); bufferBar.setVisibility(View.GONE); root.addView(bufferBar,new FrameLayout.LayoutParams(Ui.dp(this,240),Ui.dp(this,20),Gravity.CENTER));
+        bufferBar=new BufferBar(this); bufferBar.setVisibility(View.GONE); root.addView(bufferBar,new FrameLayout.LayoutParams(Ui.dp(this,160),Ui.dp(this,20),Gravity.CENTER));
         skip=Ui.quiet(this,I18n.text("Überspringen"),()-> { if(player!=null) { player.seekTo(skipTarget); skip.setVisibility(View.GONE); view.requestFocus(); } }); skip.setVisibility(View.GONE);
         FrameLayout.LayoutParams skipLayout=new FrameLayout.LayoutParams(-2,Ui.dp(this,36),Gravity.END|Gravity.BOTTOM); skipLayout.setMargins(0,0,Ui.dp(this,32),Ui.dp(this,192)); root.addView(skip,skipLayout);
         setContentView(root); view.setOnClickListener(v->{ if(chrome.getVisibility()==View.VISIBLE) hideChrome(); else showChrome(true); }); view.requestFocus();
@@ -107,7 +115,8 @@ public final class PlayerActivity extends Activity {
             logoRequest=series; final Api logoApi=app.api;
             app.io.execute(()-> { try { JSONObject data=logoApi.item(series); runOnUiThread(()-> { if(!released&&series.equals(item.optString("SeriesId"))) { logoSeries=data; app.images.logo(chrome.logo,data); } }); } catch(Exception ignored) {} });
         }
-        chrome.caption.setText(live?"Live TV":item.optString("Type").equals("Episode")?Json.label(item):item.optString("ProductionYear",""));
+        chrome.caption.setVisibility(live?View.GONE:View.VISIBLE);
+        chrome.caption.setText(live?"":item.optString("Type").equals("Episode")?Json.label(item):item.optString("ProductionYear",""));
     }
     private void showChrome(boolean focus) {
         chrome.setVisibility(View.VISIBLE); chrome.identity.setVisibility(View.VISIBLE); if(player!=null&&!seekGesture.active()) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);
@@ -120,7 +129,7 @@ public final class PlayerActivity extends Activity {
     private void optionsMenu() {
         handler.removeCallbacks(hideControls);
         String[] labels=live?new String[]{I18n.text("Tonspur"),I18n.text("Untertitel"),I18n.text("Medienversion"),I18n.text("Sender wechseln"),I18n.text("Aktuelles Programm"),I18n.text("Stream erneut verbinden"),I18n.text("Über Server abspielen")}:new String[]{I18n.text("Tonspur"),I18n.text("Untertitel"),I18n.text("Medienversion"),I18n.text("Kapitel"),I18n.text("Über Server abspielen")};
-        new AlertDialog.Builder(this).setTitle(I18n.text("Wiedergabeoptionen")).setItems(labels,(d,index)-> {
+        LowfinDialog.builder(this).setTitle(I18n.text("Wiedergabeoptionen")).setItems(labels,(d,index)-> {
             if(index==0) streams("Audio"); else if(index==1) streams("Subtitle"); else if(index==2) versions();
             else if(live&&index==3) channels(); else if(live&&index==4) guide(); else if(!live&&index==3) chapters();
             else if(live&&index==5) { if(player!=null) { liveBuffer.reset(); player.stop(); player.prepare(); player.play(); } else load(0,true); }
@@ -133,14 +142,29 @@ public final class PlayerActivity extends Activity {
         seekGesture.reset(); bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
         message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); updateChromeTitle(); if(revealControlsOnStart) showChrome(false); else hideChrome();
+        loadBegan=SystemClock.elapsedRealtime(); firstFrameLogged=false;
         final String id=item.optString("Id"); final boolean isLive=live;
+        final boolean restart=explicitRestart,keepPosition=keepSelections||restoredPosition; explicitRestart=false; restoredPosition=false;
         final String requestedSource=sourceId; final int requestedAudio=audio,requestedSubtitle=subtitle; final boolean force=forceHls;
         if(isLive) app.settings.edit().putString("lastChannel",id).apply();
+        final VideoCache requestedCache=app.videoCache;
+        app.io.execute(()-> {
+            if(g!=generation||released) return;
+            long began=SystemClock.elapsedRealtime(); DeviceCodecs.warmUp();
+            if(!isLive&&g==generation&&!released) requestedCache.warmUp();
+            android.util.Log.i("LowfinPlayer","Local startup preparation: "+(SystemClock.elapsedRealtime()-began)+" ms (overlaps metadata/negotiation)");
+        });
         network.execute(()-> {
             JSONObject negotiated=null,chosen=null; String negotiatedLive=null,negotiatedSession=null;
             try {
                 if(g!=generation||released) return;
-                JSONObject detailed=api.item(id);
+                long stage=SystemClock.elapsedRealtime(); JSONObject detailed=api.item(id);
+                android.util.Log.i("LowfinPlayer","Item metadata: "+(SystemClock.elapsedRealtime()-stage)+" ms");
+                final long initialPosition=PlaybackPolicy.startPosition(detailed,position,getIntent().getBooleanExtra("resumeFromHome",false),restart,keepPosition);
+                stage=SystemClock.elapsedRealtime();
+                CompanionApi.Prepared companionPrepared=isLive||companion==null?new CompanionApi.Prepared(null,initialPosition):app.reports.submit(()->companion.prepare(detailed,initialPosition,restart,keepPosition)).get();
+                android.util.Log.i("LowfinPlayer","Companion/previous reports: "+(SystemClock.elapsedRealtime()-stage)+" ms");
+                final long startPosition=companionPrepared.position;
                 int audioIndex=requestedAudio,subtitleIndex=keepSelections?requestedSubtitle:-1;
                 if(!keepSelections) {
                     JSONArray sources=Json.array(detailed,"MediaSources");
@@ -149,10 +173,15 @@ public final class PlayerActivity extends Activity {
                     if(first!=null) { if(requestedAudio<0) audioIndex=first.optInt("DefaultAudioStreamIndex",-1); subtitleIndex=-1; }
                 }
                 if(g!=generation||released) return;
-                JSONObject request=PlaybackPolicy.request(api.account.user,app.settings.getInt("height",720),app.settings.getInt("bitrate",4000000),isLive,force,position,audioIndex,subtitleIndex,requestedSource,app.settings.getBoolean("stereo",true));
+                stage=SystemClock.elapsedRealtime();
+                JSONObject request=PlaybackPolicy.request(api.account.user,app.settings.getInt("height",720),app.settings.getInt("bitrate",4000000),isLive,force,startPosition,audioIndex,subtitleIndex,requestedSource,app.settings.getBoolean("stereo",true));
                 if(!force) { LocalPlayback.negotiate(request); request.put("EnableTranscoding",app.settings.getBoolean("serverFallback",false)); }
+                if(!isLive) HdrPolicy.configure(this,request,app.settings.getBoolean("hdrPlayback",false));
                 if(isLive) { LiveStreams.configure(request,force); }
+                android.util.Log.i("LowfinPlayer","Device profile preparation: "+(SystemClock.elapsedRealtime()-stage)+" ms");
+                stage=SystemClock.elapsedRealtime();
                 negotiated=api.post("/Items/"+id+"/PlaybackInfo",request,"UserId",api.account.user);
+                android.util.Log.i("LowfinPlayer","Playback negotiation: "+(SystemClock.elapsedRealtime()-stage)+" ms");
                 if(!Json.str(negotiated,"ErrorCode").isEmpty()) throw new IllegalStateException(I18n.text("Wiedergabe nicht möglich: ")+Json.str(negotiated,"ErrorCode"));
                 JSONArray sources=Json.array(negotiated,"MediaSources"); chosen=sources.optJSONObject(0);
                 if(chosen==null) throw new IllegalStateException(I18n.text("Keine abspielbare Medienquelle"));
@@ -178,11 +207,14 @@ public final class PlayerActivity extends Activity {
                 JSONObject full=detailed,src=chosen; String url=stream,playSession=negotiatedSession,liveStream=negotiatedLive,mode=playMethod; boolean useHls=hls;
                 final int selectedAudio=audioIndex,selectedSubtitle=subtitleIndex;
                 library.put(full);
-                DataSource.Factory data=app.videoCache.factory(api,isLive,useHls);
+                stage=SystemClock.elapsedRealtime();
+                DataSource.Factory data=requestedCache.factory(api,isLive,useHls);
+                android.util.Log.i("LowfinPlayer","Stream data source ready: "+(SystemClock.elapsedRealtime()-stage)+" ms");
                 runOnUiThread(()-> {
                     if(g!=generation||released) { closeNegotiated(liveStream,playSession); return; }
                     item=full; source=src; sourceId=src.optString("Id"); sessionId=playSession; liveId=liveStream; method=mode;
-                    liveCandidates=liveUrls; liveCandidate=0; audio=selectedAudio; subtitle=selectedSubtitle; prepare(url,useHls,isLive?0:position,g,data); updateChromeTitle();
+                    companionSession=companionPrepared.session; requestedPosition=startPosition;
+                    liveCandidates=liveUrls; liveCandidate=0; audio=selectedAudio; subtitle=selectedSubtitle; prepare(url,useHls,isLive?0:startPosition,g,data); updateChromeTitle();
                     app.channels.engaged(api.account,id);
                 });
                 if(!isLive) { try {
@@ -207,11 +239,14 @@ public final class PlayerActivity extends Activity {
     }
     private String friendly(Exception e) { return e instanceof Api.Failure?e.getMessage():e instanceof java.io.IOException?I18n.text("Verbindung zum Server prüfen"):e.getMessage(); }
     private void prepare(String url,boolean hls,long position,int g,DataSource.Factory data) {
-        liveBuffer.reset();
+        long prepareBegan=SystemClock.elapsedRealtime(); liveBuffer.reset();denoiseReadySince=0;
         AdaptiveLoadControl control=new AdaptiveLoadControl(this,live);
         androidx.media3.extractor.DefaultExtractorsFactory extractors=new androidx.media3.extractor.DefaultExtractorsFactory();
         if(live) extractors.setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES);
         player=new ExoPlayer.Builder(this,LocalPlayback.renderers(this,app.settings.getBoolean("stereo",true)).setExtensionRendererMode(live?DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON:DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)).setMediaSourceFactory(new DefaultMediaSourceFactory(data,extractors).setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(6))).setLoadControl(control).build();
+        denoiseActive=!denoiseDisabled&&DenoisePolicy.allowed(app.settings.getBoolean("videoDenoise",false),live,source);
+        if(denoiseActive) try { player.setVideoEffects(Collections.singletonList(new DenoiseEffect())); }
+        catch(RuntimeException error) { denoiseActive=false;denoiseDisabled=true;android.util.Log.w("LowfinPlayer","Noise reduction setup unavailable");player.release();player=null;prepare(url,hls,position,g,data);return; }
         player.setTrackSelectionParameters(player.getTrackSelectionParameters().buildUpon().setMaxVideoSize(PlaybackPolicy.width(app.settings.getInt("height",720)),app.settings.getInt("height",720))
             .setMaxVideoFrameRate(30).setMaxAudioChannelCount(6).setPreferredAudioLanguages(app.settings.getString("audioLanguage",I18n.language())).setPreferredTextLanguages(I18n.language()).setTrackTypeDisabled(C.TRACK_TYPE_TEXT,subtitle<0&&(subtitleChosen||!app.settings.getBoolean("defaultSubtitles",false))).setIgnoredTextSelectionFlags(C.SELECTION_FLAG_DEFAULT|C.SELECTION_FLAG_FORCED).build());
         player.setAudioAttributes(new AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(),true);
@@ -227,8 +262,27 @@ public final class PlayerActivity extends Activity {
                 }
             }
         }
+        android.util.Log.i("LowfinPlayer","Player/decoder setup: "+(SystemClock.elapsedRealtime()-prepareBegan)+" ms");
         initialAudioApplied=false;
+        player.addAnalyticsListener(new androidx.media3.exoplayer.analytics.AnalyticsListener() {
+            @Override public void onVideoDecoderInitialized(EventTime time,String name,long timestamp,long duration) {
+                if(g==generation&&!released) android.util.Log.i("LowfinPlayer","Video decoder: "+name+" initMs="+duration);
+            }
+            @Override public void onDroppedVideoFrames(EventTime time,int count,long elapsed) {
+                if(g==generation&&!released) {
+                    android.util.Log.w("LowfinPlayer","Dropped video frames="+count+" intervalMs="+elapsed);
+                    if(denoiseActive&&denoiseOverloaded(count,elapsed)) handler.post(()-> {
+                        if(g==generation&&!released&&denoiseOverloaded(count,elapsed)) fallbackDenoise("frame-drop-rate dropped="+count+" intervalMs="+elapsed);
+                    });
+                }
+            }
+        });
         player.addListener(new Player.Listener() {
+            @Override public void onPlayWhenReadyChanged(boolean playWhenReady,int reason) {
+                if(g==generation&&!released) denoiseReadySince=playWhenReady&&player.getPlaybackState()==Player.STATE_READY?SystemClock.elapsedRealtime():0;
+                if(g==generation&&!released&&started) { report("/Progress",position()); lastReport=SystemClock.elapsedRealtime(); }
+            }
+            @Override public void onRenderedFirstFrame() { if(g==generation&&!released&&!firstFrameLogged) { firstFrameLogged=true; android.util.Log.i("LowfinPlayer","First video frame after "+(SystemClock.elapsedRealtime()-loadBegan)+" ms"); } }
             @Override public void onTracksChanged(Tracks tracks) {
                 if(g!=generation||released||initialAudioApplied||audio<0||!method.equals("DirectPlay")) return;
                 initialAudioApplied=true;
@@ -236,14 +290,22 @@ public final class PlayerActivity extends Activity {
             }
             @Override public void onPlaybackStateChanged(int state) {
                 if(g!=generation||released) return;
+                if(state==Player.STATE_BUFFERING||state==Player.STATE_READY)
+                    android.util.Log.i("LowfinPlayer","Playback state="+state+" positionMs="+position()+" bufferedAheadMs="+Math.max(0,player.getBufferedPosition()-position()));
+                if(state!=Player.STATE_READY) denoiseReadySince=0;
                 if(state==Player.STATE_BUFFERING) { if(live) liveBuffer.begin(SystemClock.elapsedRealtime()); message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); }
                 if(state==Player.STATE_READY) {
+                    denoiseReadySince=player.getPlayWhenReady()?SystemClock.elapsedRealtime():0;
+                    if(getIntent().getBooleanExtra("returnEpisodeDetail",false)&&"Episode".equals(item.optString("Type")))
+                        setResult(RESULT_OK,new Intent().putExtra("item",item.toString()).putExtra("accountScope",api.account.scope()));
                     liveBuffer.reset();
                     bufferBar.setVisibility(View.GONE); message.setVisibility(View.GONE);
                     if(!started&&revealControlsOnStart) showChrome(false);
                     if(!started) { if(live&&lastReport==0) chrome.resetLiveClock(); started=true; report("",player.getCurrentPosition()); lastReport=SystemClock.elapsedRealtime(); }
                 }
                 if(state==Player.STATE_ENDED&&!live) {
+                    WatchLater later=new WatchLater(PlayerActivity.this,api.account);
+                    later.completed(item,true,later.snapshot(item.optString("Id")));
                     if(app.settings.getBoolean("nextEpisode",true)&&"Episode".equals(item.optString("Type"))) nextEpisode(true);
                     else { message.setText(I18n.text("Wiedergabe beendet")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
                 }
@@ -251,6 +313,8 @@ public final class PlayerActivity extends Activity {
             @Override public void onPlayerError(PlaybackException error) {
                 bufferBar.setVisibility(View.GONE);
                 if(g!=generation||released) return;
+                PlaybackDiagnostics.record(app,error,player,live,method);
+                if(denoiseActive&&(error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED||error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)) { fallbackDenoise("video-processing-error code="+error.errorCode);return; }
                 if(live&&liveCandidate+1<liveCandidates.size()) { retryLiveTransport(); return; }
                 if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true,revealControlsOnStart); }
                 else { message.setText(I18n.text("Wiedergabefehler: ")+error.getErrorCodeName()+I18n.text("\nZurück oder erneut ‚Über Server abspielen‘ wählen.")); bufferBar.setVisibility(View.GONE); message.setVisibility(View.VISIBLE); showChrome(true); }
@@ -258,6 +322,15 @@ public final class PlayerActivity extends Activity {
         });
         player.setMediaItem(media.build(),position); player.prepare(); player.setPlayWhenReady(true);
         handler.removeCallbacks(tick); handler.post(tick);
+    }
+    private boolean denoiseOverloaded(int count,long interval) {
+        return player!=null&&DenoisePolicy.overloaded(count,interval,denoiseReadySince==0?0:SystemClock.elapsedRealtime()-denoiseReadySince,player.isPlaying(),player.getPlaybackState()==Player.STATE_READY);
+    }
+    private void fallbackDenoise(String reason) {
+        if(!denoiseActive||released) return;
+        denoiseDisabled=true;denoiseActive=false;long resume=position();
+        toast(I18n.resource(R.string.denoise_fallback));android.util.Log.w("LowfinPlayer","Noise reduction disabled for playback; reason="+reason+"; retrying native output");
+        load(resume,true,revealControlsOnStart);
     }
     private void retryLiveTransport() {
         if(player==null) return;
@@ -273,7 +346,7 @@ public final class PlayerActivity extends Activity {
         for(int i=0;i<segments.length();i++) {
             JSONObject s=segments.optJSONObject(i); if(s==null||!PlaybackPolicy.active(s,position)) continue;
             String type=s.optString("Type"),key=s.optString("Id",type+":"+s.optLong("StartTicks")); long end=s.optLong("EndTicks")/10000;
-            if(PlaybackPolicy.automatic(type)&&app.settings.getBoolean("autoSkip",true)&&app.settings.getBoolean("Intro".equalsIgnoreCase(type)?"skipIntro":"skipOutro",true)) {
+            if(PlaybackPolicy.autoSkip(type,item,app.settings)) {
                 if(skipped.add(key)) { long duration=player.getDuration(); player.seekTo(duration>0?Math.min(end,duration):end); }
                 continue;
             }
@@ -289,16 +362,30 @@ public final class PlayerActivity extends Activity {
     }
     private void report(String endpoint,long pos) {
         if(sessionId==null||sessionId.isEmpty()) return; final JSONObject body=reportBody(pos);
-        app.reports.execute(()-> { try { api.report(endpoint,body); } catch(Exception ignored) {} });
+        final CompanionApi.Session managed=companionSession;
+        final Api reportingApi=api;final CompanionApi reportingCompanion=companion;final Library reportingLibrary=library;final JSONObject reportingItem=item;
+        final WatchLater later=new WatchLater(app,reportingApi.account);
+        final String saved="Movie".equals(reportingItem.optString("Type"))?later.snapshot(reportingItem.optString("Id")):"";
+        app.reports.execute(()-> { try {
+            if(managed==null) reportingApi.report(endpoint,body);
+            else reportingCompanion.report(managed,endpoint.isEmpty()?"Start":endpoint.equals("/Stopped")?"Stopped":"Progress",body);
+            if(!saved.isEmpty()) {
+                if(managed!=null&&!endpoint.isEmpty()) later.completed(CompanionPolicy.decorate(reportingItem,managed.state),false,saved);
+                else if(endpoint.equals("/Stopped")) {
+                    // One verification only for a queued movie, after Jellyfin processes the stop event.
+                    JSONObject current=reportingApi.item(reportingItem.optString("Id"));reportingLibrary.put(current);later.completed(current,false,saved);
+                }
+            }
+        } catch(Exception ignored) { /* Managed reports stay in the durable outbox; never double-report through native routes. */ } });
     }
     private void cleanupSession() {
         if(sessionId!=null) {
             report("/Stopped",position());
             JSONObject cached=item; long pos=position(),duration=player==null?0:player.getDuration();
-            try { JSONObject user=Json.object(cached,"UserData"); user.put("PlaybackPositionTicks",pos*10000); if(duration>0&&pos>duration*.95) { user.put("Played",true); user.put("PlaybackPositionTicks",0); } cached.put("UserData",user); if(!live) { final Library db=library; final JSONObject saved=new JSONObject(cached.toString()); app.cacheIo.execute(()->db.put(saved)); } } catch(Exception ignored) {}
+            try { JSONObject user=Json.object(cached,"UserData"); if(companionSession==null) { user.put("PlaybackPositionTicks",pos*10000); if(duration>0&&pos>duration*.95) { user.put("Played",true); user.put("PlaybackPositionTicks",0); } } cached.put("UserData",user); if(!live) { final Library db=library; final JSONObject saved=new JSONObject(cached.toString()); app.cacheIo.execute(()->db.put(saved)); } } catch(Exception ignored) {}
             closeNegotiated(liveId,sessionId);
         }
-        sessionId=null; liveId=null;
+        sessionId=null; liveId=null; companionSession=null;
     }
     private void closeNegotiated(String liveStream,String session) {
         if((liveStream==null||liveStream.isEmpty())&&(session==null||session.isEmpty())) return;
@@ -316,7 +403,7 @@ public final class PlayerActivity extends Activity {
             names.add(s.optString("DisplayTitle",s.optString("Language",I18n.text("Spur ")+s.optInt("Index")))); indices.add(s.optInt("Index"));
         }
         if(names.isEmpty()) { toast(I18n.text("Keine weiteren Spuren")); return; }
-        new AlertDialog.Builder(this).setTitle(type.equals("Audio")?I18n.text("Tonspur"):I18n.text("Untertitel")).setItems(names.toArray(new String[0]),(d,w)-> { if(type.equals("Subtitle")) subtitleChosen=true; long p=position(); if(type.equals("Subtitle")&&indices.get(w)==-1&&player!=null) { subtitle=-1; player.setTrackSelectionParameters(SubtitlePolicy.off(player.getTrackSelectionParameters())); return; } if(type.equals("Audio")&&method.equals("DirectPlay")&&selectLocalAudio(indices.get(w))) { audio=indices.get(w); return; } if(type.equals("Audio")) audio=indices.get(w); else subtitle=indices.get(w); forceHls=app.settings.getBoolean("serverFallback",false); load(p,true,revealControlsOnStart); }).setNegativeButton(I18n.text("Abbrechen"),null).show();
+        LowfinDialog.builder(this).setTitle(type.equals("Audio")?I18n.text("Tonspur"):I18n.text("Untertitel")).setItems(names.toArray(new String[0]),(d,w)-> { if(type.equals("Subtitle")) subtitleChosen=true; long p=position(); if(type.equals("Subtitle")&&indices.get(w)==-1&&player!=null) { subtitle=-1; player.setTrackSelectionParameters(SubtitlePolicy.off(player.getTrackSelectionParameters())); return; } if(type.equals("Audio")&&method.equals("DirectPlay")&&selectLocalAudio(indices.get(w))) { audio=indices.get(w); return; } if(type.equals("Audio")) audio=indices.get(w); else subtitle=indices.get(w); forceHls=app.settings.getBoolean("serverFallback",false); load(p,true,revealControlsOnStart); }).setNegativeButton(I18n.text("Abbrechen"),null).show();
     }
     private void liveTracks(String type) {
         boolean text=type.equals("Subtitle"); int trackType=text?C.TRACK_TYPE_TEXT:C.TRACK_TYPE_AUDIO;
@@ -328,7 +415,7 @@ public final class PlayerActivity extends Activity {
             labels.add(label+(format.sampleMimeType==null?"":" · "+format.sampleMimeType.replace("audio/","").replace("application/",""))); selections.add(new TrackSelectionOverride(group.getMediaTrackGroup(),track));
         }
         if(labels.isEmpty()) { toast(I18n.text("Keine weiteren Spuren")); return; }
-        new AlertDialog.Builder(this).setTitle(text?I18n.text("Untertitel"):I18n.text("Tonspur")).setItems(labels.toArray(new String[0]),(dialog,which)-> {
+        LowfinDialog.builder(this).setTitle(text?I18n.text("Untertitel"):I18n.text("Tonspur")).setItems(labels.toArray(new String[0]),(dialog,which)-> {
             if(player!=current) return; TrackSelectionOverride selection=selections.get(which);
             if(text) subtitleChosen=true;
             if(text&&selection==null) { subtitle=-1; current.setTrackSelectionParameters(SubtitlePolicy.off(current.getTrackSelectionParameters())); }
@@ -350,12 +437,12 @@ public final class PlayerActivity extends Activity {
     private void versions() {
         JSONArray sources=Json.array(item,"MediaSources"); if(sources.length()<2) { toast(I18n.text("Eine Medienversion vorhanden")); return; }
         String[] labels=new String[sources.length()]; for(int i=0;i<sources.length();i++) labels[i]=sources.optJSONObject(i).optString("Name",I18n.text("Version ")+(i+1));
-        new AlertDialog.Builder(this).setTitle(I18n.text("Medienversion")).setItems(labels,(d,w)-> { sourceId=sources.optJSONObject(w).optString("Id"); audio=-1; forceHls=false; load(position(),false); }).show();
+        LowfinDialog.builder(this).setTitle(I18n.text("Medienversion")).setItems(labels,(d,w)-> { sourceId=sources.optJSONObject(w).optString("Id"); audio=-1; forceHls=false; load(position(),false); }).show();
     }
     private void chapters() {
         JSONArray chapters=Json.array(item,"Chapters"); if(chapters.length()==0) { toast(I18n.text("Keine Kapitel")); return; }
         String[] labels=new String[chapters.length()]; for(int i=0;i<chapters.length();i++) labels[i]=chapters.optJSONObject(i).optString("Name",I18n.text("Kapitel ")+(i+1));
-        new AlertDialog.Builder(this).setTitle(I18n.text("Kapitel")).setItems(labels,(d,w)-> { if(player!=null) player.seekTo(chapters.optJSONObject(w).optLong("StartPositionTicks")/10000); }).show();
+        LowfinDialog.builder(this).setTitle(I18n.text("Kapitel")).setItems(labels,(d,w)-> { if(player!=null) player.seekTo(chapters.optJSONObject(w).optLong("StartPositionTicks")/10000); }).show();
     }
     private void nextEpisode(boolean automatic) {
         if(!"Episode".equals(item.optString("Type"))) return;
@@ -368,7 +455,7 @@ public final class PlayerActivity extends Activity {
             else if(episodes.length()==1&&id.equals(episodes.optJSONObject(0).optString("Id"))) next=null;
             JSONObject chosen=next;
             runOnUiThread(()-> { if(g!=generation||released) return; if(chosen==null) { toast(I18n.text("Keine weitere Folge")); if(automatic) finish(); return; }
-                cleanupSession(); item=chosen; audio=-1; sourceId=null; forceHls=false; load(0,false,!automatic);
+                cleanupSession(); item=chosen; audio=-1; sourceId=null; forceHls=false; explicitRestart=true; load(0,false,!automatic);
             });
         } catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(I18n.text("Nächste Folge konnte nicht geladen werden")); }); } });
     }
@@ -376,7 +463,7 @@ public final class PlayerActivity extends Activity {
         int g=generation;
         network.execute(()-> { try { List<JSONObject> list=new ArrayList<>(); JSONArray channels=Json.array(api.get("/LiveTv/Channels","UserId",api.account.user,"SortBy","SortName"),"Items");
             for(int i=0;i<channels.length();i++) { JSONObject c=channels.optJSONObject(i); if(c!=null) list.add(c); }
-            runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Sender wechseln")).setAdapter(new ChannelPicker(this,app.images,list),(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
+            runOnUiThread(()-> { if(g!=generation||released) return; LowfinDialog.builder(this).setTitle(I18n.text("Sender wechseln")).setAdapter(new ChannelPicker(this,app.images,list),(d,w)->switchChannel(list.get(w))).setNegativeButton(I18n.text("Abbrechen"),null).show(); });
         } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Senderliste nicht verfügbar"))); } });
     }
     private void switchChannel(JSONObject channel) { cleanupSession(); item=channel; chrome.resetLiveClock(); live=true; audio=-1; sourceId=null; forceHls=false; load(0,false); }
@@ -393,11 +480,11 @@ public final class PlayerActivity extends Activity {
             JSONArray programs=Json.array(api.get("/LiveTv/Programs","UserId",api.account.user,"ChannelIds",id,"MinEndDate",java.time.Instant.now().toString(),"Limit",12,"SortBy","StartDate","SortOrder","Ascending","Fields","Overview"),"Items");
             String[] labels=new String[programs.length()];
             for(int i=0;i<programs.length();i++) { JSONObject p=programs.optJSONObject(i); String time=p.optString("StartDate"); try { time=java.time.Instant.parse(time).atZone(java.time.ZoneId.systemDefault()).toLocalTime().toString(); } catch(Exception ignored) {} labels[i]=time+"  "+p.optString("Name"); }
-            runOnUiThread(()-> { if(g!=generation||released) return; new AlertDialog.Builder(this).setTitle(I18n.text("Programm · ")+item.optString("Name")).setItems(labels,(d,w)->program(programs.optJSONObject(w))).setNegativeButton(I18n.text("Schließen"),null).show(); });
+            runOnUiThread(()-> { if(g!=generation||released) return; LowfinDialog.builder(this).setTitle(I18n.text("Programm · ")+item.optString("Name")).setItems(labels,(d,w)->program(programs.optJSONObject(w))).setNegativeButton(I18n.text("Schließen"),null).show(); });
         } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Programm nicht verfügbar"))); } });
     }
     private void program(JSONObject p) {
-        new AlertDialog.Builder(this).setTitle(p.optString("Name")).setMessage(p.optString("Overview",I18n.text("Keine Beschreibung")))
+        LowfinDialog.builder(this).setTitle(p.optString("Name")).setMessage(p.optString("Overview",I18n.text("Keine Beschreibung")))
             .setPositiveButton(I18n.text("Aufnehmen"),(d,w)-> { network.execute(()-> { try { JSONObject timer=api.get("/LiveTv/Timers/Defaults","ProgramId",p.optString("Id")); timer.put("ProgramId",p.optString("Id")); api.post("/LiveTv/Timers",timer); runOnUiThread(()->toast(I18n.text("Aufnahme geplant"))); } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Aufnahme konnte nicht geplant werden"))); } }); }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
     private void toast(String s) { if(!released) Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
@@ -416,11 +503,15 @@ public final class PlayerActivity extends Activity {
         return true;
     }
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        if(chrome!=null&&menuPress.handle(e,chrome.getVisibility()==View.VISIBLE,()-> { if(player!=null) player.pause(); },key-> {
+            showChrome(true);
+            if(!live&&(key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT)) chrome.timeline.requestFocus();
+        })) return true;
         int remote=e.getKeyCode();
         if(seekGesture.active()&&remote==seekGesture.key()) return heldSeek(seekDirection,e);
         boolean arrow=remote==KeyEvent.KEYCODE_DPAD_LEFT||remote==KeyEvent.KEYCODE_DPAD_RIGHT;
         boolean mediaSeek=remote==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD||remote==KeyEvent.KEYCODE_MEDIA_REWIND;
-        if(!live&&(mediaSeek||arrow&&(chrome.getVisibility()!=View.VISIBLE||chrome.timeline.hasFocus()||view.hasFocus()))) {
+        if(!live&&(mediaSeek||arrow&&(chrome.timeline.hasFocus()||view.hasFocus()))) {
             if(e.getAction()==KeyEvent.ACTION_DOWN) { heldSeek(remote==KeyEvent.KEYCODE_DPAD_RIGHT||remote==KeyEvent.KEYCODE_MEDIA_FAST_FORWARD?1:-1,e); chrome.timeline.requestFocus(); }
             return true;
         }
@@ -435,7 +526,7 @@ public final class PlayerActivity extends Activity {
                 if(key==KeyEvent.KEYCODE_DPAD_DOWN&&chrome.timeline.hasFocus()) { chrome.play.requestFocus(); return true; }
                 if(key==KeyEvent.KEYCODE_DPAD_DOWN&&chrome.hasFocus()) { hideChrome(); return true; }
             }
-            if(key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER) { if(chrome.getVisibility()!=View.VISIBLE) { showChrome(true); return true; } if(view.hasFocus()||chrome.timeline.hasFocus()) { if(e.getRepeatCount()==0) { chrome.play.requestFocus(); chrome.play.performClick(); } return true; } }
+            if(key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER||key==KeyEvent.KEYCODE_NUMPAD_ENTER) { if(view.hasFocus()||chrome.timeline.hasFocus()||chrome.play.hasFocus()) return menuPress.activate(e,()-> { chrome.play.requestFocus(); chrome.play.performClick(); }); }
             if((key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE||key==KeyEvent.KEYCODE_MEDIA_PLAY||key==KeyEvent.KEYCODE_MEDIA_PAUSE)&&player!=null) {
                 if(key==KeyEvent.KEYCODE_MEDIA_PAUSE||key==KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE&&player.getPlayWhenReady()) player.pause(); else player.play(); showChrome(false); return true;
             }

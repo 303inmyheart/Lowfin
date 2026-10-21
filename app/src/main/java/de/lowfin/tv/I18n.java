@@ -7,6 +7,34 @@ final class I18n {
     private static Context app; private static Resources localized; private static String active;
     private static final Map<String,Integer> IDS=new HashMap<>();
     static {
+        IDS.put("Weiche Scrollanimationen",R.string.scroll_animations);
+        IDS.put("HDR-Wiedergabe",R.string.hdr_playback);
+        IDS.put("Senderliste aktualisiert · bisheriger Cover-Prüfstand veraltet",R.string.cache_channels_reconciled);
+        IDS.put("Tracearr · Wiedergabestatistiken",R.string.tracearr_00);
+        IDS.put("Tracearr · Statistiken werden geladen …",R.string.tracearr_01);
+        IDS.put("Seriendurchläufe (Tracearr): ",R.string.tracearr_02);
+        IDS.put("Abgeschlossene Wiedergaben (Tracearr): ",R.string.tracearr_03);
+        IDS.put("Tracearr · Statistik nicht verfügbar",R.string.tracearr_04);
+        IDS.put("Tracearr zählt nach seiner Abschlussregel. Serien: vollständige Durchläufe aller aktuell verfügbaren Folgen, einschließlich Specials. Historie vor Beginn der Aufzeichnung fehlt.",R.string.tracearr_05);
+        IDS.put("Tracearr-Statistiken anzeigen",R.string.tracearr_06);
+        IDS.put("Tracearr-Verbindung bearbeiten",R.string.tracearr_07);
+        IDS.put("Tracearr-Server wählen und Verbindung prüfen",R.string.tracearr_08);
+        IDS.put("API-Key-Datei neu erstellen",R.string.tracearr_09);
+        IDS.put("Benötigt Tracearr Public API v2. API-Token unter Settings → Data & API → API erzeugen. Nach dem TXT-Import die Verbindung prüfen.",R.string.tracearr_10);
+        IDS.put("Tracearr-Adresse",R.string.tracearr_11);
+        IDS.put("Tracearr API-Token",R.string.tracearr_12);
+        IDS.put("Tracearr Public API-Token erforderlich",R.string.tracearr_13);
+        IDS.put("Jellyfin-Server in Tracearr wählen",R.string.tracearr_14);
+        IDS.put("Tracearr verbunden",R.string.tracearr_15);
+        IDS.put("Tracearr-Verbindung oder Benutzerzuordnung fehlgeschlagen",R.string.tracearr_16);
+        IDS.put("Tracearr nicht erreichbar · Adresse, API-Token und API-v2-Unterstützung prüfen",R.string.tracearr_17);
+        IDS.put("Zur Folge gehen",R.string.go_to_episode);
+        IDS.put("Wiedergaben (Jellyfin): ",R.string.detail_play_count);
+        IDS.put(" · inkl. abgebrochener",R.string.detail_play_count_note);
+        IDS.put("Startseite",R.string.settings_category_0);
+        IDS.put("Darstellung",R.string.settings_category_1);
+        IDS.put("Bibliothek und Cache",R.string.settings_category_2);
+        IDS.put("Konto und Sprache",R.string.settings_category_3);
         IDS.put("Gespeicherte Cover: ",R.string.stored_covers);
         IDS.put("Bibliothekscache wird geprüft …",R.string.cache_checking);
         IDS.put("Bibliothek wird aktualisiert · Cache bleibt verfügbar",R.string.cache_refreshing);
@@ -331,6 +359,7 @@ final class I18n {
         IDS.put("Bibliothek automatisch vorladen",R.string.option_028);
         IDS.put("Cache-Aktualisierung · Stunden",R.string.option_029);
         IDS.put("Intros automatisch überspringen",R.string.option_030);
+        IDS.put("Intro bei der ersten Folge jeder Staffel behalten",R.string.keep_season_premiere_intro);
         IDS.put("Outros automatisch überspringen",R.string.option_031);
         IDS.put("Sprungweite · Sekunden",R.string.option_032);
         IDS.put("Player-Menü ausblenden · Sekunden",R.string.option_033);
@@ -347,8 +376,13 @@ final class I18n {
     static String language() { return app==null?"en":app.getSharedPreferences("settings",0).getString("language","en"); }
     static synchronized String text(String original) {
         Integer id=IDS.get(original); if(id==null||app==null) return original;
-        String lang=language(); if(localized==null||!lang.equals(active)) { Configuration config=new Configuration(app.getResources().getConfiguration()); config.setLocale(Locale.forLanguageTag(lang)); localized=app.createConfigurationContext(config).getResources(); active=lang; }
-        return localized.getString(id);
+        return resource(id);
     }
+    private static Resources localizedResources() {
+        String lang=language(); if(localized==null||!lang.equals(active)) { Configuration config=new Configuration(app.getResources().getConfiguration()); config.setLocale(Locale.forLanguageTag(lang)); localized=app.createConfigurationContext(config).getResources(); active=lang; }
+        return localized;
+    }
+    static synchronized String resource(int id) { return localizedResources().getString(id); }
+    static synchronized String quantity(int id,int count,Object... values) { return localizedResources().getQuantityString(id,count,values); }
     static void select(String lang) { app.getSharedPreferences("settings",0).edit().putString("language",lang.equals("de")?"de":"en").apply(); }
 }

@@ -1,32 +1,23 @@
 {
-  "version": "0.7.0",
-  "version_code": 13,
+  "version": "1.2.13",
+  "version_code": 99,
+  "build_type": "release",
+  "debuggable": false,
   "tests": {
-    "tests": 143,
+    "tests": 446,
     "failures": 0,
-    "errors": 0
+    "errors": 0,
+    "skipped": 0
   },
-  "lint_errors": 0,
-  "apk_bytes": 7535849,
-  "apk_sha256": "9853b3166cff3ff4d20fc465833122d1bcca182b76ae7203e95c12b6546656d6",
+  "lint_release": "passed",
+  "english_resource_entries": 452,
+  "english_coverage_audit": "passed",
+  "companion_tests": 78,
+  "feed_generator_tests": 2,
+  "apk_sha256": "7d0b7a1813de1bd60807ce88c9270dc1a510cba80d083ae29cbcfb6acad75637",
   "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
-  "ffmpeg_abis": [
-    "arm64-v8a",
-    "armeabi-v7a",
-    "x86",
-    "x86_64"
-  ],
-  "physical_tv_tested": false,
-  "live_server_tested": false,
-  "external_ratings_keys_tested": false,
-  "features": [
-    "English default with full German language option",
-    "account-scoped individual genre toggles",
-    "configurable home rows, appearance, accents, caching and advanced playback",
-    "prefix-free TV channels",
-    "account-scoped movie and series library multiselect",
-    "real movie title slot animation",
-    "curated muted foreground hourly accent palette",
-    "permanent on-demand provider ratings cache"
-  ]
+  "installed_devices": [],
+  "installation_authorization": "User requested local build only; no installation.",
+  "document": "docs/player-caption-1.2.13.md",
+  "created_at": "2026-10-21T14:31:25.108488+00:00"
 }

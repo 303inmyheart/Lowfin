@@ -1,0 +1,12 @@
+<resources>
+    <string name="home_libraries">Libraries</string>
+    <string name="home_show_libraries">Show libraries on home screen</string>
+    <string name="home_row_order">Home row order</string>
+    <string name="home_move_up">Move up</string>
+    <string name="home_move_down">Move down</string>
+    <string name="discovery_banner">Movie discovery banner</string>
+    <string name="discovery_loading">Discovering a movie…</string>
+    <string name="discovery_empty">No movie available</string>
+    <string name="discovery_hint">◀ Previous · Next ▶ · OK: Details</string>
+    <string name="startup_logo">Show Lowfin logo while starting</string>
+</resources>

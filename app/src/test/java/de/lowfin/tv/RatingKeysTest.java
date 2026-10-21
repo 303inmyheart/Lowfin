@@ -20,4 +20,15 @@ public class RatingKeysTest {
         assertEquals("private-omdb-key",vault.get("omdb")); assertFalse(c.getSharedPreferences("rating-keys",0).getAll().toString().contains("private-omdb-key"));
         vault.put("omdb",""); assertEquals("",vault.get("omdb")); assertEquals("private-tmdb-key",vault.get("tmdb"));
     }
+    @Test public void RepeatedReadsAvoidKeystoreWorkAndExternalUpdatesInvalidateMemory() throws Exception {
+        android.content.Context c=RuntimeEnvironment.getApplication(); final int[] requests={0};
+        javax.crypto.SecretKey key=new javax.crypto.spec.SecretKeySpec(new byte[32],"AES");
+        RatingKeys vault=new RatingKeys(c,()-> { requests[0]++; return key; });
+        vault.put("omdb","first"); assertEquals("first",vault.get("omdb")); int afterFirst=requests[0];
+        for(int i=0;i<100;i++) assertEquals("first",vault.get("omdb")); assertEquals(afterFirst,requests[0]);
+        RatingKeys other=new RatingKeys(c,()->key); other.put("omdb","replacement");
+        assertEquals("replacement",vault.get("omdb")); assertEquals(afterFirst+1,requests[0]);
+        other.put("omdb",""); assertEquals("",vault.get("omdb"));
+        assertFalse(c.getSharedPreferences("rating-keys",0).getAll().toString().contains("replacement"));
+    }
 }

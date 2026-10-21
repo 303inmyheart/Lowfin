@@ -1,0 +1,37 @@
+TV .128 read-only cache inspection before installing 0.10.13.
+Local save timestamps are not evidence of Companion delivery.
+Companion 0.3 does not expose server event timestamps. Audit begins with client 0.10.13.
+Baseline: 29737 item rows, 28024 artwork files (approximately 527 MiB).
+Current: 30227 rows (+490), 28337 files (+313), 560074015 bytes (534.13 MiB).
+Artwork queue: 10. Compatible Companion detected. Existing history-gap warning remains.
+
+INSTRUMENTATION_RESULT: cache_diagnostics=cacheCursor=present
+cacheStatus=Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.
+lastSync=1791875510161
+recentMetadata=Episode | 004 - 0004 - Wo ist der blöde Hund? | series=Two and a Half Men | season=4 episode=4 | localSavedAt=2026-10-14T22:13:55.541Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000021 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000022 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys  harte jungs | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys for life | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool  wolverine | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | die nackte kanone | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000003  final chapter | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | fast  furious: hobbs  shaw | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | john wick: kapitel 0000000004 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | johnny english  jetzt erst recht | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | kindskopfe 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | kingsman: golden circle | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | men in black | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | men in black  international | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | men in black 0000000003 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+recentMetadata=Movie | men in black ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:13:15.455Z | serverDateLastSaved=
+items=30227
+cache_artwork=10
+companionAvailable=true incrementalCache=true
+autoPrecache=true
+imageFiles=28337 imageBytes=560074015
+
+INSTRUMENTATION_CODE: 0

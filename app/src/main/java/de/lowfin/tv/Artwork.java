@@ -14,12 +14,12 @@ final class Artwork {
     static JSONObject logo(JSONObject item) {
         String id=item.optString("Id"),tag=Json.str(Json.object(item,"ImageTags"),"Logo");
         if(tag.isEmpty()) { id=item.optString("ParentLogoItemId",item.optString("SeriesId")); tag=item.optString("ParentLogoImageTag",item.optString("SeriesLogoImageTag")); }
-        return id.isEmpty()||tag.isEmpty()?null:Json.obj("Id",id,"LowfinLogo",true,"ImageTags",Json.obj("Logo",tag));
+        return id.isEmpty()||tag.isEmpty()?null:Json.obj("Id",id,"Type",item.optString("Type"),"LowfinLogo",true,"ImageTags",Json.obj("Logo",tag));
     }
     static JSONObject backdrop(JSONObject item) {
         org.json.JSONArray tags=Json.array(item,"BackdropImageTags"); String id=item.optString("Id");
         if(tags.length()==0) { tags=Json.array(item,"ParentBackdropImageTags"); id=Json.str(item,"ParentBackdropItemId"); }
-        return tags.length()==0||id.isEmpty()?null:Json.obj("Id",id,"Type","Movie","BackdropImageTags",tags);
+        return tags.length()==0||id.isEmpty()?null:Json.obj("Id",id,"Type","TvChannel".equals(item.optString("Type"))?"TvChannel":"Movie","BackdropImageTags",tags);
     }
     static boolean crop(JSONObject item,boolean wide) { return !item.optString("Type").equals("TvChannel"); }
     static double ratio(JSONObject item,boolean wide) {

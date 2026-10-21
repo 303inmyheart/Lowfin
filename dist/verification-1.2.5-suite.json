@@ -1,0 +1,7 @@
+{
+  "version": "1.2.5",
+  "tests": 425,
+  "failures": 0,
+  "errors": 0,
+  "scope": "full suite; later added partial-episode metadata regression and reran targeted ratings/tag tests"
+}

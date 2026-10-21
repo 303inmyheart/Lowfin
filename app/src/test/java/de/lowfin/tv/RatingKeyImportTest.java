@@ -29,7 +29,7 @@ public class RatingKeyImportTest {
     }
     @Test public void oneExistingProviderDisablesCreationAndDoesNotOverwriteAnyKeys() throws Exception {
         keys.put("omdb","existing"); assertEquals(RatingKeyImport.State.CONFIGURED,importer.check().state); assertEquals(0,files.creates);
-        fill("TMDB_API_KEY=new\n"); assertEquals(RatingKeyImport.State.CONFIGURED,importer.selected("test:keys").state); assertEquals("existing",keys.get("omdb")); assertEquals("",keys.get("tmdb")); assertNotNull(files.content);
+        fill("TMDB_API_KEY=new\nOMDB_API_KEY=\n"); assertEquals(RatingKeyImport.State.WAITING,importer.selected("test:keys").state); org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofSeconds(1)); assertEquals(RatingKeyImport.State.IMPORTED,importer.check().state); assertEquals("existing",keys.get("omdb")); assertEquals("new",keys.get("tmdb")); assertNull(files.content);
     }
     @Test public void invalidOrUnsavableInputIsRetainedAndNoPartialKeysAreStored() throws Exception {
         importer.check(); fill("OMDB_API_KEY=private\nINVALID=another\n"); assertEquals(RatingKeyImport.State.INVALID,importer.check().state); assertFalse(keys.hasAny()); assertEquals(0,files.deletes);
@@ -49,6 +49,12 @@ public class RatingKeyImportTest {
         assertFalse(keys.hasAny()); assertNotNull(files.content); assertEquals(0,files.deletes);
         org.robolectric.shadows.ShadowSystemClock.advanceBy(java.time.Duration.ofSeconds(1));
         assertEquals(RatingKeyImport.State.IMPORTED,importer.check().state); assertEquals("edited",keys.get("omdb"));
+    }
+    @Test public void explicitRecreationWorksWithExistingKeysAndNeverOverwritesEditedFile() throws Exception {
+        keys.put("omdb","existing"); assertEquals(RatingKeyImport.State.CREATED,importer.recreate().state); assertEquals(1,files.creates);
+        fill("OMDB_API_KEY=replacement\nTMDB_API_KEY=\nTRACEARR_URL=https://tracearr.example\nTRACEARR_API_KEY=trr_pub_example\n"); byte[] edited=files.content;
+        assertEquals(RatingKeyImport.State.WAITING,importer.recreate().state); assertSame(edited,files.content); assertEquals(1,files.creates);
+        assertEquals(RatingKeyImport.State.IMPORTED,importStable().state); assertEquals("replacement",keys.get("omdb")); assertEquals("trr_pub_example",keys.get("tracearr")); assertEquals("https://tracearr.example",keys.get("tracearr_url")); assertNull(files.content);
     }
     static final class Files implements RatingKeyImport.Documents {
         byte[] content; int creates,deletes,reads; boolean allowDelete=true,changeOnSecondRead; Runnable beforeDelete=()->{};

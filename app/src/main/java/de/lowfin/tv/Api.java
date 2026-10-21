@@ -9,17 +9,14 @@ final class Api {
     static final MediaType JSON=MediaType.get("application/json; charset=utf-8");
     final Account account;
     final OkHttpClient http;
-    Api(Account a) {
-        account=a;
-        http=new OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(180,TimeUnit.SECONDS)
-            .callTimeout(200,TimeUnit.SECONDS).followSslRedirects(false).build();
-    }
+    Api(Account a) { this(a,new OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(180,TimeUnit.SECONDS).callTimeout(200,TimeUnit.SECONDS).followSslRedirects(false).build()); }
+    Api(Account a,OkHttpClient transport) { account=a; http=transport; }
     static class Failure extends IOException {
         final int status;
         Failure(int status) { super(status==401?I18n.text("Anmeldung abgelaufen"):status==403?I18n.text("Keine Berechtigung"): I18n.text("Serverfehler HTTP ")+status); this.status=status; }
     }
     String authorization() {
-        return "MediaBrowser Client=\"Lowfin\", Device=\"Android TV\", DeviceId=\""+account.device+"\", Version=\"0.7.0\""+
+        return "MediaBrowser Client=\"Lowfin\", Device=\"Android TV\", DeviceId=\""+account.device+"\", Version=\""+BuildConfig.VERSION_NAME+"\""+
             (account.token.isEmpty()?"":", Token=\""+account.token+"\"");
     }
     HttpUrl url(String path,Object... pairs) {
@@ -51,8 +48,29 @@ final class Api {
     JSONObject items(int start,int limit,String type,String parent,String search) throws Exception {
         return get("/Users/"+account.user+"/Items","Recursive",true,"ParentId",parent,"IncludeItemTypes",type,
             "StartIndex",start,"Limit",limit,"SortBy","SortName","SortOrder","Ascending","SearchTerm",search,
-            "Fields","Overview,Genres,ProviderIds,ParentId,DateCreated,MediaSources,MediaStreams,PrimaryImageAspectRatio,SortName,RecursiveItemCount,Chapters",
+            "Fields","Overview,Genres,ProviderIds,ParentId,DateCreated,PrimaryImageAspectRatio,SortName,RecursiveItemCount",
             "EnableImages",true,"EnableUserData",true);
+    }
+    int letterOffset(String type,String parent,String letter) throws Exception {
+        if("#".equals(letter)) return 0;
+        if(!letter.matches("[A-Z]")) throw new IllegalArgumentException("Invalid letter");
+        JSONObject total=get("/Users/"+account.user+"/Items","Recursive",true,"ParentId",parent,"IncludeItemTypes",type,"Limit",0,"EnableImages",false,"EnableUserData",false,"EnableTotalRecordCount",true);
+        JSONObject after=get("/Users/"+account.user+"/Items","Recursive",true,"ParentId",parent,"IncludeItemTypes",type,"NameStartsWithOrGreater",letter,"Limit",0,"EnableImages",false,"EnableUserData",false,"EnableTotalRecordCount",true);
+        if(!total.has("TotalRecordCount")||!after.has("TotalRecordCount")) throw new java.io.IOException("Missing library count");
+        int count=total.getInt("TotalRecordCount"),remaining=after.getInt("TotalRecordCount");
+        if(remaining<0||count<remaining) throw new java.io.IOException("Invalid library count");
+        return remaining==0?-1:count-remaining;
+    }
+    JSONArray liveChannels() throws Exception {
+        JSONArray all=new JSONArray(); int offset=0;
+        while(true) {
+            JSONObject page=get("/LiveTv/Channels","UserId",account.user,"SortBy","SortName","Fields","ChannelInfo","StartIndex",offset,"Limit",200);
+            JSONArray items=page.getJSONArray("Items"); int total=page.getInt("TotalRecordCount");
+            if(items.length()==0&&offset<total) throw new IOException("Incomplete live channel list");
+            for(int i=0;i<items.length();i++) all.put(items.get(i)); offset+=items.length();
+            if(offset>=total) return all;
+            if(offset>100000) throw new IOException("Oversized live channel list");
+        }
     }
     String image(JSONObject item,int width) { return image(item,width,false); }
     String image(JSONObject item,int width,boolean wide) {

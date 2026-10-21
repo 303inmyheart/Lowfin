@@ -8,4 +8,17 @@
         <item name="android:windowNoTitle">true</item>
         <item name="android:windowFullscreen">true</item>
     </style>
+    <style name="LowfinDialogTheme" parent="android:style/Theme.Material.Dialog.Alert">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#C6B7C9</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:textColorPrimary">#F1F1F4</item>
+        <item name="android:textColorSecondary">#96969D</item>
+        <item name="android:windowMinWidthMajor">0dp</item>
+        <item name="android:windowMinWidthMinor">0dp</item>
+    </style>
+    <style name="ShelfProgress" parent="android:style/Widget.ProgressBar.Horizontal">
+        <item name="android:indeterminateDrawable">@null</item>
+        <item name="android:indeterminateOnly">false</item>
+    </style>
 </resources>

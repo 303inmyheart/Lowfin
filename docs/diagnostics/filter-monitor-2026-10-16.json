@@ -1,0 +1,85 @@
+{
+  "start": "2026-10-16 15:18:47 UTC",
+  "end": "2026-10-16 15:26:47 UTC",
+  "pid": 20631,
+  "session": 43791,
+  "device": "192.168.1.128:5555",
+  "samples": [
+    {
+      "time": "2026-10-16 15:20:37 UTC",
+      "pid": 20631,
+      "pssKiB": 115121,
+      "rssKiB": 149904,
+      "swapPssKiB": 6001,
+      "newLogEvents": 0
+    },
+    {
+      "time": "2026-10-16 15:21:45 UTC",
+      "pid": 20631,
+      "newLogEvents": 0
+    },
+    {
+      "time": "2026-10-16 15:24:04 UTC",
+      "statsStart": 1792164187,
+      "statsEnd": 1792164241,
+      "globalMissedFrames": 9,
+      "totalVideoFrames": 1289,
+      "droppedVideoFrames": 0,
+      "averageFPS": 23.998,
+      "presentHistogram": {
+        "16": 2,
+        "32": 94,
+        "33": 483,
+        "34": 65,
+        "48": 1,
+        "50": 639,
+        "102": 4,
+        "118": 1
+      }
+    },
+    {
+      "time": "2026-10-16 15:25:31 UTC",
+      "averageFPS": 24.046,
+      "totalVideoFrames": 3390,
+      "droppedVideoFrames": 0,
+      "globalMissedFrames": 11,
+      "statsStart": 1792164187,
+      "statsEnd": 1792164329,
+      "presentHistogram": {
+        "16": 2,
+        "17": 1,
+        "32": 251,
+        "33": 1239,
+        "34": 201,
+        "48": 2,
+        "50": 1686,
+        "66": 1,
+        "86": 1,
+        "102": 5,
+        "118": 1
+      }
+    },
+    {
+      "time": "2026-10-16 15:24:55 UTC",
+      "pssKiB": 102613,
+      "rssKiB": 110184,
+      "swapPssKiB": 27273,
+      "newLogEvents": 0
+    }
+  ],
+  "errors": 0,
+  "bufferEvents": 0,
+  "droppedEvents": 0,
+  "timeStatsEnabled": true,
+  "stopped": "2026-10-16 15:25:31 UTC",
+  "completedEightMinutes": false,
+  "stopReason": "User ended observation early: playback satisfactory",
+  "timeStatsRestoredDisabled": true,
+  "notes": [
+    "Monitoring stopped at user request before eight-minute target.",
+    "Player log stream produced no events after start; no recorded errors, buffer transitions, dropped-frame reports or fallback.",
+    "SurfaceFlinger statistics enabled only from 15:23:07 UTC; retained output is actual video-layer stats, not full monitoring window.",
+    "Initial short timing capture had rare ~100–118ms present intervals. Do not equate zero dropped layers with perfect pacing.",
+    "Display refresh 60Hz is not video FPS."
+  ]
+}

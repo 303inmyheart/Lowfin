@@ -1,0 +1,35 @@
+{
+  "version": "1.0.7",
+  "version_code": 79,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "tests": 374,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "ff07c4da1450d6ea7e0778e1010a3454a75ee5dde653c9f643351db81b12d649",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installation_pending": [],
+  "installed_device": "192.168.1.128:5555",
+  "installed_version_verified": "1.0.7 (79)",
+  "github_pushed": false,
+  "created_at": "2026-10-16T15:32:49.279205+00:00",
+  "denoise_fallback_fix": {
+    "root_cause": "42 lifetime decoder drops over 554940 ms wrongly tripped absolute-count guard at episode transition",
+    "rate_window_ms": [
+      1000,
+      10000
+    ],
+    "minimum_drops": 12,
+    "minimum_drop_rate_per_second": 3,
+    "minimum_settled_ready_ms": 5000,
+    "requires_active_playback": true,
+    "processing_error_fallback_retained": true,
+    "exact_report_regression": "passed"
+  },
+  "optimization_deferred": "docs/deferred-optimization-2026-10-16.md",
+  "app_started": true
+}

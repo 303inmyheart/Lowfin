@@ -1,0 +1,57 @@
+Read-only .128 snapshot after 0.10.16 install.
+Metadata rows 30228 (unchanged). Image files 28358 (+19 vs 28339), bytes 560677898 (+556701).
+No later persisted Companion delivery than Torment/Culpa Nuestra at 2026-10-14T22:40:38.252Z.
+Recent filesystem image timestamps 2026-10-14T22:49:29..39Z (2026-10-15 00:49:29..39 Berlin). These can reflect use and are NOT a download origin log. Image matching bounded to latest 5000 metadata records; unmatched hashes intentionally remain unknown.
+
+INSTRUMENTATION_RESULT: cache_diagnostics=cacheChangeAudit=[{"receivedAt":1792017638252,"source":"companion","id":"2e48f4e639a33681abd8adaf6221a5fe","type":"Movie","name":"Torment","series":"","season":-1,"episode":-1},{"receivedAt":1792017638252,"source":"companion","id":"f65290e59afd56c39867203d651c21c3","type":"Movie","name":"Culpa Nuestra - Unsere Schuld","series":"","season":-1,"episode":-1},{"receivedAt":1792017581155,"source":"companion","id":"f65290e59afd56c39867203d651c21c3","type":"Movie","name":"Culpa Nuestra - Unsere Schuld","series":"","season":-1,"episode":-1},{"receivedAt":1792017579202,"source":"companion","id":"2e48f4e639a33681abd8adaf6221a5fe","type":"Movie","name":"Tormento (2025)","series":"","season":-1,"episode":-1}]
+cacheCursor=present
+cacheStatus=Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.
+lastSync=1791875510161
+recentMetadata=Movie | 0000000021 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000022 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys  harte jungs | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys for life | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool  wolverine | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | die nackte kanone | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000003  final chapter | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | fast  furious: hobbs  shaw | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | john wick: kapitel 0000000004 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | johnny english  jetzt erst recht | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | kindskopfe 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | kingsman: golden circle | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | men in black | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | men in black  international | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | men in black 0000000003 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | men in black ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentMetadata=Movie | pixels | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:56:48.012Z | serverDateLastSaved=
+recentArtworkFiles=20 (matched against latest 5000 media rows; timestamps can reflect use)
+recentImage=Saw IV | series= | Primary width=240 | bytes=25864 | filesystemModifiedAt=2026-10-14T22:49:39Z
+recentImage=Poltergeist II – Die andere Seite | series= | Primary width=320 | bytes=23640 | filesystemModifiedAt=2026-10-14T22:49:39Z
+recentImage=House of Wax | series= | Primary width=320 | bytes=26246 | filesystemModifiedAt=2026-10-14T22:49:39Z
+recentImage=V/H/S/85 | series= | Primary width=320 | bytes=50133 | filesystemModifiedAt=2026-10-14T22:49:39Z
+recentImage=[REC]² | series= | Primary width=240 | bytes=25304 | filesystemModifiedAt=2026-10-14T22:49:39Z
+recentImage=unmatched 43c2dd05eb22ee02ad85e8118e96f9d708539a867c91786313bc36fbe67f4ffa.jpg | bytes=31402 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=Jurassic Park III | series= | Backdrop width=959 | bytes=112336 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched 83689ced5e00b24c0add0a865d16a65e23060e0724d1c844e94a5c1403d7dd52.jpg | bytes=19916 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched f4dbf6d0d7df5811eefb4f7b1be02d2e60fc13d37234fa4225d343f57d8d445e.jpg | bytes=19107 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=Jurassic Park III | series= | Primary width=240 | bytes=15879 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched b872a1162c7d63db0eb08fb3fde7977153d69e2573c470865b9b5d18ebc28fa9.jpg | bytes=23311 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=Jurassic Park III | series= | Logo width=320 | bytes=37543 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched d7787c512493238fa4d2d697be22541f8750b5ea539d641b2d3087c30fe9424a.jpg | bytes=23109 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched 6ff7a6b0582cf3dd577a2309333db69895942db74a3e0e9684da451b7ead573b.jpg | bytes=35264 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched dc78eac7ee2f232abd85c79456303bca73d19d01b1f33517b558c8d473fa9e6f.jpg | bytes=20348 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=unmatched 20ee80c8b63bdfd62ae995dd9f536bcd53fb816bf552836a06356928726392e4.jpg | bytes=17704 | filesystemModifiedAt=2026-10-14T22:49:38Z
+recentImage=Wrong Turn 3: Left for Dead | series= | Primary width=320 | bytes=43576 | filesystemModifiedAt=2026-10-14T22:49:29Z
+recentImage=Unknown User: Dark Web | series= | Primary width=320 | bytes=39336 | filesystemModifiedAt=2026-10-14T22:49:29Z
+recentImage=Lily's Ritual | series= | Primary width=320 | bytes=23557 | filesystemModifiedAt=2026-10-14T22:49:29Z
+recentImage=Hannibal Rising | series= | Primary width=320 | bytes=28694 | filesystemModifiedAt=2026-10-14T22:49:29Z
+items=30228
+cache_artwork=10
+companionAvailable=true incrementalCache=true
+autoPrecache=true
+imageFiles=28358 imageBytes=560677898
+
+INSTRUMENTATION_CODE: 0

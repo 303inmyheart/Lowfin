@@ -1,0 +1,25 @@
+<resources>
+    <string name="companion_title">Smart Completion</string>
+    <string name="companion_long_videos">Lowfin Companion · long videos</string>
+    <string name="companion_default">Jellyfin default</string>
+    <string name="companion_percentage">Custom percentage</string>
+    <string name="companion_remaining">Remaining time</string>
+    <string name="companion_never">Never auto complete</string>
+    <string name="companion_mode">Completion rule</string>
+    <string name="companion_resume">Keep resume position independently</string>
+    <string name="companion_inherit">Use the general rule</string>
+    <string name="companion_reset">Reset resume position</string>
+    <string name="companion_reset_confirm">Clear the saved resume position? The watched status stays unchanged.</string>
+    <string name="companion_hint">Applies to your account and playback in Lowfin. Manual watched changes remain available.</string>
+    <string name="companion_percent_hint">Percentage · e.g. 99.5</string>
+    <string name="companion_minutes_hint">Minutes remaining · e.g. 2</string>
+    <string name="companion_hours_hint">Minimum duration in hours · e.g. 4</string>
+    <string name="companion_enabled">General rule enabled</string>
+    <string name="companion_invalid">Enter a valid value within the displayed range.</string>
+    <string name="companion_error">Could not save. Reopen the settings and check the server connection.</string>
+    <string name="companion_save">Save</string>
+    <string name="companion_cancel">Cancel</string>
+    <string name="companion_on">On</string>
+    <string name="companion_off">Off</string>
+    <string name="companion_global_hint">For your account, this rule applies only when a movie or episode has no individual rule. Other clients retain Jellyfin’s normal behavior.</string>
+</resources>

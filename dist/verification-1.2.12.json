@@ -1,0 +1,44 @@
+{
+  "version": "1.2.12",
+  "version_code": 98,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 445,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "c1c02d4c0779af99623c3278eeeb94d8d44debecb1c77632eafa2b0a70cdb8a8",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "cover_tag_ui_binding_not_blocked_by_persistence_tested": true,
+  "persistent_tag_hits_not_rewritten_tested": true,
+  "idle_timer_disabled_without_polling_tested": true,
+  "installed_devices": [
+    {
+      "serial": "192.168.1.128:5555",
+      "version": "1.2.12",
+      "version_code": 98,
+      "debuggable": false,
+      "started": true,
+      "resumed_activity": "de.lowfin.tv/.MainActivity",
+      "startup_crash_seen": false,
+      "verified_at": "2026-10-21T13:16:28.013503+00:00"
+    }
+  ],
+  "github_pushed": false,
+  "document": "docs/optimization-1.2.12.md",
+  "created_at": "2026-10-21T13:15:47.767098+00:00",
+  "post_install_smoke": {
+    "home_build_ms": 191,
+    "first_artwork_ms": 2456,
+    "startup_skipped_frame_reports": [
+      91,
+      30
+    ],
+    "persistent_inventory_used": true,
+    "controlled_benchmark": false
+  }
+}

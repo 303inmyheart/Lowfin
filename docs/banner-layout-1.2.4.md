@@ -1,0 +1,5 @@
+# Lowfin 1.2.4 — banner alignment and rating footer
+
+The discovery banner now uses the same horizontal bounds as ordinary shelf containers (no additional 4 dp side margins). Ratings occupy a separate full-width bottom row with 24/20 dp inner margins. All enabled provider chips retain their normal compact 10 sp text, proportional icons, reserved maximum-value widths and unit scale. No shared rating-row behavior changes. Description now permits four lines and reserves a 42 dp footer area; poster aspect ratio and player/navigation behavior remain unchanged.
+
+Validation: existing HD and 4K native UI tests assert alignment with the neighboring shelf, all rating chips on one row without clipping/scaling, unchanged score-arrival height, four-line description configuration, non-overlap, poster dimensions and detail-return/remote navigation. Disabled ratings and missing metadata remain supported. HD and 3840×2160 fixture screenshots visually inspected. No physical TV accessed or app installed: user explicitly deferred installation.

@@ -1,0 +1,9 @@
+<resources>
+    <string name="precache_clear_all">Delete entire library precache</string>
+    <string name="precache_clear_action">Delete precache</string>
+    <string name="precache_clear_confirm">Delete cached library metadata, covers and saved library lists for this account? Sign-in, settings, API keys, ratings, watch list and Companion rules/resume are kept. Automatic precaching can rebuild the library afterwards.</string>
+    <string name="precache_cleared">Library precache deleted. Metadata and covers can be loaded again.</string>
+    <string name="precache_clear_failed">The precache could not be fully cleared. Try again after preloading has stopped.</string>
+    <string name="precache_clearing">Deleting precache</string>
+    <string name="precache_clearing_hint">Stopping background work and removing local library metadata and covers…</string>
+</resources>

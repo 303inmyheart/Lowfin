@@ -1,0 +1,11 @@
+<resources>
+    <string name="screensaver_title">Bildschirmschoner</string>
+    <string name="screensaver_enable">Bildschirmschoner aktivieren</string>
+    <string name="screensaver_hint">Startet bei Inaktivität außerhalb der Wiedergabe. Zeigt Filme und Serien mit Bewertungen, ohne Cover-Tags. Hält den TV während der Anzeige wach. Jede Fernbedienungstaste schließt ihn, ohne die Ansicht darunter zu bedienen.</string>
+    <string name="screensaver_delay">Start nach · Minuten</string>
+    <string name="screensaver_interval">Bildwechsel · Sekunden</string>
+    <string name="screensaver_libraries">Bildschirmschoner · Bibliotheken</string>
+    <string name="banner_libraries">Home-Banner · Bibliotheken</string>
+    <string name="ambient_libraries_loading">Bibliotheken werden geladen …</string>
+    <string name="ambient_libraries_empty">Keine passenden Bibliotheken gefunden</string>
+</resources>

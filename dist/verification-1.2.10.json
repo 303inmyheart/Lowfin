@@ -1,0 +1,33 @@
+{
+  "version": "1.2.10",
+  "version_code": 96,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "scope": "GenreIconsTest + genre navigation UI regression",
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "5048f369f2c6537e84c940d80e699c23e88455a8862d0f13a1a15a2f978b336c",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "genre_names_inspected_on": "192.168.1.128:5555",
+  "temporary_diagnostic_removed": true,
+  "malformed_gaming_tile_omitted": true,
+  "installed_devices": [
+    {
+      "serial": "192.168.1.128:5555",
+      "version": "1.2.10",
+      "version_code": 96,
+      "debuggable": false,
+      "started": true,
+      "verified_at": "2026-10-21T12:58:30.472012+00:00"
+    }
+  ],
+  "github_pushed": false,
+  "document": "docs/genre-icons-1.2.10.md",
+  "created_at": "2026-10-21T12:58:04.570769+00:00"
+}

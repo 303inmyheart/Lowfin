@@ -1,0 +1,41 @@
+{
+  "version": "1.2.9",
+  "version_code": 95,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "earlier_full_suite": {
+    "tests": 436,
+    "failures": 0,
+    "errors": 0
+  },
+  "final_focused_tests": {
+    "tests": 20,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "85d0d69e0f116f610a66e378e69e91ad265c40c6afc94b17e7268dd0c474a2d9",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "screensaver_default_enabled": false,
+  "screensaver_idle_range_minutes": [
+    1,
+    20
+  ],
+  "screensaver_wake_and_full_key_dismissal_tested": true,
+  "independent_account_scoped_library_choices": true,
+  "installed_devices": [
+    {
+      "serial": "192.168.1.128:5555",
+      "version": "1.2.9",
+      "version_code": 95,
+      "debuggable": false,
+      "started": true,
+      "verified_at": "2026-10-21T09:41:48.039159+00:00"
+    }
+  ],
+  "github_pushed": false,
+  "document": "docs/screensaver-1.2.9.md",
+  "created_at": "2026-10-21T09:41:09.353182+00:00"
+}

@@ -1,0 +1,22 @@
+{
+  "version": "1.0.1",
+  "version_code": 73,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "tests": 359,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "additional_animated_return_test": "passed",
+  "lint_release": "passed",
+  "apk_sha256": "a3b926e4fdfa682671964218e3dd59f23d1677b2e5d776af919e19bf40f0daa7",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installation_pending": [],
+  "github_pushed": false,
+  "created_at": "2026-10-16T14:28:16.125967+00:00",
+  "installed_device": "192.168.1.128:5555",
+  "installed_version_verified": "1.0.1 (73)",
+  "app_started": true
+}

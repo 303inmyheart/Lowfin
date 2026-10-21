@@ -1,8 +1,9 @@
 plugins { id 'com.android.application' }
 android {
     namespace 'de.lowfin.tv'
+    buildFeatures { buildConfig true }
     compileSdk 35
-    defaultConfig { applicationId 'de.lowfin.tv'; minSdk 26; targetSdk 35; versionCode 29; versionName '0.7.16' }
+    defaultConfig { applicationId 'de.lowfin.tv'; minSdk 26; targetSdk 35; versionCode 99; versionName '1.2.13'; testInstrumentationRunner 'de.lowfin.tv.ChannelDiagnostics' }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
     buildTypes {
         release { signingConfig signingConfigs.debug; minifyEnabled true; shrinkResources true; proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro' }
@@ -16,6 +17,7 @@ dependencies {
     implementation 'androidx.media3:media3-exoplayer:1.8.0'
     implementation 'androidx.media3:media3-exoplayer-hls:1.8.0'
     implementation 'androidx.media3:media3-ui:1.8.0'
+    implementation 'androidx.media3:media3-effect:1.8.0'
     implementation 'org.jellyfin.media3:media3-ffmpeg-decoder:1.8.0+1'
     implementation 'androidx.media3:media3-datasource-okhttp:1.8.0'
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'

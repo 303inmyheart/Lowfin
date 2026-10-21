@@ -1,0 +1,74 @@
+{
+  "version": "1.2.0",
+  "version_code": 86,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 411,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "lint_warnings": 58,
+  "apk_sha256": "c579ad7e39556110a97540e1a56d99899f36104fbc81ea36764b1a77d9629f37",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-21T03:19:27.440809+00:00",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.0",
+      "version_code": 86,
+      "verified": true,
+      "app_started": true
+    }
+  ],
+  "installation_pending": [],
+  "github_pushed": false,
+  "document": "docs/optimization-1.2.0.md",
+  "startup128": {
+    "first_pid": 7883,
+    "current_pid": 8475,
+    "fresh_next_ms_first_start": 1697,
+    "fresh_resume_ms_first_start": 9164,
+    "cached_resume_ms_first_start": 1632,
+    "first_artwork_ms_first_start": 2508,
+    "text_free_logo_visually_verified": true,
+    "home_and_poster_visually_verified": true,
+    "saved_inventory_files": 26749,
+    "saved_inventory_mb": 652,
+    "second_start": {
+      "cached_resume_ms": 568,
+      "fresh_next_ms": 1292,
+      "fresh_resume_ms": 5874,
+      "first_artwork_ms": 1183,
+      "saved_inventory_files": 26757,
+      "saved_inventory_mb": 653
+    }
+  },
+  "optimizations": [
+    "unchanged metadata only updates stamp",
+    "batch restored home rows across shelves",
+    "batch Companion native/cached resume lookups preserving first duplicate and scope",
+    "baseline existence query instead of exact count",
+    "skip snapshot parsing for empty cursor advances",
+    "one filesystem timestamp read per eviction candidate",
+    "reuse static image hash alphabet"
+  ],
+  "preserved": [
+    "schema 8 and persistent cache",
+    "existing account settings and signature",
+    "normal playback, buffers and fallbacks",
+    "plugin manual revision/sequence fences and scoped lists",
+    "launcher identity and dynamic headings",
+    "optional animations and remote focus"
+  ],
+  "work_count_evidence": {
+    "identical_short_refreshes": 100,
+    "replacement_inserts_after_initial_write": 0,
+    "timestamp_reads_per_eviction_candidate": 1
+  },
+  "installation_scope": "Only .128 installed and opened; no .87/.166 access, no shutdown",
+  "controlled_fps_comparison": false
+}

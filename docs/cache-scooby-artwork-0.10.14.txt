@@ -1,0 +1,54 @@
+Read-only diagnostic on TV .128. UTC timestamps; Europe/Berlin UTC+02:00.
+Matched current metadata image tags to actual cached files. These timestamps may reflect use (LRU touch) rather than download. No pre-existing file hashes/download records: historical image replacement cannot be proved.
+
+INSTRUMENTATION_RESULT: cache_diagnostics=cacheCursor=present
+cacheStatus=Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.
+lastSync=1791875510161
+recentMetadata=Movie | 0000000021 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000022 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys  harte jungs | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys for life | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool  wolverine | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | die nackte kanone | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | equalizer 0000000003  final chapter | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | fast  furious: hobbs  shaw | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | john wick: kapitel 0000000004 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | johnny english  jetzt erst recht | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | kindskopfe 0000000002 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | kingsman: golden circle | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | men in black | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | men in black  international | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | men in black 0000000003 | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | men in black ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+recentMetadata=Movie | pixels | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:26:12.412Z | serverDateLastSaved=
+scoobyMatchedImageFiles=286
+scoobyImage=Mission Scooby-Doo | series= | Thumb width=320 | bytes=14910 | filesystemModifiedAt=2026-10-14T20:45:33Z
+scoobyImage=Mission Scooby-Doo | series= | Primary width=320 | bytes=29580 | filesystemModifiedAt=2026-10-14T20:45:11Z
+scoobyImage=Scooby Doo und wer bist Du | series= | Primary width=320 | bytes=47118 | filesystemModifiedAt=2026-10-14T20:44:31Z
+scoobyImage=Die Scooby Doo Show | series= | Primary width=320 | bytes=46996 | filesystemModifiedAt=2026-10-14T20:43:41Z
+scoobyImage=Die Scooby Doo Show | series= | Thumb width=320 | bytes=21476 | filesystemModifiedAt=2026-10-14T20:43:28Z
+scoobyImage=Scooby Doo, wo bist du? | series= | Thumb width=320 | bytes=19847 | filesystemModifiedAt=2026-10-14T20:42:11Z
+scoobyImage=Scooby Doo, wo bist du? | series= | Primary width=320 | bytes=43745 | filesystemModifiedAt=2026-10-14T20:41:58Z
+scoobyImage=Das Tor zum Schicksal | series=Mission Scooby-Doo | Primary width=320 | bytes=16835 | filesystemModifiedAt=2026-10-14T04:07:12Z
+scoobyImage=Der Traumweber | series=Mission Scooby-Doo | Primary width=320 | bytes=11608 | filesystemModifiedAt=2026-10-14T04:07:11Z
+scoobyImage=Antike Helden | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=21675 | filesystemModifiedAt=2026-10-14T04:07:08Z
+scoobyImage=Elementar, mein lieber Shaggy! | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=19848 | filesystemModifiedAt=2026-10-14T04:07:07Z
+scoobyImage=Wie im Film | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=24969 | filesystemModifiedAt=2026-10-14T04:07:05Z
+scoobyImage=Der Geistertruck | series=Mission Scooby-Doo | Primary width=320 | bytes=14530 | filesystemModifiedAt=2026-10-14T04:07:04Z
+scoobyImage=Die fürchterliche Herde | series=Mission Scooby-Doo | Primary width=320 | bytes=19432 | filesystemModifiedAt=2026-10-14T04:07:02Z
+scoobyImage=Folge 22 | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=18893 | filesystemModifiedAt=2026-10-14T04:07:01Z
+scoobyImage=Scooby-Doo und wer bist Du S00E001 | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=20256 | filesystemModifiedAt=2026-10-14T04:06:57Z
+scoobyImage=Spuk in Crystal Cove | series=Mission Scooby-Doo | Primary width=320 | bytes=17245 | filesystemModifiedAt=2026-10-14T04:06:55Z
+scoobyImage=Das große, grüne Horrording | series=Die Scooby Doo Show | Primary width=320 | bytes=18941 | filesystemModifiedAt=2026-10-14T04:06:54Z
+scoobyImage=Schuh-bi-dubidu! | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=28773 | filesystemModifiedAt=2026-10-14T04:06:51Z
+scoobyImage=Ein Ritter in Hollywood | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=16607 | filesystemModifiedAt=2026-10-14T04:06:50Z
+items=30227
+cache_artwork=10
+companionAvailable=true incrementalCache=true
+autoPrecache=true
+imageFiles=28337 imageBytes=560074015
+
+INSTRUMENTATION_CODE: 0

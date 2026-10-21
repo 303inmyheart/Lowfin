@@ -1,0 +1,85 @@
+{
+  "version": "1.1.0",
+  "version_code": 82,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 390,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "lint_warnings": 57,
+  "apk_sha256": "3d8a0d5e770917d7849d08ef094f6a43932165980fee8b16c1507c6e3cf15926",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-16T17:03:05.204765+00:00",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.1.0",
+      "version_code": 82,
+      "verified": true,
+      "app_started": true
+    },
+    {
+      "device": "192.168.1.87:5555",
+      "version": "1.1.0",
+      "version_code": 82,
+      "verified": true,
+      "app_started": false
+    },
+    {
+      "device": "192.168.1.166:5555",
+      "version": "1.1.0",
+      "version_code": 82,
+      "verified": true,
+      "app_started": false
+    }
+  ],
+  "installation_pending": [],
+  "installation_requires_explicit_go": false,
+  "app_started": true,
+  "future_start_only": "192.168.1.128:5555",
+  "future_shutdown_after_success": "192.168.1.128:5555",
+  "github_pushed": false,
+  "optimization_document": "docs/optimization-1.1.0.md",
+  "controlled_fps_gain_measured": false,
+  "previous_installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.0.9",
+      "version_code": 81,
+      "verified": true,
+      "app_started": true
+    },
+    {
+      "device": "192.168.1.87:5555",
+      "version": "1.0.9",
+      "version_code": 81,
+      "verified": true,
+      "app_started": false
+    }
+  ],
+  "denoise_reflected_constructor_retained": true,
+  "on_device_110_validation": "Package/version/flags verified on all three; .128 main activity started without captured crash; no sustained playback/performance test",
+  "installation_authorized_at": "2026-10-16T17:06:25.294232+00:00",
+  "installation_completed_at": "2026-10-16T17:06:25.294232+00:00",
+  "startup128": {
+    "pid": 26348,
+    "home_build_ms": 175,
+    "first_artwork_ms": 7127,
+    "artwork_inventory": "saved inventory",
+    "files": 24428,
+    "mib": 619,
+    "crash_captured": false,
+    "controlled_speedup_established": false
+  },
+  "shutdown128": {
+    "requested": true,
+    "command": "adb shell reboot -p",
+    "result": "Done",
+    "connection_check": "device offline after shutdown"
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "version": "1.2.3",
+  "version_code": 89,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 22,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "tests_scope": "final targeted CoverTagsTest and CacheChangesTest; prior full suite 422 passed, see verification-1.2.3-suite.json",
+  "companion_tests": 54,
+  "lint_release": "passed",
+  "lint_warnings": 58,
+  "apk_sha256": "16fd691d75f7aee57c4087e6f83666e67d4f21af7a456ce57caa387b001416b2",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "companion_version": "0.4.0",
+  "companion_zip_sha256": "3cd40d230f5c063ff09d27656e0b662f84a3714ab60f83542bd646171fee164d",
+  "companion_integration": {
+    "serverVersion": "12.2.0",
+    "pluginVersion": "0.4.0",
+    "runtimeSeconds": 43200,
+    "checks": [
+      "discovery",
+      "existing-auth",
+      "long-video-correction",
+      "normal-session-progress",
+      "persistent-resume-list",
+      "duplicate-report",
+      "no-synthetic-progress",
+      "manual-watched-fence",
+      "custom-percentage",
+      "default-policy",
+      "global-threshold-preserved",
+      "explicit-opt-in",
+      "native-playback-without-rule",
+      "two-library-scope",
+      "cross-device-same-user-rule",
+      "jellyfin-resume-exclusions",
+      "hidden-resume-retained",
+      "plugin-metadata-and-artwork",
+      "incremental-cache-bootstrap",
+      "native-metadata-event-delivery",
+      "cache-permission-cursor-reset",
+      "cache-authentication",
+      "admin-plugin-configuration",
+      "provider-user-allowlist",
+      "provider-secret-protection",
+      "ordinary-user-config-denied",
+      "dashboard-page-registration",
+      "cover-tag-auth-and-limits",
+      "cover-tag-config-and-facts",
+      "cover-tag-disable-and-independent-switches",
+      "cover-tag-library-visibility"
+    ]
+  },
+  "production_plugin_installed": false,
+  "document": "docs/cover-tags-1.2.3.md",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.3",
+      "version_code": 89,
+      "verified": true,
+      "app_started": false
+    }
+  ],
+  "installation_scope": "Only .128; do not start app per latest instruction. Other TVs untouched.",
+  "github_pushed": false,
+  "created_at": "2026-10-21T07:52:26.420568+00:00"
+}

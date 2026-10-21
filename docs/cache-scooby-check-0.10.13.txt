@@ -1,0 +1,44 @@
+Read-only .128 inspection. Times below are UTC; Berlin is UTC+02:00.
+No cacheChangeAudit entry present: no persisted Companion delivery evidence at inspection.
+Local savedAt is not proof of changed content or a server-side change.
+
+INSTRUMENTATION_RESULT: cache_diagnostics=cacheCursor=present
+cacheStatus=Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.
+lastSync=1791875510161
+recentMetadata=Series | mission scoobydoo | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:23:45.096Z | serverDateLastSaved=
+recentMetadata=Series | scooby doo wo bist du? | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:23:45.096Z | serverDateLastSaved=
+recentMetadata=Series | whats new scoobydoo | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:23:45.096Z | serverDateLastSaved=
+recentMetadata=Series | die scooby doo show | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:23:39.927Z | serverDateLastSaved=
+recentMetadata=Series | scooby doo und wer bist du | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:23:39.927Z | serverDateLastSaved=
+recentMetadata=Movie | scoobydoo | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T10:07:32.079Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0016 - Hund über Bord | series=Die Scooby Doo Show | season=3 episode=16 | localSavedAt=2026-10-14T04:02:54.798Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0015 - Hexerei in Wimbledon | series=Die Scooby Doo Show | season=3 episode=15 | localSavedAt=2026-10-14T04:02:54.792Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0014 - Festung der Schrecken | series=Die Scooby Doo Show | season=3 episode=14 | localSavedAt=2026-10-14T04:02:52.309Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0013 - Wo Fische Vorfahrt haben | series=Die Scooby Doo Show | season=3 episode=13 | localSavedAt=2026-10-14T04:02:52.304Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0012 - Das Erbe von Kim Chow Lin | series=Die Scooby Doo Show | season=3 episode=12 | localSavedAt=2026-10-14T04:02:50.631Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0011 - Phantom im Plattenstudio | series=Die Scooby Doo Show | season=3 episode=11 | localSavedAt=2026-10-14T04:02:49.278Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0010 - Das große, grüne Horrording | series=Die Scooby Doo Show | season=3 episode=10 | localSavedAt=2026-10-14T04:02:48.023Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0008 - Notlandung im Dschungel | series=Die Scooby Doo Show | season=3 episode=8 | localSavedAt=2026-10-14T04:02:46.678Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0009 - Nachts wenn die Katze kommt | series=Die Scooby Doo Show | season=3 episode=9 | localSavedAt=2026-10-14T04:02:46.663Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0007 - Auf den Spuren von Blechvisage | series=Die Scooby Doo Show | season=3 episode=7 | localSavedAt=2026-10-14T04:02:44.911Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0006 - Ein Hochlandtanz mit Mummenschanz | series=Die Scooby Doo Show | season=3 episode=6 | localSavedAt=2026-10-14T04:02:43.489Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0004 - Das Zeichen von Mormo | series=Die Scooby Doo Show | season=3 episode=4 | localSavedAt=2026-10-14T04:02:42.227Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0005 - Das triefende Teer-Ungeheuer | series=Die Scooby Doo Show | season=3 episode=5 | localSavedAt=2026-10-14T04:02:42.220Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0003 - Schwarzer Schnee | series=Die Scooby Doo Show | season=3 episode=3 | localSavedAt=2026-10-14T04:02:40.823Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0002 - Der einäugige Seebär | series=Die Scooby Doo Show | season=3 episode=2 | localSavedAt=2026-10-14T04:02:39.431Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0001 - Es droht Gefahr in Willawa | series=Die Scooby Doo Show | season=3 episode=1 | localSavedAt=2026-10-14T04:02:38.171Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0008 - Ungeheuer aus der Tiefe | series=Die Scooby Doo Show | season=2 episode=8 | localSavedAt=2026-10-14T04:02:36.860Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0007 - Kreuzfahrt ins Jahr 5007 | series=Die Scooby Doo Show | season=2 episode=7 | localSavedAt=2026-10-14T04:02:35.595Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0006 - Hexenzauber am Spinnenberg | series=Die Scooby Doo Show | season=2 episode=6 | localSavedAt=2026-10-14T04:02:35.589Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0005 - Das Phantom der Rennbahn | series=Die Scooby Doo Show | season=2 episode=5 | localSavedAt=2026-10-14T04:02:34.368Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0004 - Warnung aus dem Jenseits | series=Die Scooby Doo Show | season=2 episode=4 | localSavedAt=2026-10-14T04:02:33.125Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0003 - In der Höhle des Sauriers | series=Die Scooby Doo Show | season=2 episode=3 | localSavedAt=2026-10-14T04:02:31.812Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0001 - Fluch der Wikinger | series=Die Scooby Doo Show | season=2 episode=1 | localSavedAt=2026-10-14T04:02:30.602Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0002 - Zu Gast auf der großen Schädel-Insel | series=Die Scooby Doo Show | season=2 episode=2 | localSavedAt=2026-10-14T04:02:30.597Z | serverDateLastSaved=
+items=30227
+cache_artwork=10
+companionAvailable=true incrementalCache=true
+autoPrecache=true
+imageFiles=28337 imageBytes=560074015
+
+INSTRUMENTATION_CODE: 0

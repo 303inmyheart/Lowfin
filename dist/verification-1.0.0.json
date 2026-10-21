@@ -1,0 +1,57 @@
+{
+  "version": "1.0.0",
+  "version_code": 72,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 357,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "companion_tests_passed": 40,
+  "lint_release_errors": 0,
+  "apk_bytes": 7593702,
+  "apk_sha256": "b0991157654750e72ff8541c0cd7ea46e79c207c6aeaa77d41a244dafcbf9e70",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "native_abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
+    "x86",
+    "x86_64"
+  ],
+  "created_at": "2026-10-15T10:06:45.555029+00:00",
+  "github_pushed": false,
+  "installation_pending": [],
+  "start_only": "192.168.1.128:5555",
+  "physical_playback_retested": false,
+  "complete_input_freeze_fix_established": false,
+  "installations": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.0.0",
+      "versionCode": 72,
+      "verified": true,
+      "installed": true,
+      "appStartRequested": true
+    },
+    {
+      "device": "192.168.1.166:5555",
+      "version": "1.0.0",
+      "versionCode": 72,
+      "verified": true,
+      "installed": true,
+      "appStartRequested": false
+    },
+    {
+      "device": "192.168.1.87:5555",
+      "version": "1.0.0",
+      "versionCode": 72,
+      "verified": true,
+      "installed": true,
+      "appStartRequested": false
+    }
+  ],
+  "installation_verified_at": "2026-10-15T10:07:50.208313+00:00"
+}

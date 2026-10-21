@@ -30,6 +30,25 @@ public class VideoCacheTest {
         try { source.open(new DataSpec.Builder().setUri(url).build()); byte[] bytes=new byte[128]; int n; while((n=source.read(bytes,0,bytes.length))!=-1) result.write(bytes,0,n); }
         finally { source.close(); } return result.toByteArray();
     }
+    @Test public void IndexPreparationDoesNotDownloadMediaAndKeepsExistingCachedBytes() throws Exception {
+        cache.warmUp();assertEquals(0,server.getRequestCount());
+        String url=server.url("/Videos/movie/stream?Static=true&MediaSourceId=version").toString();
+        assertEquals(600,read(cache.factory(api,false,false),url).length);assertEquals(1,server.getRequestCount());
+        cache.warmUp();assertEquals(600,read(cache.factory(api,false,false),url).length);assertEquals(1,server.getRequestCount());
+    }
+    @Test public void ConcurrentIndexPreparationAndStreamCreationShareOneCache() throws Exception {
+        java.util.concurrent.ExecutorService workers=java.util.concurrent.Executors.newFixedThreadPool(3);
+        try {
+            java.util.concurrent.Future<?> first=workers.submit(cache::warmUp),second=workers.submit(cache::warmUp);
+            String url=server.url("/Videos/movie/stream?Static=true").toString();
+            assertEquals(600,read(cache.factory(api,false,false),url).length);first.get(5,java.util.concurrent.TimeUnit.SECONDS);second.get(5,java.util.concurrent.TimeUnit.SECONDS);
+            assertEquals(600,read(cache.factory(api,false,false),url).length);assertEquals(1,server.getRequestCount());
+        } finally { workers.shutdownNow(); }
+    }
+    @Test public void DisabledCachePreparationStaysDisabled() throws Exception {
+        cache.close();cache=new VideoCache(RuntimeEnvironment.getApplication(),0);cache.warmUp();assertEquals(0,server.getRequestCount());
+        String url=server.url("/Videos/movie/stream?Static=true").toString();read(cache.factory(api,false,false),url);read(cache.factory(api,false,false),url);assertEquals(2,server.getRequestCount());
+    }
     @Test public void finiteVideoIsReusedAcrossPlaybackSessionsWithAuthOnNetworkOnly() throws Exception {
         DataSource.Factory factory=cache.factory(api,false,false);
         String url=server.url("/Videos/movie/stream?Static=true&MediaSourceId=version&PlaySessionId=one").toString();

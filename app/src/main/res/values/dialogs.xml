@@ -1,0 +1,4 @@
+<resources>
+    <string name="dialog_transparency">Dialog background transparency</string>
+    <string name="dialog_transparency_hint" formatted="false">0% is opaque; 100% shows the content behind the dialog. Left/right adjusts the preview. Save applies it to all Lowfin dialogs.</string>
+</resources>

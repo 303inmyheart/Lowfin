@@ -1,0 +1,6 @@
+<resources>
+    <string name="hdr_playback">HDR-Wiedergabe</string>
+    <string name="hdr_hint">Standardmäßig aus. Aktiviert natives HDR10 / HDR10+ / HLG nur mit passendem Display und Decoder. Dolby Vision wird nicht angeboten. Ohne native HDR-Unterstützung benötigen HDR-Quellen eine SDR-Version oder den vorhandenen Server-Fallback. Änderungen gelten ab der nächsten Wiedergabe.</string>
+    <string name="random_all_movies">Alle Filme</string>
+    <string name="random_by_genre">Genre wählen…</string>
+</resources>

@@ -1,0 +1,74 @@
+{
+  "version": "1.2.1",
+  "version_code": 87,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 415,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "lint_warnings": 58,
+  "apk_sha256": "1e36a31866523b65c235e57dc6a8af9fc0f3c0432042c3368fc256df473c4715",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-21T03:34:49.738476+00:00",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.1",
+      "version_code": 87,
+      "verified": true,
+      "app_started": true
+    },
+    {
+      "device": "192.168.1.87:5555",
+      "version": "1.2.1",
+      "version_code": 87,
+      "verified": true,
+      "app_started": true,
+      "activity_resumed": true,
+      "verified_at": "2026-10-21T05:19:00.034684+00:00"
+    },
+    {
+      "device": "192.168.1.166:5555",
+      "version": "1.2.1",
+      "version_code": 87,
+      "verified": true,
+      "app_started": true,
+      "activity_resumed": true,
+      "verified_at": "2026-10-21T05:19:00.034689+00:00"
+    }
+  ],
+  "installation_pending": [],
+  "github_pushed": false,
+  "document": "docs/banner-information-1.2.1.md",
+  "startup128": {
+    "pid": 13985,
+    "activity_resumed": true,
+    "banner_runtime_genres_scores_visually_verified": true,
+    "visible_hint_removed": true
+  },
+  "banner": {
+    "compact_ratings": true,
+    "existing_provider_and_cache_preferences": true,
+    "visible_debounced_requests": true,
+    "late_callback_guards": true,
+    "fixed_score_geometry": true,
+    "missing_facts_and_disabled_sources_tested": true
+  },
+  "layout_qa": {
+    "HD": "1280x720/tvdpi; fixture + actual TV",
+    "4K": "3840x2160/xxxhdpi; automated native layout and screenshot, no physical 4K TV accessed",
+    "4k_poster_pixels": [
+      504,
+      756
+    ],
+    "4k_meta_text_pixels": 44,
+    "4k_rating_text_pixels": 40,
+    "no_overlap": true
+  },
+  "installation_scope": "Initial .128 delivery; subsequent explicit user authorization: install and start .87 and .166, both verified. No shutdown or GitHub push."
+}

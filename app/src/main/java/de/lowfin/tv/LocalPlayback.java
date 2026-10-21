@@ -1,8 +1,6 @@
 package de.lowfin.tv;
 
 import android.content.Context;
-import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import androidx.media3.common.C;
 import androidx.media3.common.audio.*;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
@@ -19,7 +17,7 @@ final class LocalPlayback {
         video.put("video/avc","h264"); video.put("video/hevc","hevc"); video.put("video/mpeg2","mpeg2video"); video.put("video/mp4v-es","mpeg4"); video.put("video/x-vnd.on2.vp9","vp9"); video.put("video/x-vnd.on2.vp8","vp8"); video.put("video/av01","av1");
         audio.put("audio/mp4a-latm","aac"); audio.put("audio/mpeg","mp3"); audio.put("audio/ac3","ac3"); audio.put("audio/eac3","eac3"); audio.put("audio/vnd.dts","dts"); audio.put("audio/flac","flac"); audio.put("audio/opus","opus"); audio.put("audio/vorbis","vorbis");
         Set<String> supported=new HashSet<>();
-        try { for(MediaCodecInfo codec:new MediaCodecList(MediaCodecList.REGULAR_CODECS).getCodecInfos()) if(!codec.isEncoder()) for(String mime:codec.getSupportedTypes()) supported.add(mime.toLowerCase(Locale.ROOT)); } catch(RuntimeException ignored) { }
+        try { supported.addAll(DeviceCodecs.types()); } catch(RuntimeException ignored) { }
         List<String> v=new ArrayList<>(),a=new ArrayList<>();
         for(Map.Entry<String,String> e:video.entrySet()) if(supported.contains(e.getKey())) v.add(e.getValue());
         for(Map.Entry<String,String> e:audio.entrySet()) if(supported.contains(e.getKey())) a.add(e.getValue());

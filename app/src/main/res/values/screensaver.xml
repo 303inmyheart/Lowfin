@@ -1,0 +1,11 @@
+<resources>
+    <string name="screensaver_title">Screensaver</string>
+    <string name="screensaver_enable">Enable screensaver</string>
+    <string name="screensaver_hint">Starts after inactivity outside playback. Shows movies and series with ratings, without cover tags. Keeps the TV awake while visible. Any remote key closes it without activating the screen underneath.</string>
+    <string name="screensaver_delay">Start after · minutes</string>
+    <string name="screensaver_interval">Change image · seconds</string>
+    <string name="screensaver_libraries">Screensaver · Libraries</string>
+    <string name="banner_libraries">Home banner · Libraries</string>
+    <string name="ambient_libraries_loading">Loading libraries…</string>
+    <string name="ambient_libraries_empty">No suitable libraries found</string>
+</resources>

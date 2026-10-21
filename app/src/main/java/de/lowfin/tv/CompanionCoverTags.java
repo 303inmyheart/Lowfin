@@ -1,0 +1,114 @@
+package de.lowfin.tv;
+
+import android.content.*;
+import android.os.*;
+import android.util.LruCache;
+import org.json.*;
+import java.util.*;
+import java.util.concurrent.*;
+
+/** Small on-demand metadata batches; no bitmap changes, UI-thread disk access or library-wide scan. */
+final class CompanionCoverTags implements AutoCloseable {
+    private final LowfinApp app;
+    private final Api api;
+    private final CompanionApi companion;
+    private final Library library;
+    private final Handler main=new Handler(Looper.getMainLooper());
+    private final ExecutorService worker=Executors.newSingleThreadExecutor();
+    private final Object gate=new Object(),pendingGate=new Object();
+    private final LruCache<String,Integer> facts=new LruCache<>(256);
+    private final LruCache<String,Long> retry=new LruCache<>(256);
+    private final Set<String> pending=new LinkedHashSet<>();
+    private final WeakHashMap<ArtworkView,String> bound=new WeakHashMap<>();
+    private final Runnable settingsChanged=()->main.post(this::refresh);
+    private final Runnable drain=this::drain;
+    private final Runnable indexRetry=this::refresh;
+    private volatile boolean closed;
+    private boolean busy;
+    private volatile boolean updating;
+    private volatile long epoch;
+    private final SharedPreferences.OnSharedPreferenceChangeListener preferences=(prefs,key)-> { if("showCoverTags".equals(key)||"hdrPlayback".equals(key)) main.post(this::refresh); };
+
+    CompanionCoverTags(Context context,Api api) {
+        this.api=api;Context application=context.getApplicationContext();app=application instanceof LowfinApp?(LowfinApp)application:null;
+        companion=app!=null&&app.api==api?app.companion:null;library=companion==null?null:companion.library;
+        if(companion!=null) { companion.coverTagsChanged=settingsChanged;app.settings.registerOnSharedPreferenceChangeListener(preferences); }
+    }
+    private int filter() { return !closed&&companion!=null&&app.api==api&&app.settings.getBoolean("showCoverTags",true)?(companion.coverTagFilter()&(app.settings.getBoolean("hdrPlayback",false)?7:3)):0; }
+    static String id(String value) { String normalized=value.replace("-","").toLowerCase(Locale.ROOT);return normalized.matches("[0-9a-f]{32}")?normalized:""; }
+    void bind(ArtworkView view,JSONObject item,boolean wide) {
+        String type=item.optString("Type"),image=Artwork.type(item,wide);
+        String id=(type.equals("Movie")||type.equals("Episode")||type.equals("Video")||type.equals("Series")||type.equals("Season"))&&(image.equals("Primary")||image.equals("Thumb"))?id(item.optString("Id")):"";
+        if(id.isEmpty()) { bound.remove(view);view.badges("",0);return; }
+        bound.put(view,id);view.badges(id,0);apply(view,id);
+    }
+    private void apply(ArtworkView view,String id) {
+        if(!id.equals(view.badgeItem)) return;
+        int filter=filter();if(filter==0) { view.badges(id,0);return; }
+        if(updating) return;
+        // LruCache protects its own short operations. Never wait for the writer's SQLite lock here.
+        Integer mask=facts.get(id);if(mask!=null) { view.badges(id,mask&filter);return; }
+        Long delay=retry.get(id);if(delay!=null&&SystemClock.elapsedRealtime()<delay) return;
+        synchronized(pendingGate) { if(pending.size()<256) pending.add(id); }
+        if(!busy) { main.removeCallbacks(drain);main.postDelayed(drain,80); }
+    }
+    private void refresh() {
+        if(closed) return;
+        for(Map.Entry<ArtworkView,String> entry:new ArrayList<>(bound.entrySet())) {
+            ArtworkView view=entry.getKey();if(view!=null) apply(view,entry.getValue());
+        }
+    }
+    private void drain() {
+        if(closed||busy||updating||filter()==0||library==null) return;
+        List<String> ids=new ArrayList<>();final long generation;
+        synchronized(pendingGate) { generation=epoch;Iterator<String> it=pending.iterator();while(it.hasNext()&&ids.size()<64) { ids.add(it.next());it.remove(); } }
+        if(ids.isEmpty()) return;busy=true;
+        worker.execute(()-> {
+            Map<String,Integer> loaded=new HashMap<>();List<String> missing=new ArrayList<>();boolean indexPending=false;
+            try {
+                for(String id:ids) {
+                    String stored=library.state("cover-tags-v2-"+id);
+                    if(stored.matches("[0-7]")) loaded.put(id,Integer.parseInt(stored));else missing.add(id);
+                }
+                if(!missing.isEmpty()&&!closed&&filter()!=0) {
+                    JSONObject response=companion.call("GET","/badges",null,"ids",String.join(",",missing));
+                    indexPending=response.optBoolean("pending");JSONArray entries=response.getJSONArray("items");if(entries.length()>64) throw new java.io.IOException("Oversized cover tag response");
+                    for(int i=0;i<entries.length();i++) {
+                        JSONObject entry=entries.getJSONObject(i);String id=id(entry.optString("id"));int mask=entry.optInt("mask",-1);
+                        if(missing.contains(id)&&mask>=0&&mask<=7) loaded.put(id,mask);
+                    }
+                }
+                synchronized(gate) {
+                    if(!closed&&generation==epoch) {
+                        Map<String,String> fresh=new LinkedHashMap<>();
+                        for(String id:missing) if(loaded.containsKey(id)) fresh.put("cover-tags-v2-"+id,""+loaded.get(id));
+                        // Disk hits are already durable; only new server facts need one shared transaction.
+                        library.stateBatch(fresh);
+                        for(Map.Entry<String,Integer> entry:loaded.entrySet()) facts.put(entry.getKey(),entry.getValue());
+                    }
+                }
+            } catch(Exception ignored) { /* Artwork remains available when the optional service fails. */ }
+            final boolean waitingForIndex=indexPending;
+            main.post(()-> {
+                busy=false;if(closed) return;
+                synchronized(gate) { if(generation==epoch) for(String id:ids) if(facts.get(id)==null) retry.put(id,SystemClock.elapsedRealtime()+(waitingForIndex?5000:30000)); }
+                if(waitingForIndex) { main.removeCallbacks(indexRetry);main.postDelayed(indexRetry,5100); }
+                refresh();synchronized(pendingGate) { if(!pending.isEmpty()&&filter()!=0) main.postDelayed(drain,80); }
+            });
+        });
+    }
+    void invalidate(JSONArray changes) {
+        if(changes.length()==0) return;
+        updating=true;
+        synchronized(gate) {
+            epoch++;for(int i=0;i<changes.length();i++) { JSONObject change=changes.optJSONObject(i);if(change==null) continue;for(String id:Json.coverTagIds(Json.object(change,"item"))) { facts.remove(id);retry.remove(id); } }
+        }
+    }
+    void changesApplied() { updating=false;main.post(this::refresh); }
+    @Override public void close() {
+        closed=true;main.removeCallbacks(drain);main.removeCallbacks(indexRetry);worker.shutdownNow();
+        if(companion!=null) { if(companion.coverTagsChanged==settingsChanged) companion.coverTagsChanged=null;app.settings.unregisterOnSharedPreferenceChangeListener(preferences); }
+        synchronized(pendingGate) { pending.clear(); }
+        synchronized(gate) { facts.evictAll();retry.evictAll(); }
+    }
+}

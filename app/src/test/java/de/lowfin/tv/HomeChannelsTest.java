@@ -35,6 +35,68 @@ public class HomeChannelsTest {
     }
     @After public void cleanup() { if(app.images!=null) app.images.close(); app.io.shutdownNow(); app.reports.shutdownNow(); }
     private JSONObject episode(String id,long ticks) { return Json.obj("Id",id,"Type","Episode","Name","Eine Folge","SeriesName","Eine Serie","SeriesId","show","ParentIndexNumber",40,"IndexNumber",6,"RunTimeTicks",27000000000L,"UserData",Json.obj("PlaybackPositionTicks",ticks)); }
+    @Test public void homeRefreshReusesUiSnapshotsWithoutDuplicateServerLists() throws Exception {
+        checkRefreshRequests(true);
+    }
+    @Test public void standaloneJobStillFetchesFreshResumeNextRecommendationsAndViews() throws Exception {
+        checkRefreshRequests(false);
+    }
+    private void checkRefreshRequests(boolean fromHome) throws Exception {
+        try(okhttp3.mockwebserver.MockWebServer server=new okhttp3.mockwebserver.MockWebServer()) {
+            JSONArray recommendations=new JSONArray();
+            for(int i=0;i<5;i++) recommendations.put(Json.obj("RecommendationType","SimilarToRecentlyPlayed","BaselineItemName","Watched "+i,"Items",Json.arr(Json.obj("Id","film-"+i,"Type","Movie","Name","Film "+i))));
+            final JSONArray recs=recommendations;
+            server.setDispatcher(new okhttp3.mockwebserver.Dispatcher(){public okhttp3.mockwebserver.MockResponse dispatch(okhttp3.mockwebserver.RecordedRequest request) {
+                String path=request.getRequestUrl().encodedPath();Object response;
+                if(path.equals("/Movies/Recommendations")) response=recs;
+                else if(path.endsWith("/Views")) response=Json.obj("Items",Json.arr(Json.obj("Id","library","Name","Library")));
+                else if(path.endsWith("/Items/Resume")) response=Json.obj("Items",Json.arr(episode("fresh-resume",600000000L)));
+                else if(path.equals("/Shows/NextUp")) response=Json.obj("Items",Json.arr(episode("fresh-next",0)));
+                else if(path.endsWith("/Items")) {String type=request.getRequestUrl().queryParameter("IncludeItemTypes");response=Json.obj("Items",Json.arr(Json.obj("Id","library-"+type,"Type",type,"Name",type)));}
+                else return new okhttp3.mockwebserver.MockResponse().setResponseCode(404);
+                return new okhttp3.mockwebserver.MockResponse().setBody(response.toString());
+            }});server.start();
+            Account selected=new Account(server.url("/").toString(),"user","token","Rico","device");app.setAccount(selected);
+            String resume=Json.arr(episode("ui-resume",600000000L)).toString(),next=Json.arr(episode("ui-next",0)).toString();
+            app.library.state("views",Json.arr(Json.obj("Id","library","Name","Library")).toString());
+            app.library.state("home-0",resume);app.library.state("home-1",next);app.library.state("homeRecommendations",recs.toString());
+            java.util.concurrent.ExecutorService worker=org.robolectric.util.ReflectionHelpers.getField(app.channels,"worker");
+            if(fromHome) app.channels.refreshLibraries();else app.channels.refresh(null);
+            worker.submit(()->{}).get(8,java.util.concurrent.TimeUnit.SECONDS);
+            java.util.List<String> paths=new ArrayList<>();
+            int count=server.getRequestCount();for(int i=0;i<count;i++) {okhttp3.mockwebserver.RecordedRequest request=server.takeRequest(1,java.util.concurrent.TimeUnit.SECONDS);assertNotNull(request);paths.add(request.getRequestUrl().encodedPath());assertNotEquals("DateCreated",request.getRequestUrl().queryParameter("SortBy"));}
+            assertEquals(fromHome?2:7,count); // Standalone resume also discovers the optional Companion.
+            assertEquals(!fromHome,paths.contains("/Users/user/Items/Resume"));assertEquals(!fromHome,paths.contains("/Shows/NextUp"));
+            assertEquals(!fromHome,paths.contains("/Movies/Recommendations"));assertEquals(!fromHome,paths.contains("/Users/user/Views"));
+            if(fromHome) {assertEquals(resume,app.library.state("home-0"));assertEquals(next,app.library.state("home-1"));}
+            else {assertTrue(app.library.state("home-0").contains("fresh-resume"));assertTrue(app.library.state("home-1").contains("fresh-next"));}
+            assertEquals("",app.library.state("home-2"));
+            assertTrue(app.library.state("tv-library-Movie-library").contains("library-Movie"));
+            assertTrue(app.library.state("tv-library-Series-library").contains("library-Series"));
+            assertNotNull(provider.byProviderId("channel","lowfin-resume"));
+            assertTrue(provider.byProviderId("channel","lowfin-recommendation-0").getAsString("display_name").contains("Watched 0"));
+        }
+    }
+    @Test public void UpdatedBrandRewritesLegacyChannelLogoWithoutReplacingChannel() throws Exception {
+        java.lang.reflect.Method channel=HomeChannels.class.getDeclaredMethod("channel",String.class,String.class,boolean.class); channel.setAccessible(true);
+        long id=(Long)channel.invoke(app.channels,"resume","Fortsetzen",false);
+        android.content.SharedPreferences preferences=app.getSharedPreferences("tv-home",0);
+        preferences.edit().remove("logo-resume-companion-centered-v2").putBoolean("logo-resume-companion-style-v1",true).commit();
+        provider.logoWrites=0;
+        assertEquals(id,((Long)channel.invoke(app.channels,"resume","Fortsetzen",false)).longValue());
+        assertEquals(1,provider.logoWrites); assertTrue(preferences.getBoolean("logo-resume-companion-centered-v2",false));
+        channel.invoke(app.channels,"resume","Fortsetzen",false); assertEquals(1,provider.logoWrites);
+    }
+    @Test public void ChannelCanBeDisabledAndReenabledWithoutReplacingItsId() throws Exception {
+        app.channels.publish(); await(()->provider.count("watch_next_program")==2);
+        ContentValues channel=provider.byProviderId("channel","lowfin-resume"); long id=channel.getAsLong("_id");
+        assertTrue(app.channels.enabled("resume")); app.channels.setEnabled("resume",false);
+        await(()->provider.byProviderId("preview_program",account.scope()+":resume")==null&&provider.count("watch_next_program")==1);
+        assertFalse(app.channels.enabled("resume")); assertEquals(id,(long)provider.byProviderId("channel","lowfin-resume").getAsLong("_id"));
+        app.channels.publish(); Thread.sleep(50); assertNull(provider.byProviderId("preview_program",account.scope()+":resume"));
+        app.channels.setEnabled("resume",true); await(()->provider.byProviderId("preview_program",account.scope()+":resume")!=null&&provider.count("watch_next_program")==2);
+        assertEquals(id,(long)provider.byProviderId("channel","lowfin-resume").getAsLong("_id"));
+    }
     @Test public void createsFourChannelsAndAddsContinueAndNextToWatchNext() throws Exception {
         app.channels.publish(); await(()->provider.count("watch_next_program")==2);
         assertEquals(4,provider.count("channel")); assertEquals(4,provider.count("preview_program"));
@@ -144,6 +206,19 @@ public class HomeChannelsTest {
         app.library.state("homeRecommendations",Json.arr(Json.obj("BaselineItemName","Schauspieler","RecommendationType","HasActorFromRecentlyPlayed","Items",Json.arr(Json.obj("Id","film","Type","Movie"))),Json.obj("BaselineItemName","Regisseur","RecommendationType","HasDirectorFromRecentlyPlayed","Items",Json.arr(Json.obj("Id","other","Type","Movie")))).toString());
         app.channels.publish(); await(()->provider.count("watch_next_program")==2); assertEquals(4,provider.count("channel")); assertNull(provider.byProviderId("channel","lowfin-recommendation-0"));
     }
+    @Test public void unchangedProgramsCauseNoWritesButExternalChangesAndProgressAreRepaired() throws Exception {
+        java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);publish.invoke(app.channels,account);
+        Set<Long> channels=provider.ids("channel"),programs=provider.ids("preview_program");provider.previewWrites=0;provider.watchWrites=0;
+        publish.invoke(app.channels,account);assertEquals(0,provider.previewWrites);assertEquals(0,provider.watchWrites);
+        ContentValues preview=provider.byProviderId("preview_program",account.scope()+":resume");ContentValues wrong=new ContentValues();wrong.put("title","Externally changed");provider.update(TvContractCompat.buildPreviewProgramUri(preview.getAsLong("_id")),wrong,null,null);provider.previewWrites=0;
+        publish.invoke(app.channels,account);assertEquals(1,provider.previewWrites);assertEquals("Eine Serie",provider.byProviderId("preview_program",account.scope()+":resume").getAsString("title"));assertEquals(0,provider.watchWrites);
+        app.library.put(episode("resume",1200000000L));provider.previewWrites=0;publish.invoke(app.channels,account);assertEquals(1,provider.previewWrites);assertEquals(1,provider.watchWrites);assertEquals(channels,provider.ids("channel"));assertEquals(programs,provider.ids("preview_program"));
+    }
+    @Test public void missingProgramsAreRecreatedEvenWhenTheirDesiredContentHasNotChanged() throws Exception {
+        java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);publish.invoke(app.channels,account);
+        ContentValues previous=provider.byProviderId("preview_program",account.scope()+":resume");provider.delete(TvContractCompat.buildPreviewProgramUri(previous.getAsLong("_id")),null,null);publish.invoke(app.channels,account);
+        assertNotNull(provider.byProviderId("preview_program",account.scope()+":resume"));assertEquals(2,provider.count("watch_next_program"));
+    }
     @Test public void updatesProgressWithoutDuplicatingOrRecreatingChannels() throws Exception {
         app.channels.publish(); await(()->provider.count("watch_next_program")==2);
         Set<Long> ids=provider.ids("channel"); long programId=provider.byProviderId("watch_next_program",account.scope()+":resume").getAsLong("_id");
@@ -188,6 +263,7 @@ public class HomeChannelsTest {
 
     public static final class FakeTvProvider extends ContentProvider {
         volatile boolean zeroChannelUpdates;
+        int previewWrites,watchWrites;
         private final Map<String,Map<Long,ContentValues>> tables=new HashMap<>(); private long next=1;
         @Override public boolean onCreate() { return true; }
         private String table(Uri uri) { return uri.getPathSegments().get(0); }
@@ -199,7 +275,7 @@ public class HomeChannelsTest {
         synchronized void foreign(String table) { ContentValues v=new ContentValues(); v.put("_id",next++); v.put("package_name","another.app"); v.put("internal_provider_id","foreign"); v.put("browsable",1); rows(table).put(v.getAsLong("_id"),v); }
         synchronized void browse(String table,String id,boolean enabled) { for(ContentValues v:rows(table).values()) if(id.equals(v.getAsString("internal_provider_id"))) v.put("browsable",enabled?1:0); }
         @Override public synchronized Uri insert(Uri uri,ContentValues values) { ContentValues v=new ContentValues(values); v.put("_id",next++); v.put("package_name","de.lowfin.tv"); v.put("browsable",1); rows(table(uri)).put(v.getAsLong("_id"),v); return ContentUris.withAppendedId(uri,v.getAsLong("_id")); }
-        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return zeroChannelUpdates&&table(uri).equals("channel")?0:1; }
+        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; if(table(uri).equals("preview_program")) previewWrites++;if(table(uri).equals("watch_next_program")) watchWrites++;v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return zeroChannelUpdates&&table(uri).equals("channel")?0:1; }
         @Override public synchronized int delete(Uri uri,String where,String[] args) { return rows(table(uri)).remove(ContentUris.parseId(uri))==null?0:1; }
         @Override public synchronized Cursor query(Uri uri,String[] projection,String where,String[] args,String sort) {
             MatrixCursor out=new MatrixCursor(projection); String channel=uri.getQueryParameter("channel"); Long id=uri.getPathSegments().size()>1?ContentUris.parseId(uri):null;
@@ -210,6 +286,7 @@ public class HomeChannelsTest {
             } return out;
         }
         @Override public String getType(Uri uri) { return "image/png"; }
-        @Override public ParcelFileDescriptor openFile(Uri uri,String mode) throws FileNotFoundException { return ParcelFileDescriptor.open(new File(getContext().getCacheDir(),"channel-logo.png"),ParcelFileDescriptor.MODE_READ_WRITE|ParcelFileDescriptor.MODE_CREATE|ParcelFileDescriptor.MODE_TRUNCATE); }
+        int logoWrites;
+        @Override public ParcelFileDescriptor openFile(Uri uri,String mode) throws FileNotFoundException { logoWrites++; return ParcelFileDescriptor.open(new File(getContext().getCacheDir(),"channel-logo.png"),ParcelFileDescriptor.MODE_READ_WRITE|ParcelFileDescriptor.MODE_CREATE|ParcelFileDescriptor.MODE_TRUNCATE); }
     }
 }

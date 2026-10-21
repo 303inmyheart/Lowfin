@@ -1,0 +1,86 @@
+{
+  "version": "1.2.5",
+  "version_code": 91,
+  "build_type": "release",
+  "apk_sha256": "373d823ab7afe7ed0fc7cc8df3adaf8fc0e96b52d4baa9f2ee1ccacd6487c6a6",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "full_suite": {
+    "tests": 425,
+    "failures": 0,
+    "errors": 0,
+    "note": "before final partial-episode metadata regression"
+  },
+  "final_targeted_tests": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0
+  },
+  "companion_tests": 62,
+  "lint_release": "passed",
+  "companion_version": "0.4.1",
+  "companion_zip_sha256": "41d7545bea1080909224f2a992a8711fbab267fc24f3aa0be685360e558bf671",
+  "companion_integration": {
+    "serverVersion": "12.2.0",
+    "pluginVersion": "0.4.1",
+    "runtimeSeconds": 43200,
+    "checks": [
+      "discovery",
+      "existing-auth",
+      "long-video-correction",
+      "normal-session-progress",
+      "persistent-resume-list",
+      "duplicate-report",
+      "no-synthetic-progress",
+      "manual-watched-fence",
+      "custom-percentage",
+      "default-policy",
+      "global-threshold-preserved",
+      "explicit-opt-in",
+      "native-playback-without-rule",
+      "two-library-scope",
+      "cross-device-same-user-rule",
+      "jellyfin-resume-exclusions",
+      "hidden-resume-retained",
+      "plugin-metadata-and-artwork",
+      "incremental-cache-bootstrap",
+      "native-metadata-event-delivery",
+      "cache-permission-cursor-reset",
+      "cache-authentication",
+      "admin-plugin-configuration",
+      "provider-user-allowlist",
+      "provider-secret-protection",
+      "ordinary-user-config-denied",
+      "dashboard-page-registration",
+      "cover-tag-auth-and-limits",
+      "cover-tag-config-and-facts",
+      "cover-tag-disable-and-independent-switches",
+      "cover-tag-library-visibility"
+    ]
+  },
+  "episode_majority_integration": {
+    "server": "12.2.0",
+    "plugin": "0.4.1",
+    "episodes": 3,
+    "sd": 2,
+    "hd": 1,
+    "seriesDvd": true,
+    "seasonDvd": true,
+    "episodeRatingsRouteAndNoStore": true,
+    "noExternalCredentialsUsed": true
+  },
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.2.5",
+      "version_code": 91,
+      "verified": true,
+      "app_started": true,
+      "activity_resumed": true,
+      "verified_at": "2026-10-21T08:16:38.929341+00:00"
+    }
+  ],
+  "production_plugin_installed": false,
+  "github_pushed": false,
+  "document": "docs/episode-ratings-and-dvd-majority-1.2.5.md",
+  "created_at": "2026-10-21T08:15:52.719594+00:00"
+}

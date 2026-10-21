@@ -1,0 +1,23 @@
+{
+  "version": "1.2.13",
+  "version_code": 99,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "tests": 446,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "english_resource_entries": 452,
+  "english_coverage_audit": "passed",
+  "companion_tests": 78,
+  "feed_generator_tests": 2,
+  "apk_sha256": "7d0b7a1813de1bd60807ce88c9270dc1a510cba80d083ae29cbcfb6acad75637",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installed_devices": [],
+  "installation_authorization": "User requested local build only; no installation.",
+  "document": "docs/player-caption-1.2.13.md",
+  "created_at": "2026-10-21T14:31:25.108488+00:00"
+}

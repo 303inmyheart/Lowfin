@@ -1,0 +1,7 @@
+<resources>
+    <string name="jump_to_letter">Jump to letter</string>
+    <string name="jump_letter_hint"># starts at numbers and symbols. Letters use Jellyfin’s sort order.</string>
+    <string name="jump_letter_empty">No titles at or after this letter.</string>
+    <string name="scroll_animations">Smooth scrolling</string>
+    <string name="scroll_animation_hint">Home and library content glide while navigating. Requires UI animations to be enabled.</string>
+</resources>

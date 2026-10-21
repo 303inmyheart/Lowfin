@@ -5,6 +5,15 @@ import org.json.*;
 import static org.junit.Assert.*;
 
 public class PlaybackPolicyTest {
+    @Test public void premiereIntroExceptionOnlyAppliesToFirstEpisodesWhenEnabled() {
+        JSONObject first=Json.obj("Type","Episode","IndexNumber",1,"ParentIndexNumber",2);
+        assertTrue(PlaybackPolicy.keepSeasonPremiereIntro("Intro",first,true));
+        assertFalse(PlaybackPolicy.keepSeasonPremiereIntro("Outro",first,true));
+        assertFalse(PlaybackPolicy.keepSeasonPremiereIntro("Intro",first,false));
+        assertFalse(PlaybackPolicy.keepSeasonPremiereIntro("Intro",Json.obj("Type","Episode","IndexNumber",2),true));
+        assertFalse(PlaybackPolicy.keepSeasonPremiereIntro("Intro",Json.obj("Type","Episode"),true));
+        assertFalse(PlaybackPolicy.keepSeasonPremiereIntro("Intro",Json.obj("Type","Movie","IndexNumber",1),true));
+    }
     @Test public void uhdProfileDoesNotKeepAFullHdWidthLimit() {
         JSONObject conditions=PlaybackPolicy.profile(2160,25000000).optJSONArray("CodecProfiles").optJSONObject(0);
         JSONArray limits=conditions.optJSONArray("Conditions");

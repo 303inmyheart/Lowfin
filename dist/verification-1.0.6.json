@@ -1,0 +1,37 @@
+{
+  "version": "1.0.6",
+  "version_code": 78,
+  "build_type": "release",
+  "debuggable": false,
+  "tests": {
+    "tests": 372,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "f6d616c57ee01034a02092c43f24f41fa4011237c3b8a3c9f1cdcad88e92c098",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installation_pending": [],
+  "installed_device": "192.168.1.128:5555",
+  "installed_version_verified": "1.0.6 (78)",
+  "app_started": true,
+  "github_pushed": false,
+  "created_at": "2026-10-16T15:16:39.645984+00:00",
+  "denoise_gpu_test": {
+    "device": "192.168.1.128:5555",
+    "renderer": "Mali-G31",
+    "result": "passed",
+    "checks": [
+      "actual optimized target builder constructor",
+      "reflected factory methods",
+      "graph factory construction",
+      "shader compilation",
+      "identity passthrough",
+      "spatial noise reduction",
+      "strong edge preservation",
+      "opaque alpha preservation"
+    ],
+    "limitations": "Factory/reflection and shader fixture checks, not full-film playback or a sustained performance benchmark."
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "version": "1.1.2",
+  "version_code": 84,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 401,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "lint_warnings": 57,
+  "apk_sha256": "c8dbed933de9f0ebf0360a1de51b0e0f9eca90c980b40b400d7198dc5fbecc09",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-21T02:27:52.699422+00:00",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.1.2",
+      "version_code": 84,
+      "verified": true,
+      "app_started": true
+    }
+  ],
+  "installation_pending": [],
+  "app_started": true,
+  "github_pushed": false,
+  "document": "docs/home-return-awake-1.1.2.md",
+  "precache_keep_awake": {
+    "default": false,
+    "foreground_only": true,
+    "full_baseline_and_active_delta_artwork": true,
+    "player_flags_unchanged": true,
+    "actual_user_cache_rebuilt_for_test": false
+  },
+  "home_return": {
+    "row_and_media_id": true,
+    "more_card": true,
+    "horizontal_layout": true,
+    "local_metadata_hydration": true,
+    "cold_start_behavior_unchanged": true
+  },
+  "installation_scope": "Only .128 installed and opened; no .87/.166 access and no shutdown",
+  "startup128": {
+    "pid": 21256,
+    "activity_resumed": true
+  }
+}

@@ -1,0 +1,57 @@
+Read-only .128 cache snapshot before 0.10.15 update.
+Confirmed Companion metadata deliveries: Torment and Culpa Nuestra - Unsere Schuld, latest received 2026-10-14T22:40:38.252Z (2026-10-15 00:40:38.252 Europe/Berlin).
+30228 metadata rows (+1 vs 30227), 28339 images (+2 vs 28337), 560121197 bytes (+47182).
+Image growth is not per-download source evidence. Scooby matching files unchanged (286).
+
+INSTRUMENTATION_RESULT: cache_diagnostics=cacheChangeAudit=[{"receivedAt":1792017638252,"source":"companion","id":"2e48f4e639a33681abd8adaf6221a5fe","type":"Movie","name":"Torment","series":"","season":-1,"episode":-1},{"receivedAt":1792017638252,"source":"companion","id":"f65290e59afd56c39867203d651c21c3","type":"Movie","name":"Culpa Nuestra - Unsere Schuld","series":"","season":-1,"episode":-1},{"receivedAt":1792017581155,"source":"companion","id":"f65290e59afd56c39867203d651c21c3","type":"Movie","name":"Culpa Nuestra - Unsere Schuld","series":"","season":-1,"episode":-1},{"receivedAt":1792017579202,"source":"companion","id":"2e48f4e639a33681abd8adaf6221a5fe","type":"Movie","name":"Tormento (2025)","series":"","season":-1,"episode":-1}]
+cacheCursor=present
+cacheStatus=Cache behalten · wartet auf Plugin-Änderungen. Frühere Änderungen konnten nicht geprüft werden; bei Bedarf manuell aktualisieren.
+lastSync=1791875510161
+recentMetadata=Episode | 003 - 0034 - Namenlos | series=SpongeBob Schwammkopf | season=3 episode=34 | localSavedAt=2026-10-14T22:43:24.602Z | serverDateLastSaved=
+recentMetadata=Episode | 002 - 0002 - Das Experiment der Mars-Universität | series=Futurama | season=2 episode=2 | localSavedAt=2026-10-14T22:43:24.571Z | serverDateLastSaved=
+recentMetadata=Episode | 004 - 0006 - Nicht ohne meine Niere | series=South Park | season=4 episode=6 | localSavedAt=2026-10-14T22:43:24.512Z | serverDateLastSaved=
+recentMetadata=Movie | conjuring 0000000004: das letzte kapitel | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:43:24.489Z | serverDateLastSaved=
+recentMetadata=Episode | 003 - 0012 - Timmy reißt aus | series=Cosmo und Wanda - Wenn Elfen helfen | season=3 episode=12 | localSavedAt=2026-10-14T22:43:24.469Z | serverDateLastSaved=
+recentMetadata=Episode | 006 - 0006 - JuRicksic Mort | series=Rick and Morty | season=6 episode=6 | localSavedAt=2026-10-14T22:43:24.444Z | serverDateLastSaved=
+recentMetadata=Episode | 004 - 0004 - Wo ist der blöde Hund? | series=Two and a Half Men | season=4 episode=4 | localSavedAt=2026-10-14T22:43:24.421Z | serverDateLastSaved=
+recentMetadata=Episode | 001 - 0001 - Geheimnisse | series=Dark | season=1 episode=1 | localSavedAt=2026-10-14T22:40:47.652Z | serverDateLastSaved=
+recentMetadata=Episode | 001 - 0005 - Der Fießling aus dem Schließfach | series=Danny Phantom | season=1 episode=5 | localSavedAt=2026-10-14T22:40:47.652Z | serverDateLastSaved=
+recentMetadata=Episode | 001 - 0008 - Charlie mittendrin | series=Anger Management | season=1 episode=8 | localSavedAt=2026-10-14T22:40:47.652Z | serverDateLastSaved=
+recentMetadata=Episode | 001 - 0013 - Endspiel | series=Blue Mountain State | season=1 episode=13 | localSavedAt=2026-10-14T22:40:47.652Z | serverDateLastSaved=
+recentMetadata=Episode | 012 - 0014 - American Fung | series=American Dad | season=12 episode=14 | localSavedAt=2026-10-14T22:40:47.652Z | serverDateLastSaved=
+recentMetadata=Movie | torment | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:40:38.091Z | serverDateLastSaved=
+recentMetadata=Movie | culpa nuestra  unsere schuld | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:40:38.042Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000021 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+recentMetadata=Movie | 0000000022 jump street | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys  harte jungs | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys for life | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+recentMetadata=Movie | bad boys ii | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+recentMetadata=Movie | deadpool  wolverine | series= | season=-1 episode=-1 | localSavedAt=2026-10-14T22:39:38.194Z | serverDateLastSaved=
+scoobyMatchedImageFiles=286
+scoobyImage=Mission Scooby-Doo | series= | Thumb width=320 | bytes=14910 | filesystemModifiedAt=2026-10-14T20:45:33Z
+scoobyImage=Mission Scooby-Doo | series= | Primary width=320 | bytes=29580 | filesystemModifiedAt=2026-10-14T20:45:11Z
+scoobyImage=Scooby Doo und wer bist Du | series= | Primary width=320 | bytes=47118 | filesystemModifiedAt=2026-10-14T20:44:31Z
+scoobyImage=Die Scooby Doo Show | series= | Primary width=320 | bytes=46996 | filesystemModifiedAt=2026-10-14T20:43:41Z
+scoobyImage=Die Scooby Doo Show | series= | Thumb width=320 | bytes=21476 | filesystemModifiedAt=2026-10-14T20:43:28Z
+scoobyImage=Scooby Doo, wo bist du? | series= | Thumb width=320 | bytes=19847 | filesystemModifiedAt=2026-10-14T20:42:11Z
+scoobyImage=Scooby Doo, wo bist du? | series= | Primary width=320 | bytes=43745 | filesystemModifiedAt=2026-10-14T20:41:58Z
+scoobyImage=Das Tor zum Schicksal | series=Mission Scooby-Doo | Primary width=320 | bytes=16835 | filesystemModifiedAt=2026-10-14T04:07:12Z
+scoobyImage=Der Traumweber | series=Mission Scooby-Doo | Primary width=320 | bytes=11608 | filesystemModifiedAt=2026-10-14T04:07:11Z
+scoobyImage=Antike Helden | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=21675 | filesystemModifiedAt=2026-10-14T04:07:08Z
+scoobyImage=Elementar, mein lieber Shaggy! | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=19848 | filesystemModifiedAt=2026-10-14T04:07:07Z
+scoobyImage=Wie im Film | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=24969 | filesystemModifiedAt=2026-10-14T04:07:05Z
+scoobyImage=Der Geistertruck | series=Mission Scooby-Doo | Primary width=320 | bytes=14530 | filesystemModifiedAt=2026-10-14T04:07:04Z
+scoobyImage=Die fürchterliche Herde | series=Mission Scooby-Doo | Primary width=320 | bytes=19432 | filesystemModifiedAt=2026-10-14T04:07:02Z
+scoobyImage=Folge 22 | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=18893 | filesystemModifiedAt=2026-10-14T04:07:01Z
+scoobyImage=Scooby-Doo und wer bist Du S00E001 | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=20256 | filesystemModifiedAt=2026-10-14T04:06:57Z
+scoobyImage=Spuk in Crystal Cove | series=Mission Scooby-Doo | Primary width=320 | bytes=17245 | filesystemModifiedAt=2026-10-14T04:06:55Z
+scoobyImage=Das große, grüne Horrording | series=Die Scooby Doo Show | Primary width=320 | bytes=18941 | filesystemModifiedAt=2026-10-14T04:06:54Z
+scoobyImage=Schuh-bi-dubidu! | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=28773 | filesystemModifiedAt=2026-10-14T04:06:51Z
+scoobyImage=Ein Ritter in Hollywood | series=Scooby Doo und wer bist Du | Primary width=320 | bytes=16607 | filesystemModifiedAt=2026-10-14T04:06:50Z
+items=30228
+cache_artwork=10
+companionAvailable=true incrementalCache=true
+autoPrecache=true
+imageFiles=28339 imageBytes=560121197
+
+INSTRUMENTATION_CODE: 0

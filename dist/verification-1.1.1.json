@@ -1,0 +1,43 @@
+{
+  "version": "1.1.1",
+  "version_code": 83,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "tests": 397,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "lint_release": "passed",
+  "lint_warnings": 57,
+  "apk_sha256": "a8e66655f845fefda9555cac61f4873f7f4ee7f46cd52ac895e2532690a3b85f",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "created_at": "2026-10-21T02:15:40.047843+00:00",
+  "installed_devices": [
+    {
+      "device": "192.168.1.128:5555",
+      "version": "1.1.1",
+      "version_code": 83,
+      "verified": true,
+      "app_started": true
+    }
+  ],
+  "installation_pending": [],
+  "app_started": true,
+  "github_pushed": false,
+  "document": "docs/home-refresh-notices-1.1.1.md",
+  "startup128": {
+    "pid": 16663,
+    "cached_resume_ms": 1852,
+    "cached_next_ms": 1853,
+    "fresh_next_ms": 1877,
+    "fresh_resume_ms": 6708,
+    "home_build_ms": 325,
+    "first_artwork_ms": 2907,
+    "saved_artwork_inventory": true,
+    "controlled_speedup_established": false
+  },
+  "installation_scope": "Automatic install/start exclusively .128 per latest instruction; .87/.166 not accessed; no shutdown"
+}

@@ -1,0 +1,29 @@
+{
+  "version": "1.2.8",
+  "version_code": 94,
+  "build_type": "release",
+  "debuggable": false,
+  "shrinking": "R8 + resources",
+  "tests": {
+    "scope": "MovieSlotTest + DialogActionsTest",
+    "tests": 11,
+    "failures": 0,
+    "errors": 0
+  },
+  "lint_release": "passed",
+  "apk_sha256": "f90c950bbf06535fe77739725e03b2520f35cbc9f273c47e4c5b3249e4c561db",
+  "certificate_sha256": "dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198",
+  "installed_devices": [
+    {
+      "serial": "192.168.1.128:5555",
+      "version": "1.2.8",
+      "version_code": 94,
+      "debuggable": false,
+      "started": true,
+      "verified_at": "2026-10-21T09:25:04.813424+00:00"
+    }
+  ],
+  "github_pushed": false,
+  "document": "docs/random-movie-width-1.2.8.md",
+  "created_at": "2026-10-21T09:24:41.993510+00:00"
+}
