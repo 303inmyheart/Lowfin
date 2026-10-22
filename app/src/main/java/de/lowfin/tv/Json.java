@@ -13,11 +13,15 @@ final class Json {
     static JSONObject object(JSONObject j,String key) { JSONObject o=j.optJSONObject(key); return o==null?new JSONObject():o; }
     static JSONArray array(JSONObject j,String key) { JSONArray a=j.optJSONArray(key); return a==null?new JSONArray():a; }
     static String str(JSONObject j,String key) { return j.isNull(key)?"":j.optString(key,""); }
+    static String normalizedId(String value) {
+        String id=value.replace("-","").toLowerCase(java.util.Locale.ROOT);if(id.length()!=32)return "";
+        for(int i=0;i<32;i++){char c=id.charAt(i);if(!((c>='0'&&c<='9')||(c>='a'&&c<='f')))return "";}return id;
+    }
     static java.util.List<String> coverTagIds(JSONObject item) {
         java.util.LinkedHashSet<String> ids=new java.util.LinkedHashSet<>();
         for(String field:new String[]{"Id","SeriesId","SeasonId","ParentId"}) {
             if(!field.equals("Id")&&!item.optString("Type").equals("Episode")&&!item.optString("Type").equals("Season")) continue;
-            String id=item.optString(field).replace("-","").toLowerCase(java.util.Locale.ROOT);if(id.matches("[0-9a-f]{32}")) ids.add(id);
+            String id=normalizedId(item.optString(field));if(!id.isEmpty())ids.add(id);
         }
         return new java.util.ArrayList<>(ids);
     }

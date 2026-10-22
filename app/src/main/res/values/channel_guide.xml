@@ -1,0 +1,8 @@
+<resources>
+    <string name="live_guide_title">Programme</string>
+    <string name="live_guide_refresh">Refresh</string>
+    <string name="live_guide_loading">Loading current and upcoming programmes…</string>
+    <string name="live_guide_now">Now</string>
+    <string name="live_guide_empty">No current or upcoming programmes are available for this channel.</string>
+    <string name="live_guide_retry">Try again</string>
+</resources>

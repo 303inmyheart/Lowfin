@@ -1,0 +1,5 @@
+<resources>
+    <string name="live_program_loading">Loading current programme…</string>
+    <string name="live_program_error">Current programme could not be loaded.</string>
+    <string name="live_program_empty">No programme information is available for this channel right now.</string>
+</resources>

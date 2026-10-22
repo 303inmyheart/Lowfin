@@ -1,0 +1,8 @@
+<resources>
+    <string name="live_guide_title">Programm</string>
+    <string name="live_guide_refresh">Aktualisieren</string>
+    <string name="live_guide_loading">Aktuelles und folgendes Programm wird geladen …</string>
+    <string name="live_guide_now">Jetzt</string>
+    <string name="live_guide_empty">Für diesen Sender ist kein aktuelles oder folgendes Programm verfügbar.</string>
+    <string name="live_guide_retry">Erneut versuchen</string>
+</resources>

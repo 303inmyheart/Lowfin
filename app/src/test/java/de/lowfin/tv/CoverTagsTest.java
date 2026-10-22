@@ -59,6 +59,18 @@ public class CoverTagsTest {
             assertTrue("UI binding waited for the database writer",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began)<500);
         } finally {unlock.countDown();writer.join(2000);}
     }
+    @Test public void BatchCompletionDoesNotWaitForPersistenceAndRejectsStaleRetries() throws Exception {
+        Object gate=org.robolectric.util.ReflectionHelpers.getField(tags,"gate");CountDownLatch locked=new CountDownLatch(1),unlock=new CountDownLatch(1);
+        Thread writer=new Thread(()-> {synchronized(gate) {locked.countDown();try {unlock.await(4,TimeUnit.SECONDS);}catch(InterruptedException error) {Thread.currentThread().interrupt();}}});writer.start();assertTrue(locked.await(1,TimeUnit.SECONDS));
+        try {
+            java.lang.reflect.Method complete=CompanionCoverTags.class.getDeclaredMethod("completeBatch",long.class,java.util.List.class,boolean.class,boolean.class);complete.setAccessible(true);
+            long began=System.nanoTime();complete.invoke(tags,0L,java.util.Collections.singletonList(FIRST),false,false);
+            assertTrue("UI completion waited for the database writer",TimeUnit.NANOSECONDS.toMillis(System.nanoTime()-began)<500);
+            android.util.LruCache<String,Object> retries=org.robolectric.util.ReflectionHelpers.getField(tags,"retry");assertNotNull(retries.get(FIRST));
+            retries.evictAll();org.robolectric.util.ReflectionHelpers.setField(tags,"epoch",1L);
+            complete.invoke(tags,0L,java.util.Collections.singletonList(FIRST),false,false);assertNull("Old batches must not delay fresh tags",retries.get(FIRST));
+        } finally {unlock.countDown();writer.join(2000);}
+    }
     @Test public void PersistentFactsAreReadWithoutWritingThemBackAgain() throws Exception {
         db.state("cover-tags-v2-"+FIRST,"3");
         db.getWritableDatabase().execSQL("CREATE TABLE tag_write_audit (value INTEGER)");

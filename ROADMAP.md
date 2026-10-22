@@ -388,3 +388,13 @@ Batch per-user Companion state reads in bounded chunks, preserve list order and 
 - [x] 1.2.14 / Companion 0.6.0: Alle JellyTag-Kategorien als native, begrenzte Cover-Tags, serverseitig wählbar, sprachneutraler Index und abwärtskompatible API.
 
 - [x] 1.2.15: Bildrate, Audiokanäle, Trailer-Auflösung, Untertitelsprache, Banner-Wechsel und Spulverhalten lokal konfigurierbar; einheitliche Einstellungsabstände.
+
+- [x] 1.2.16: Sender lang drücken für aktuelles Programm; Live-TV-Seitenleisteneintrag nur bei verfügbaren Sendern, mit kontobezogener Hintergrundprüfung.
+
+- [x] 1.2.17: Sender-Programmübersicht per langem OK, jetzt/danach mit Tagesangaben und Uhrzeiten, blätterbare Folgesendungen und Detailbeschreibung bei OK.
+
+- [x] 1.2.18: Navigationsoptimierung anhand .128-Logs: unnötige Seitenleisten-Neuaufbauten vermeiden, Beschreibungen mit begrenztem HTML-Cache und schnellem Klartextpfad, Cover-ID-Prüfung ohne wiederholte Regex-Kompilierung.
+
+- [x] 1.2.19: Remove the remaining main-thread cover-tag persistence wait; fence retry deadlines by metadata generation and test blocked-writer completion.
+
+- [x] 1.2.20: Rate-limit sustained Companion cache notices while continuing immediate incremental updates.

@@ -32,6 +32,7 @@ public class TvUiTest {
     private volatile JSONArray recommendations=new JSONArray(),firstEpisodes=new JSONArray();
     private volatile boolean recommendationsOffline;
     private volatile boolean companionInstalled;
+    private volatile boolean liveConfigured=true;
     private volatile String blockedHomePath="";
     private final java.util.concurrent.CountDownLatch homeBlocked=new java.util.concurrent.CountDownLatch(1),homeRelease=new java.util.concurrent.CountDownLatch(1);
     private volatile JSONObject companionState;
@@ -61,7 +62,8 @@ public class TvUiTest {
                 if(path.equals("/Users/user/Items/movie")) return new MockResponse().setBody(movie.toString());
                 if(path.equals("/Genres")) return new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","genre","Name","Drama","MovieCount",1)),"TotalRecordCount",1).toString());
                 if(path.equals("/Users/user/Views")) return new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","films","Name","Meine Filme","CollectionType","movies"),Json.obj("Id","shows","Name","Serien","CollectionType","tvshows"))).toString());
-                if(path.equals("/LiveTv/Channels")) return new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","channel","Name","Sender Eins","Type","TvChannel")),"TotalRecordCount",1).toString());
+                if(path.equals("/LiveTv/Channels")) return new MockResponse().setBody(Json.obj("Items",liveConfigured?Json.arr(Json.obj("Id","channel","Name","Sender Eins","Type","TvChannel")):new JSONArray(),"TotalRecordCount",liveConfigured?1:0).toString());
+                if(path.equals("/LiveTv/Programs")) {JSONArray programmes=new JSONArray();int offset=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("StartIndex"),"0")),limit=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("Limit"),"1"));java.time.Instant now=java.time.Instant.now();for(int n=offset;n<Math.min(15,offset+limit);n++)programmes.put(Json.obj("ChannelId","channel","Name",n==0?"Aktuelle Sendung":"Spätere Sendung "+n,"Overview","Programm-Beschreibung "+n,"StartDate",now.plusSeconds(n*1200-600).toString(),"EndDate",now.plusSeconds((n+1)*1200-600).toString()));return new MockResponse().setBody(Json.obj("Items",programmes).toString());}
                 if(path.equals("/Shows/show/Seasons")) {
                     JSONArray seasons=new JSONArray(); for(int i=1;i<=45;i++) seasons.put(Json.obj("Id","s"+i,"ParentId","show","SeriesId","show","Type","Season","IndexNumber",i,"Name","Staffel "+i,"RecursiveItemCount",24,"ImageTags",Json.obj("Primary","season-poster"),"PrimaryImageAspectRatio",2.0/3));
                     return new MockResponse().setBody(Json.obj("Items",seasons,"TotalRecordCount",45).toString());
@@ -449,19 +451,43 @@ public class TvUiTest {
         assertEquals("Mehr anzeigen",more.getContentDescription().toString()); more.performClick(); layout();
         assertNotNull(findText(root,"Als Nächstes")); assertTrue(recycler().getAdapter() instanceof MediaAdapter);
     }
+    @Test public void unchangedLibraryAndLiveResponsesKeepSidebarViewsAndFocus() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Meine Filme")!=null&&findButton(root,"Live TV")!=null&&!((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"viewsLoading")));
+        remote(KeyEvent.KEYCODE_MENU,1);layout();Button original=findButton(root,"Suche");original.requestFocus();
+        java.lang.reflect.Method publish=MainActivity.class.getDeclaredMethod("publishViews",java.util.List.class);publish.setAccessible(true);
+        java.util.List<JSONObject> copy=new java.util.ArrayList<>();java.util.List<JSONObject> before=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"views");for(JSONObject view:before)copy.add(new JSONObject(view.toString()));publish.invoke(activity.get(),copy);layout();assertSame(original,findButton(root,"Suche"));assertTrue(original.hasFocus());
+        copy.get(0).put("Name","Renamed library");publish.invoke(activity.get(),copy);layout();assertNotNull(findButton(root,"Renamed library"));assertTrue(findButton(root,"Suche").hasFocus());
+    }
     @Test public void SidebarSpacingBetweenGenresAndLiveMatchesOtherEntries() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis()); activity=Robolectric.buildActivity(MainActivity.class).setup();
-        remote(KeyEvent.KEYCODE_MENU,1); layout(); View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Live TV")!=null);remote(KeyEvent.KEYCODE_MENU,1); layout(); View root=activity.get().findViewById(android.R.id.content);
         Button search=findButton(root,"Suche"),genres=findButton(root,"Genres"),live=findButton(root,"Live TV");
         assertEquals(genres.getTop()-search.getBottom(),live.getTop()-genres.getBottom());
         screenshot("sidebar-even-spacing-hd.png");
+    }
+    @Test public void sidebarHidesLiveTvWhenNoChannelsExist() throws Exception {
+        liveConfigured=false;app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->"false".equals(app.library.state("liveTvAvailable")));assertNull(findButton(activity.get().findViewById(android.R.id.content),"Live TV"));
+    }
+    @Test public void channelLongPressShowsCurrentProgrammeWithoutStartingPlayback() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Live TV")!=null);findButton(root,"Live TV").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&recycler().getChildCount()>0);
+        View card=recycler().getChildAt(0);card.performLongClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotNull(dialog);
+        await(()->findText(dialog.getWindow().getDecorView(),"Aktuelle Sendung")!=null);View programmeRow=(View)findText(dialog.getWindow().getDecorView(),"Aktuelle Sendung").getParent();programmeRow.performClick();android.app.AlertDialog details=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertNotSame(dialog,details);assertNotNull(find(details.getWindow().getDecorView(),v->v instanceof TextView&&((TextView)v).getText().toString().contains("Programm-Beschreibung")));details.dismiss();layout();assertTrue(dialog.isShowing());assertTrue(programmeRow.hasFocus());assertNull(shadowOf(activity.get()).getNextStartedActivity());
+    }
+    @Test public void channelGuideShowsUpcomingAndOnlyOffersAvailablePages() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Live TV")!=null);findButton(root,"Live TV").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0);recycler().getChildAt(0).performLongClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View guide=dialog.getWindow().getDecorView();
+        await(()->findText(guide,"Spätere Sendung 11")!=null);assertNull(findText(guide,"Spätere Sendung 12"));assertEquals(View.GONE,findButton(guide,"← Vorherige Seite").getVisibility());findButton(guide,"Nächste Seite →").performClick();
+        await(()->findText(guide,"Spätere Sendung 12")!=null);assertEquals(View.VISIBLE,findButton(guide,"← Vorherige Seite").getVisibility());assertEquals(View.GONE,findButton(guide,"Nächste Seite →").getVisibility());findButton(guide,"← Vorherige Seite").performClick();await(()->findText(guide,"Aktuelle Sendung")!=null);assertNull(shadowOf(activity.get()).getNextStartedActivity());
     }
     @Test public void sidebarUsesActualLibraryNamesAndLiveTvOnlyShowsChannels() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Rico","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null);
         View root=activity.get().findViewById(android.R.id.content);
-        assertNotNull(findButton(root,"Suche")); findButton(root,"Live TV").performClick();
+        assertNotNull(findButton(root,"Suche"));await(()->findButton(root,"Live TV")!=null); findButton(root,"Live TV").performClick();
         await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);
         assertNull(findButton(root,"Programm")); assertNull(findButton(root,"Aufnahmen"));
         screenshot("live-channels-hd.png");

@@ -17,7 +17,22 @@ public class CacheNoticeTest {
         List<Integer> shown=new ArrayList<>();CacheNotice notices=new CacheNotice(()->true,shown::add);
         notices.changed(0);notices.changed(2);notices.changed(3);Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue(shown.isEmpty());
         Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));assertEquals(Collections.singletonList(5),shown);
-        notices.changed(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));assertEquals(Arrays.asList(5,1),shown);notices.close();
+        notices.changed(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));assertEquals(Collections.singletonList(5),shown);
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(58500));assertEquals(Arrays.asList(5,1),shown);notices.close();
+    }
+    @Test public void continuousChangesNotifyAtMostOncePerMinuteWithoutLosingCounts() {
+        List<Integer> shown=new ArrayList<>();CacheNotice notices=new CacheNotice(()->true,shown::add);
+        notices.changed(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
+        for(int i=0;i<59;i++) {notices.changed(8);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));}
+        assertEquals(Collections.singletonList(1),shown);
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1));assertEquals(Arrays.asList(1,472),shown);
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(2));assertEquals(2,shown.size());notices.close();
+    }
+    @Test public void disablingDuringCooldownDropsTheSummary() {
+        boolean[] enabled={true};List<Integer> shown=new ArrayList<>();CacheNotice notices=new CacheNotice(()->enabled[0],shown::add);
+        notices.changed(1);Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1500));
+        notices.changed(9);Shadows.shadowOf(Looper.getMainLooper()).idle();enabled[0]=false;
+        Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(1));assertEquals(Collections.singletonList(1),shown);notices.close();
     }
     @Test public void disablingOrLeavingForegroundDropsQueuedAndFutureNotices() {
         boolean[] allowed={true};List<Integer> shown=new ArrayList<>();CacheNotice notices=new CacheNotice(()->allowed[0],shown::add);

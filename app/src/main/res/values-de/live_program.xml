@@ -1,0 +1,5 @@
+<resources>
+    <string name="live_program_loading">Aktuelles Programm wird geladen …</string>
+    <string name="live_program_error">Das aktuelle Programm konnte nicht geladen werden.</string>
+    <string name="live_program_empty">Für diesen Sender sind gerade keine Programminformationen verfügbar.</string>
+</resources>

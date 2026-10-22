@@ -62,6 +62,7 @@ final class LowfinDialog {
         centerTexts(window.getDecorView());
         fitContent(dialog,width,preferredWidth>0);
     }
+    static void refit(AlertDialog dialog) {Context context=dialog.getContext();fitContent(dialog,Math.min(Ui.dp(context,480),context.getResources().getDisplayMetrics().widthPixels-Ui.dp(context,48)),false);}
     private static void fitContent(AlertDialog dialog,int cap,boolean fixedWidth) {
         Window window=dialog.getWindow();Context context=dialog.getContext();View decor=window.getDecorView();
         int wanted=Math.max(Ui.dp(context,280),textWidth(decor,cap));

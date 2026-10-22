@@ -33,6 +33,7 @@ public final class MainActivity extends Activity {
     private LinearLayout sidebar;
     private final List<JSONObject> views=new ArrayList<>();
     private boolean viewsLoading;
+    private boolean liveAvailable,liveChecking;private Api liveApi;private long liveChecked;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView cacheStatusView;
     private Button preloadButton;
@@ -72,7 +73,7 @@ public final class MainActivity extends Activity {
         }
     }
     private boolean savedNone(Bundle state) { return state==null; }
-    @Override protected void onResume() { super.onResume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
+    @Override protected void onResume() { super.onResume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
     @Override protected void onPause() { if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
     @Override protected void onDestroy() { if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void checkSession() {
@@ -136,6 +137,7 @@ public final class MainActivity extends Activity {
     private Runnable ratingFocusUpdate;
     private int focusedHomeRow=-1;
     private long lastNavigationWarning=-2000;
+    private final OverviewText overviewText=new OverviewText();
     private String focusedHomeId="";
     private Runnable homeBackdropUpdate;
     private void shell(String title) {
@@ -270,7 +272,7 @@ public final class MainActivity extends Activity {
     private void buildSidebar() {
         String focusedLabel=sidebar.findFocus() instanceof Button?((Button)sidebar.findFocus()).getText().toString():null;
         sidebar.removeAllViews(); sideButton(I18n.text("Start"),()->show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false)); sideButton(I18n.text("Suche"),this::search); sideButton("Genres",()->show(new Screen("genres","Genres",null,null,null),false));
-        sideButton("Live TV",()->show(new Screen("live","Live TV",null,null,null),false));
+        if(liveAvailable&&liveApi==app.api) sideButton("Live TV",()->show(new Screen("live","Live TV",null,null,null),false));
         sideButton(I18n.text("Zufälliger Film"),()-> { String parent=screen.kind.equals("browse")&&screen.type.contains("Movie")?screen.parent:null; setDrawer(false); randomMovieMenu(parent); });
         if(screen.kind.equals("genre")) sideButton(HomeGenres.read(app.settings,app.account).contains(screen.parent)?I18n.text("Von Startseite lösen"):I18n.text("Auf Startseite anheften"),()-> { HomeGenres.toggle(app.settings,app.account,screen.parent); show(screen,false); });
         Ui.space(sidebar,12); sidebar.addView(Ui.text(this,I18n.text("BIBLIOTHEKEN"),11,Ui.MUTED)); Ui.space(sidebar,10);
@@ -282,21 +284,38 @@ public final class MainActivity extends Activity {
         }
         sideButton(I18n.text("Später ansehen"),()->special(I18n.text("Später ansehen"),"watchLater"));
         sideButton(I18n.text("Favoriten"),()->special(I18n.text("Favoriten"),"favorites")); sideButton(I18n.text("Einstellungen"),()->show(new Screen("settings",I18n.text("Einstellungen"),null,null,null),false));
-        if(screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).libraries(views);
-        if(drawerOpen&&focusedLabel!=null) for(int i=0;i<sidebar.getChildCount();i++) { View button=sidebar.getChildAt(i); if(button instanceof Button&&focusedLabel.equals(((Button)button).getText().toString())) { button.requestFocus(); break; } }
+        if(drawerOpen&&focusedLabel!=null) {boolean restored=false;for(int i=0;i<sidebar.getChildCount();i++) { View button=sidebar.getChildAt(i); if(button instanceof Button&&focusedLabel.equals(((Button)button).getText().toString())) { button.requestFocus();restored=true;break; } }if(!restored&&sidebar.getChildCount()>0)sidebar.getChildAt(0).requestFocus();}
     }
     static String viewTypes(JSONObject library) { switch(library.optString("CollectionType")) { case "movies":return "Movie"; case "tvshows":return "Series"; case "homevideos":return "Video"; case "boxsets":return "BoxSet"; default:return "Movie,Series,Video,BoxSet"; } }
+    private void checkLiveTv() {
+        if(app==null||app.api==null) return;final Api api=app.api;final Library db=app.library;
+        if(liveApi!=api) {liveApi=api;liveAvailable=false;liveChecking=false;liveChecked=0;}
+        if(liveChecking||liveChecked!=0&&SystemClock.elapsedRealtime()-liveChecked<60000)return;
+        liveChecking=true;final boolean bootstrap=liveChecked==0;
+        app.io.execute(()-> {
+            if(bootstrap) {String saved=db.state("liveTvAvailable");boolean cached="true".equals(saved);runOnUiThread(()->{if(app.api==api&&liveApi==api&&sidebar!=null){if(liveAvailable!=cached){liveAvailable=cached;buildSidebar();}}});}
+            try {boolean available=new LiveTv(api).available();db.state("liveTvAvailable",""+available);runOnUiThread(()->{if(app.api==api&&liveApi==api){if(liveAvailable!=available){liveAvailable=available;if(sidebar!=null)buildSidebar();}}});}catch(Exception ignored){/* A temporary outage must not erase the last successful result. */}
+            finally {runOnUiThread(()->{if(liveApi==api){liveChecking=false;liveChecked=SystemClock.elapsedRealtime();}});}
+        });
+    }
+    private void publishViews(List<JSONObject> next) {
+        if(SidebarViews.sameData(views,next))return;
+        boolean rebuild=!SidebarViews.sameButtons(views,next);views.clear();views.addAll(next);
+        if(rebuild)buildSidebar();
+        if(screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter)((HomeAdapter)grid.getAdapter()).libraries(views);
+    }
     private void loadViews() {
+        checkLiveTv();
         if(viewsLoading||app.api==null) return; viewsLoading=true; final Api api=app.api; final Library db=app.library;
         final boolean[] fresh={false};
         app.cacheIo.execute(()-> {
             try { String saved=db.state("views"); if(!saved.isEmpty()) { List<JSONObject> cached=list(new JSONArray(saved));
-                runOnUiThread(()-> { if(app.api==api&&sidebar!=null&&!fresh[0]) { views.clear(); views.addAll(cached); buildSidebar(); } });
+                runOnUiThread(()-> { if(app.api==api&&sidebar!=null&&!fresh[0]) { publishViews(cached); } });
             } } catch(Exception ignored) {}
         });
         app.navigationIo.execute(()-> {
             try { JSONArray a=Json.array(api.get("/Users/"+api.account.user+"/Views"),"Items"); List<JSONObject> result=list(a);
-                runOnUiThread(()-> { if(app.api==api&&sidebar!=null) { fresh[0]=true; views.clear(); views.addAll(result); buildSidebar(); } });
+                runOnUiThread(()-> { if(app.api==api&&sidebar!=null) { fresh[0]=true; publishViews(result); } });
                 app.cacheIo.execute(()-> { db.state("views",a.toString()); if(app.api==api) app.channels.refreshLibraries(); });
             } catch(Exception e) { runOnUiThread(()-> { if(app.api==api) toast(I18n.text("Bibliotheken konnten nicht aktualisiert werden: ")+e.getMessage()); }); }
             finally { runOnUiThread(()-> { if(app.api==api) viewsLoading=false; }); }
@@ -548,7 +567,7 @@ public final class MainActivity extends Activity {
         List<String> facts=new ArrayList<>(); if(film.optInt("ProductionYear")>0) facts.add(""+film.optInt("ProductionYear"));
         if(film.optLong("RunTimeTicks")>0) facts.add(film.optLong("RunTimeTicks")/600000000+" min");
         if(!film.optString("OfficialRating").isEmpty()) facts.add(film.optString("OfficialRating")); String genreText=Json.genres(film); if(!genreText.isEmpty()) facts.add(genreText); homeFilmMeta.setText(String.join("  ·  ",facts));
-        homeFilmOverview.setText(android.text.Html.fromHtml(film.optString("Overview",I18n.text("Keine Beschreibung vorhanden")),android.text.Html.FROM_HTML_MODE_LEGACY));
+        homeFilmOverview.setText(overviewText.render(film.optString("Overview",I18n.text("Keine Beschreibung vorhanden"))));
     }
     private void recommendationItems() {
         MediaAdapter adapter=cards(false); adapter.set(list(Json.array(screen.item,"Items"))); restoreFocus();
@@ -940,7 +959,9 @@ public final class MainActivity extends Activity {
         for(int i=page*PAGE;i<Math.min(saved.size(),(page+1)*PAGE+1);i++) result.add(saved.get(i));
         return db.latestItems(result);
     }
+    private void channelProgram(JSONObject channel) {if(app.api!=null)new ChannelGuide(this,app,channel).show();}
     private void itemActions(JSONObject item) {
+        if("TvChannel".equals(item.optString("Type"))) {channelProgram(item);return;}
         if(app.account==null||!Arrays.asList("Movie","Series","Season","Episode","Video").contains(item.optString("Type"))) return;
         final boolean season="Season".equals(item.optString("Type"));
         final Api api=app.api; final Library db=app.library; final int g=generation;
