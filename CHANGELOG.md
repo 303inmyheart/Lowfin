@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.2.20
+
+- Limit Companion cache-update notices to one per minute during sustained updates, accumulating the intervening entry counts. Metadata and artwork processing remain immediate.
+- Preserve foreground, settings and account-lifecycle guards; test sustained bursts and disabling during the notification cooldown.
+
+## 1.2.19
+
+- Removed a remaining UI-thread wait on the Companion cover-tag persistence lock when an asynchronous batch completes. Retry deadlines carry their metadata generation so stale responses cannot delay updated tags.
+- Added regression coverage for completion during blocked persistence and stale batch retries. Navigation stalls were confirmed in Android input logs; this fix does not establish that every stall has the same cause.
+
+## 1.2.18
+
+- Avoid rebuilding sidebar buttons for unchanged library and Live TV availability responses. Metadata/artwork changes still update home library cards; renamed/reordered libraries still refresh navigation.
+- Render ordinary home descriptions without invoking the HTML parser; preserve formatting/entities/whitespace through a bounded formatted-text cache.
+- Replace per-cover GUID regex compilation with equivalent allocation-light validation for cover tags and invalidation IDs.
+
+## 1.2.17
+
+- Replace the single current-programme popup with a compact channel programme guide on long OK: now and upcoming shows, local times and day headings.
+- Open programme descriptions with OK and return to the selected row; load additional entries in bounded pages with correct Previous/Next visibility.
+- Add refresh/retry controls, account/dialog lifecycle guards and English/German labels. The main Live TV page remains a channel list.
+
+## 1.2.16
+
+- Long-press a Live TV channel to show its currently airing programme, local start/end times, episode title and description in a native Lowfin dialog. Short press still starts playback.
+- Hide the sidebar Live TV entry when the signed-in user has no available channels. Probe one channel in the background and retain the last successful result during temporary server failures.
+- Add English/German loading, unavailable and empty-guide messages; preserve compact dialog sizing and scrolling.
+
 ## 1.2.15
 
 - Add device-local frame-rate limits (automatic/30/60 FPS), audio channel limits (automatic/2.0/5.1/7.1) and trailer resolution selection. Stereo downmix retains priority.

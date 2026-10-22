@@ -18,7 +18,8 @@ final class CompanionCoverTags implements AutoCloseable {
     private final Object gate=new Object(),pendingGate=new Object();
     private final LruCache<String,Integer> facts=new LruCache<>(256);
     private final LruCache<String,String[]> labelFacts=new LruCache<>(256);
-    private final LruCache<String,Long> retry=new LruCache<>(256);
+    private static final class Retry { final long epoch,until; Retry(long epoch,long until) { this.epoch=epoch;this.until=until; } }
+    private final LruCache<String,Retry> retry=new LruCache<>(256);
     private final Set<String> pending=new LinkedHashSet<>();
     private final WeakHashMap<ArtworkView,String> bound=new WeakHashMap<>();
     private final Runnable settingsChanged=()->main.post(this::refresh);
@@ -36,7 +37,7 @@ final class CompanionCoverTags implements AutoCloseable {
         if(companion!=null) { companion.coverTagsChanged=settingsChanged;app.settings.registerOnSharedPreferenceChangeListener(preferences); }
     }
     private int filter() { return !closed&&companion!=null&&app.api==api&&app.settings.getBoolean("showCoverTags",true)?((companion.coverTagFilter()&(app.settings.getBoolean("hdrPlayback",false)?7:3))|(companion.extendedTags()&&!companion.coverLabelKeys().isEmpty()?8:0)):0; }
-    static String id(String value) { String normalized=value.replace("-","").toLowerCase(Locale.ROOT);return normalized.matches("[0-9a-f]{32}")?normalized:""; }
+    static String id(String value) { return Json.normalizedId(value); }
     void bind(ArtworkView view,JSONObject item,boolean wide) {
         String type=item.optString("Type"),image=Artwork.type(item,wide);
         String id=(type.equals("Movie")||type.equals("Episode")||type.equals("Video")||type.equals("Series")||type.equals("Season"))&&(image.equals("Primary")||image.equals("Thumb"))?id(item.optString("Id")):"";
@@ -49,7 +50,7 @@ final class CompanionCoverTags implements AutoCloseable {
         if(updating) return;
         // LruCache protects its own short operations. Never wait for the writer's SQLite lock here.
         Integer mask=facts.get(id);String[] labels=labelFacts.get(id);if(mask!=null&&(!companion.extendedTags()||labels!=null)) { if(companion.extendedTags()) view.badges(id,0,CoverTagLabels.filter(labels,companion.coverLabelKeys(),app.settings.getBoolean("hdrPlayback",false)));else view.badges(id,mask&filter);return; }
-        Long delay=retry.get(id);if(delay!=null&&SystemClock.elapsedRealtime()<delay) return;
+        Retry delay=retry.get(id);if(delay!=null&&delay.epoch==epoch&&SystemClock.elapsedRealtime()<delay.until) return;
         synchronized(pendingGate) { if(pending.size()<256) pending.add(id); }
         if(!busy) { main.removeCallbacks(drain);main.postDelayed(drain,80); }
     }
@@ -93,13 +94,16 @@ final class CompanionCoverTags implements AutoCloseable {
                 }
             } catch(Exception ignored) { /* Artwork remains available when the optional service fails. */ }
             final boolean waitingForIndex=indexPending;
-            main.post(()-> {
-                busy=false;if(closed) return;
-                synchronized(gate) { if(generation==epoch) for(String id:ids) if(facts.get(id)==null||extended&&labelFacts.get(id)==null) retry.put(id,SystemClock.elapsedRealtime()+(waitingForIndex?5000:30000)); }
-                if(waitingForIndex) { main.removeCallbacks(indexRetry);main.postDelayed(indexRetry,5100); }
-                refresh();synchronized(pendingGate) { if(!pending.isEmpty()&&filter()!=0) main.postDelayed(drain,80); }
-            });
+            main.post(()->completeBatch(generation,ids,extended,waitingForIndex));
         });
+    }
+    // UI callback: never acquire gate, which protects background SQLite writes.
+    // epoch is volatile and each cache operation has its own short internal lock.
+    private void completeBatch(long generation,List<String> ids,boolean extended,boolean waitingForIndex) {
+        busy=false;if(closed) return;
+        if(generation==epoch) for(String id:ids) if(facts.get(id)==null||extended&&labelFacts.get(id)==null) retry.put(id,new Retry(generation,SystemClock.elapsedRealtime()+(waitingForIndex?5000:30000)));
+        if(waitingForIndex) { main.removeCallbacks(indexRetry);main.postDelayed(indexRetry,5100); }
+        refresh();synchronized(pendingGate) { if(!pending.isEmpty()&&filter()!=0) main.postDelayed(drain,80); }
     }
     void invalidate(JSONArray changes) {
         if(changes.length()==0) return;

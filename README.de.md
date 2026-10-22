@@ -4,7 +4,7 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.2.15**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.2.20**.
 
 Optionales **Lowfin Companion 0.6.0** für Jellyfin 12.2.x: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
@@ -15,10 +15,10 @@ Version 1.2 reduziert wiederholte lokale Metadaten-Schreibvorgänge, bündelt Ab
 
 ## Installieren
 
-Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.2.15-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.2.20-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.2.15-release.apk
+adb install -r Lowfin-1.2.20-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.
