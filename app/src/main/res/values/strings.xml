@@ -359,4 +359,6 @@
     <string name="tracearr_16">"Tracearr connection or user mapping failed"</string>
     <string name="tracearr_17">"Tracearr unavailable · Check URL, API token and API v2 support"</string>
     <string name="show_cover_tags">Show cover format tags</string>
+    <string name="focus_pulse">Pulsing focus outline</string>
+    <string name="focus_pulse_hint">A subtle accent-color pulse on the focused control. Requires UI animations.</string>
 </resources>

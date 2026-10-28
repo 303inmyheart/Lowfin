@@ -80,7 +80,7 @@ public final class MainActivity extends Activity {
         final Api api=app.api;
         app.io.execute(()-> {
             try { api.get("/Users/Me");
-                final CompanionApi companion=app.companion; if(companion!=null&&app.api==api) companion.refreshDiscovery();
+                final CompanionApi companion=app.companion; if(companion!=null&&app.api==api) companion.discover();
                 final Library db=app.library;
                 app.cacheIo.execute(()-> {
                     String last=db.state("lastSync"); long time=0; try { time=Long.parseLong(last); } catch(Exception ignored) {}
@@ -143,7 +143,8 @@ public final class MainActivity extends Activity {
     private void shell(String title) {
         if(startupOverlay!=null) {startupOverlay.dismiss();startupOverlay=null;}
         pageControls=null;cacheStatusView=null;preloadButton=null;detailStateRefresh=null;detailReload=null;detailNeedsReload=false;
-        root=new FrameLayout(this); Accent.background(root); boolean artworkScreen=screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"));
+        root=new FrameLayout(this); boolean artworkScreen=screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"));
+        if(artworkScreen) root.setBackgroundColor(Ui.BG); else Accent.background(root);
         if(!artworkScreen) root.setPadding(Ui.dp(this,20),Ui.dp(this,18),Ui.dp(this,20),Ui.dp(this,18));
         drawerOpen=false; drawerReturnFocus=null; lastContentFocus=null;
         FrameLayout stage=new FrameLayout(this); contentStage=stage; root.addView(stage,new FrameLayout.LayoutParams(-1,-1)); detailBackdrop=null;
@@ -151,6 +152,9 @@ public final class MainActivity extends Activity {
             // Cache the static backdrop, color filter and two shades as one GPU layer.
             // Bound the extra texture to 1080p; larger displays retain normal rendering.
             FrameLayout artwork=new FrameLayout(this);
+            // Include the static ambient gradient in the existing backdrop layer.
+            // Otherwise every banner/focus frame redraws the full-screen shader below it.
+            Accent.background(artwork);
             android.util.DisplayMetrics metrics=getResources().getDisplayMetrics();
             if((long)metrics.widthPixels*metrics.heightPixels<=1920L*1080) artwork.setLayerType(View.LAYER_TYPE_HARDWARE,null);
             stage.addView(artwork,new FrameLayout.LayoutParams(-1,-1));
@@ -380,7 +384,7 @@ public final class MainActivity extends Activity {
     private static List<JSONObject> list(JSONArray a) { List<JSONObject> out=new ArrayList<>(); for(int i=0;i<a.length();i++) { JSONObject j=a.optJSONObject(i); if(j!=null) out.add(j); } return out; }
     private TextView note(String s) { TextView t=Ui.text(this,s,13,Ui.MUTED); body.addView(t); Ui.space(body,5); return t; }
     private MediaAdapter cards(boolean compact) {
-        grid=new RecyclerView(this); int columns=app.settings.getInt("gridColumns",8);
+        grid=new LibraryGrid(this); int columns=app.settings.getInt("gridColumns",8);
         GridLayoutManager layout=ScrollMotion.grid(this,columns); grid.setLayoutManager(layout); grid.setItemAnimator(null); grid.setHasFixedSize(true); grid.setItemViewCacheSize(4);
         MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.wide=screen!=null&&"resume".equals(screen.type); adapter.onActions(this::itemActions); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
         layout.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() { @Override public int getSpanSize(int position) { return adapter.span(position); } });
@@ -491,7 +495,7 @@ public final class MainActivity extends Activity {
         homeReload=()-> {
             if(SystemClock.elapsedRealtime()-lastRefresh[0]<1500&&lastRefresh[0]!=0) return; lastRefresh[0]=SystemClock.elapsedRealtime();
             final CompanionApi resumeCompanion=app.companion;
-            for(int i=0;i<2;i++) { final int row=i;
+            for(int i=0;i<2;i++) { final int row=i; final long queued=SystemClock.elapsedRealtime();
                 app.homeIo.execute(()-> {
                     if(g!=generation||isFinishing()||app.api!=api) return;
                     long started=SystemClock.elapsedRealtime();
@@ -499,12 +503,26 @@ public final class MainActivity extends Activity {
                         JSONObject response;
                         if(row==0) response=api.get("/Users/"+api.account.user+"/Items/Resume","MediaTypes","Video","Limit",18,"Fields","Overview,ParentId,PrimaryImageAspectRatio");
                         else response=api.get("/Shows/NextUp","UserId",api.account.user,"Limit",18,"Fields","Overview,ParentId,PrimaryImageAspectRatio","EnableResumable",false);
-                        JSONArray a=Json.array(response,"Items"); db.put(a,System.currentTimeMillis()); List<JSONObject> loaded=list(a);
+                        long received=SystemClock.elapsedRealtime();
+                        JSONArray a=Json.array(response,"Items");
+                        // Resume reconciliation needs fresh native user data in the database first.
+                        // Next Up has no reconciliation dependency and can render before persistence.
+                        if(row==0) db.put(a,System.currentTimeMillis());
+                        long stored=SystemClock.elapsedRealtime();
+                        List<JSONObject> loaded=list(a);
                         if(row==0&&resumeCompanion!=null&&app.api==api) loaded=resumeCompanion.mergeResume(loaded,18);
-                        db.state("home-"+row,new JSONArray(loaded).toString()); final List<JSONObject> data=loaded;
-                        runOnUiThread(()-> { if(g==generation&&!isFinishing()&&app.api==api) { fresh[row]=true;adapter.update(row,data);android.util.Log.i("LowfinHome","Fresh shelf "+row+": "+data.size()+" items after "+(SystemClock.elapsedRealtime()-started)+" ms"); } });
+                        final List<JSONObject> data=loaded;
+                        long reconciled=SystemClock.elapsedRealtime();
+                        runOnUiThread(()-> { if(g==generation&&!isFinishing()&&app.api==api) { fresh[row]=true;adapter.update(row,data);android.util.Log.i("LowfinHome","Fresh shelf "+row+": "+data.size()+" items after "+(SystemClock.elapsedRealtime()-queued)+" ms (queue="+(started-queued)+", network="+(received-started)+", store="+(stored-received)+", companion="+(reconciled-stored)+")"); } });
+                        app.cacheIo.execute(()-> {
+                            if(app.api!=api||g!=generation) return;
+                            try {
+                                if(row==1) db.put(a,System.currentTimeMillis());
+                                db.state("home-"+row,new JSONArray(data).toString());
+                            } catch(Exception ignored) { /* A cache failure must not discard a fresh visible shelf. */ }
+                            finally { if(app.api==api) app.channels.publish(); }
+                        });
                     } catch(Exception ignored) { /* Cached shelves remain usable offline. */ }
-                    finally { if(app.api==api) app.channels.publish(); }
                 });
             }
             if(lastRecommendationRefresh[0]==0||SystemClock.elapsedRealtime()-lastRecommendationRefresh[0]>120000) {
@@ -587,6 +605,7 @@ public final class MainActivity extends Activity {
     private void addLetterButton(MediaAdapter adapter) {
         Button jump=Ui.quiet(this,I18n.resource(R.string.jump_to_letter),()->letterMenu());jump.setTextSize(12);Ui.fixedFocus(jump);jump.setFocusable(false);
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-2,Ui.dp(this,34));params.setMargins(Ui.dp(this,16),0,0,0);heading.addView(jump,params);
+        if(grid instanceof LibraryGrid) ((LibraryGrid)grid).letterShortcut(jump);
         final RecyclerView target=grid;final int g=generation;
         final boolean firstEntry=screen.scroll==null&&screen.gridFocusId.isEmpty()&&screen.jumpIndex<0;
         target.getViewTreeObserver().addOnGlobalLayoutListener(new android.view.ViewTreeObserver.OnGlobalLayoutListener() {
@@ -597,7 +616,7 @@ public final class MainActivity extends Activity {
                     RecyclerView.ViewHolder first=target.findViewHolderForAdapterPosition(0);
                     if(first==null||!first.itemView.requestFocus()) return;
                 } else if(!target.hasFocus()) return;
-                jump.setFocusable(true);
+                // LibraryGrid enables this only for an explicit Up from row one.
                 target.getViewTreeObserver().removeOnGlobalLayoutListener(this);
             }
         });

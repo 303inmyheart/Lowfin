@@ -25,7 +25,11 @@ keys=set(re.findall(r'IDS.put\("((?:[^"\\]|\\.)*)"',source))
 missing_literals=[]
 for path in (ROOT/'app/src/main/java/de/lowfin/tv').glob('*.java'):
     if path.name=='I18n.java':continue
-    for value in re.findall(r'I18n.text\("((?:[^"\\]|\\.)*)"\)',path.read_text()):
+    # Include conditional I18n.text arguments and labels passed through Options'
+    # translating helpers, not just direct I18n.text("literal") calls.
+    for value in re.findall(r'"((?:[^"\\]|\\.)*)"',path.read_text()):
+        # ISO 639-2 "und" means an unspecified audio language, not German UI.
+        if path.name=='AudioTracks.java' and value=='und':continue
         if value not in keys and words.search(value):missing_literals.append(path.name)
 if missing_literals:raise SystemExit('Unmapped German UI literals: '+', '.join(sorted(set(missing_literals))))
 print(f'English coverage OK: {len(english)} resource entries; {len(german)} German entries covered; literal mappings checked.')

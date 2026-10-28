@@ -36,6 +36,9 @@ final class MediaDiff {
             return true;
         }
         if(before instanceof Number&&after instanceof Number) {
+            // Common JSON integers need no temporary decimal strings; mixed numeric
+            // types retain the normalized comparison (and invalid-number rejection).
+            if(before.getClass()==after.getClass()&&(before instanceof Integer||before instanceof Long||before instanceof Short||before instanceof Byte)) return before.equals(after);
             try { return JSONObject.numberToString((Number)before).equals(JSONObject.numberToString((Number)after)); }
             catch(org.json.JSONException invalid) { return false; }
         }

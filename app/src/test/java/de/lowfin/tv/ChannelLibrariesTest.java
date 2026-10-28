@@ -16,5 +16,14 @@ public class ChannelLibrariesTest {
     @Test public void defaultMixesAllLibrariesInsteadOfOnlyLastIndexedLibrary() { List<JSONObject> items=ChannelLibraries.cached(db,prefs,account,"Series"); assertEquals(4,items.size()); assertEquals("a1",items.get(0).optString("Id")); assertEquals("s1",items.get(1).optString("Id")); }
     @Test public void chosenLibraryIsIndependentOfFilmChoicesAndOtherAccounts() { prefs.edit().putString(ChannelLibraries.key(account,"Series"),"[\"shows\"]").commit(); assertEquals("s1",ChannelLibraries.cached(db,prefs,account,"Series").get(0).optString("Id")); assertNull(ChannelLibraries.selection(prefs,account,"Movie")); assertNull(ChannelLibraries.selection(prefs,new Account("https://other.example","user","token","name","device"),"Series")); }
     @Test public void ExplicitEmptySelectionPublishesNoCards() { prefs.edit().putString(ChannelLibraries.key(account,"Series"),"[]").commit(); assertTrue(ChannelLibraries.cached(db,prefs,account,"Series").isEmpty()); }
+    @Test public void batchedLibrarySnapshotsKeepFallbacksFilteringAndRoundRobinOrder() {
+        prefs.edit().putString(ChannelLibraries.key(account,"Series"),"[\"anime\",\"uncached\",\"shows\",\"broken\"]").commit();
+        db.put(Json.obj("Id","u1","Type","Series","ParentId","uncached","Name","Fallback"));
+        db.state("tv-library-Series-anime",Json.arr(Json.obj("Id","a1","Type","Series"),Json.obj("Id","wrong","Type","Movie")).toString());
+        db.state("tv-library-Series-broken","not-json");
+        List<JSONObject> rows=ChannelLibraries.cached(db,prefs,account,"Series");List<String> ids=new ArrayList<>();for(JSONObject item:rows)ids.add(item.optString("Id"));
+        assertEquals(Arrays.asList("a1","u1","s1","s2"),ids);
+        assertEquals(Arrays.asList("anime","uncached","shows","broken"),ChannelLibraries.selection(prefs,account,"Series"));
+    }
     @Test public void mixingDeduplicatesAndHonorsLimit() { JSONObject movie=Json.obj("Id","same"); assertEquals(1,ChannelLibraries.mix(Arrays.asList(Arrays.asList(movie,movie),Arrays.asList(movie)),24).size()); assertEquals(2,ChannelLibraries.mix(Arrays.asList(Arrays.asList(movie,Json.obj("Id","b")),Arrays.asList(Json.obj("Id","c"))),2).size()); }
 }

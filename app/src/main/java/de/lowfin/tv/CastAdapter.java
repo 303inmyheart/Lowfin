@@ -32,7 +32,7 @@ final class CastAdapter extends RecyclerView.Adapter<CastAdapter.Person> {
         ImageView image=portrait(parent.getContext()); avatar.addView(image,new FrameLayout.LayoutParams(Ui.dp(parent.getContext(),88),Ui.dp(parent.getContext(),88),Gravity.CENTER));
         Ui.space(card,8); TextView name=Ui.text(parent.getContext(),"",12,Ui.MUTED); name.setGravity(Gravity.CENTER); name.setMaxLines(2); name.setEllipsize(android.text.TextUtils.TruncateAt.END); card.addView(name);
         TextView role=Ui.text(parent.getContext(),"",11,Ui.MUTED); role.setGravity(Gravity.CENTER); role.setMaxLines(2); role.setEllipsize(android.text.TextUtils.TruncateAt.END); card.addView(role);
-        android.graphics.drawable.GradientDrawable shape=new android.graphics.drawable.GradientDrawable();shape.setShape(android.graphics.drawable.GradientDrawable.OVAL);shape.setColor(android.graphics.Color.TRANSPARENT);avatar.setBackground(shape);
+        android.graphics.drawable.GradientDrawable shape=Ui.background(android.graphics.Color.TRANSPARENT,0);((FocusBackground)shape).owner(card);shape.setShape(android.graphics.drawable.GradientDrawable.OVAL);shape.setColor(android.graphics.Color.TRANSPARENT);avatar.setBackground(shape);
         java.util.function.BiConsumer<View,Integer> ring=(view,color)->shape.setStroke(Ui.dp(parent.getContext(),2),card.hasFocus()?color:android.graphics.Color.TRANSPARENT);
         Accent.bind(avatar,ring); Accent.bind(name,(view,color)->name.setTextColor(card.hasFocus()?color:Ui.MUTED));
         card.setOnFocusChangeListener((view,focused)-> { ring.accept(avatar,Accent.color); name.setTextColor(focused?Accent.color:Ui.MUTED); });

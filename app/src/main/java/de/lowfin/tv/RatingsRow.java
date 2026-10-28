@@ -12,7 +12,7 @@ final class RatingsRow extends ViewGroup {
     private int binding;
     private boolean episodeRequested;
     private boolean stable;
-    private final boolean compact;
+    private final boolean compact,dense;
     private final java.util.Map<String,TextView> slots=new java.util.LinkedHashMap<>();
     void reserve(LowfinApp app) {
         stable=true; removeAllViews(); slots.clear();
@@ -34,14 +34,15 @@ final class RatingsRow extends ViewGroup {
     }
     private static String label(String id) { return id.equals("tomatoes")?"RT":id.equals("tomatoesaudience")?I18n.text("Publikum"):id.equals("metacritic")?"MC":id.equals("letterboxd")?"LB":id.equals("mdblist")?"MDBList":id.equals("imdb")?"IMDb":id.equals("tmdb")?"TMDB":"Trakt"; }
     private TextView chip(String id,String value) {
-        TextView chip=Ui.text(getContext(),label(id)+"  "+value,compact?10:12,Color.WHITE);chip.setSingleLine(true);chip.setPadding(Ui.dp(getContext(),compact?6:8),Ui.dp(getContext(),compact?3:5),Ui.dp(getContext(),compact?6:8),Ui.dp(getContext(),compact?3:5));chip.setBackground(Ui.background(0xb31a1a1d,0xff353538));
-        int icon=icon(id);if(icon!=0) { android.graphics.drawable.Drawable drawable=getContext().getDrawable(icon);fitIcon(drawable,getContext(),compact?(id.equals("tmdb")?20:16):(id.equals("tmdb")?27:22),compact?12:16);chip.setCompoundDrawables(drawable,null,null,null);chip.setCompoundDrawablePadding(Ui.dp(getContext(),compact?4:5)); }
+        TextView chip=Ui.text(getContext(),label(id)+"  "+value,dense?9:compact?10:12,Color.WHITE);chip.setSingleLine(true);chip.setPadding(Ui.dp(getContext(),dense?4:compact?6:8),Ui.dp(getContext(),compact?3:5),Ui.dp(getContext(),dense?4:compact?6:8),Ui.dp(getContext(),compact?3:5));chip.setBackground(Ui.background(0xb31a1a1d,0xff353538));
+        int icon=icon(id);if(icon!=0) { android.graphics.drawable.Drawable drawable=getContext().getDrawable(icon);fitIcon(drawable,getContext(),dense?(id.equals("tmdb")?18:14):compact?(id.equals("tmdb")?20:16):(id.equals("tmdb")?27:22),dense?11:compact?12:16);chip.setCompoundDrawables(drawable,null,null,null);chip.setCompoundDrawablePadding(Ui.dp(getContext(),dense?3:compact?4:5)); }
         return chip;
     }
     RatingsRow(Context context) { this(context,false); }
-    RatingsRow(Context context,boolean compact) { super(context);this.compact=compact;setVisibility(GONE); }
+    RatingsRow(Context context,boolean compact) {this(context,compact,false);}
+    RatingsRow(Context context,boolean compact,boolean dense) {super(context);this.compact=compact;this.dense=dense;setVisibility(GONE);}
     void cancelLoad() {binding++;}
-    void clear() { episodeRequested=false;binding++; itemId=""; if(stable) { for(java.util.Map.Entry<String,TextView> slot:slots.entrySet()) { TextView chip=slot.getValue();chip.animate().cancel();chip.setText(label(slot.getKey())+"  —");chip.setAlpha(.4f);chip.setContentDescription(label(slot.getKey())); } } else { removeAllViews();setVisibility(GONE); } }
+    void clear() { episodeRequested=false;binding++; itemId=""; if(stable) { for(java.util.Map.Entry<String,TextView> slot:slots.entrySet()) { TextView chip=slot.getValue();chip.animate().cancel();String label=label(slot.getKey()),placeholder=label+"  —";if(!android.text.TextUtils.equals(chip.getText(),placeholder)) chip.setText(placeholder);chip.setAlpha(.4f);if(!android.text.TextUtils.equals(chip.getContentDescription(),label)) chip.setContentDescription(label); } } else { removeAllViews();setVisibility(GONE); } }
     void load(LowfinApp app,JSONObject item) {
         String nextId=item.optString("Id");boolean episode="Episode".equals(item.optString("Type"));if(episode&&episodeRequested&&nextId.equals(itemId)) return;episodeRequested=episode;int version=++binding;
         if(!stable&&(!itemId.equals(nextId)||app.ratings==null)) { removeAllViews();setVisibility(GONE); }
@@ -91,13 +92,13 @@ final class RatingsRow extends ViewGroup {
     }
     static int icon(String id) { switch(id) { case "imdb":return R.drawable.rating_imdb; case "tomatoes":return R.drawable.rating_tomatoes; case "tomatoesaudience":return R.drawable.rating_tomatoesaudience; case "metacritic":return R.drawable.rating_metacritic; case "tmdb":return R.drawable.rating_tmdb; case "trakt":return R.drawable.rating_trakt; case "letterboxd":return R.drawable.rating_letterboxd; case "mdblist":return R.drawable.provider_mdblist; default:return 0; } }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {
-        int limit=MeasureSpec.getSize(widthSpec),x=0,y=0,rowHeight=0,gap=Ui.dp(getContext(),compact?4:6);
+        int limit=MeasureSpec.getSize(widthSpec),x=0,y=0,rowHeight=0,gap=Ui.dp(getContext(),dense?3:compact?4:6);
         for(int i=0;i<getChildCount();i++) { View child=getChildAt(i); child.measure(MeasureSpec.makeMeasureSpec(child.getLayoutParams().width>0?Math.min(limit,child.getLayoutParams().width):limit,child.getLayoutParams().width>0?MeasureSpec.EXACTLY:MeasureSpec.AT_MOST),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
             if(x>0&&x+child.getMeasuredWidth()>limit) { y+=rowHeight+gap; x=0; rowHeight=0; } x+=child.getMeasuredWidth()+gap; rowHeight=Math.max(rowHeight,child.getMeasuredHeight()); }
         setMeasuredDimension(resolveSize(limit,widthSpec),resolveSize(y+rowHeight,heightSpec));
     }
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
-        int x=0,y=0,height=0,gap=Ui.dp(getContext(),compact?4:6);
+        int x=0,y=0,height=0,gap=Ui.dp(getContext(),dense?3:compact?4:6);
         for(int i=0;i<getChildCount();i++) { View child=getChildAt(i); if(x>0&&x+child.getMeasuredWidth()>getWidth()) { x=0; y+=height+gap; height=0; }
             child.layout(x,y,x+child.getMeasuredWidth(),y+child.getMeasuredHeight()); x+=child.getMeasuredWidth()+gap; height=Math.max(height,child.getMeasuredHeight()); }
     }

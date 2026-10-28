@@ -42,7 +42,7 @@ final class CompanionCoverTags implements AutoCloseable {
         String type=item.optString("Type"),image=Artwork.type(item,wide);
         String id=(type.equals("Movie")||type.equals("Episode")||type.equals("Video")||type.equals("Series")||type.equals("Season"))&&(image.equals("Primary")||image.equals("Thumb"))?id(item.optString("Id")):"";
         if(id.isEmpty()) { bound.remove(view);view.badges("",0);return; }
-        bound.put(view,id);view.badges(id,0);apply(view,id);
+        bound.put(view,id);if(!id.equals(view.badgeItem)||updating) view.badges(id,0);apply(view,id);
     }
     private void apply(ArtworkView view,String id) {
         if(!id.equals(view.badgeItem)) return;
@@ -50,6 +50,7 @@ final class CompanionCoverTags implements AutoCloseable {
         if(updating) return;
         // LruCache protects its own short operations. Never wait for the writer's SQLite lock here.
         Integer mask=facts.get(id);String[] labels=labelFacts.get(id);if(mask!=null&&(!companion.extendedTags()||labels!=null)) { if(companion.extendedTags()) view.badges(id,0,CoverTagLabels.filter(labels,companion.coverLabelKeys(),app.settings.getBoolean("hdrPlayback",false)));else view.badges(id,mask&filter);return; }
+        view.badges(id,0);
         Retry delay=retry.get(id);if(delay!=null&&delay.epoch==epoch&&SystemClock.elapsedRealtime()<delay.until) return;
         synchronized(pendingGate) { if(pending.size()<256) pending.add(id); }
         if(!busy) { main.removeCallbacks(drain);main.postDelayed(drain,80); }
@@ -68,10 +69,12 @@ final class CompanionCoverTags implements AutoCloseable {
         worker.execute(()-> {
             Map<String,Integer> loaded=new HashMap<>();Map<String,String[]> loadedLabels=new HashMap<>();Set<String> received=new HashSet<>();final boolean extended=companion.extendedTags();List<String> missing=new ArrayList<>();boolean indexPending=false;
             try {
+                List<String> keys=new ArrayList<>();for(String id:ids) {keys.add("cover-tags-v2-"+id);if(extended) keys.add("cover-tag-labels-v1-"+id);}
+                Map<String,String> storedFacts=library.states(keys);
                 for(String id:ids) {
-                    String stored=library.state("cover-tags-v2-"+id);
-                    if(stored.matches("[0-7]")) loaded.put(id,Integer.parseInt(stored));
-                    if(extended) {String[] labels=CoverTagLabels.decode(library.state("cover-tag-labels-v1-"+id));if(labels!=null) loadedLabels.put(id,labels);}
+                    String stored=storedFacts.getOrDefault("cover-tags-v2-"+id,"");
+                    if(stored.length()==1&&stored.charAt(0)>='0'&&stored.charAt(0)<='7') loaded.put(id,stored.charAt(0)-'0');
+                    if(extended) {String[] labels=CoverTagLabels.decode(storedFacts.getOrDefault("cover-tag-labels-v1-"+id,""));if(labels!=null) loadedLabels.put(id,labels);}
                     if(!loaded.containsKey(id)||extended&&!loadedLabels.containsKey(id)) missing.add(id);
                 }
                 if(!missing.isEmpty()&&!closed&&filter()!=0) {

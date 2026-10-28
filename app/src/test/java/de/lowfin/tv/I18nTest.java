@@ -16,6 +16,9 @@ public class I18nTest {
         assertEquals("Screensaver",I18n.resource(R.string.screensaver_title));
         assertEquals("Season no.",I18n.resource(R.string.season_number_hint));
         assertEquals("Home banner · Libraries",I18n.resource(R.string.banner_libraries));
+        assertEquals("Pulsing focus outline",I18n.resource(R.string.focus_pulse));
+        assertEquals("Remove from Watch later",I18n.text("Aus Später ansehen entfernen"));
+        assertEquals("Add to favorites",I18n.text("Zu Favoriten hinzufügen"));
         I18n.select("de");assertEquals("Staffel-Nr.",I18n.resource(R.string.season_number_hint));
     }
 }

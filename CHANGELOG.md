@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.3
+
+- Verify English coverage for all 473 English/German resources, conditional UI labels and translating settings helpers. English remains the default; add regressions for focus-pulse and Watch later/favorites labels. All 500 Android unit tests and release lint pass for the locally built release.
+- Include the static ambient gradient in the existing home/detail backdrop layer, avoiding repeated full-screen shader work during foreground animations without allocating another layer. Retain normal rendering above 1080p and accent updates.
+- Replace memory-cached artwork directly instead of clearing its drawable first; retain clearing for missing artwork and asynchronous loads.
+- Exclude the letter shortcut from automatic library focus recovery and horizontal searches while cards are active; enable it only for a deliberate Up from the first row and disable it again on return.
+- Add an optional accent-colored focus-outline pulse in Appearance, off by default and governed by UI animations. Only a visible focused control schedules work; focus loss, hidden/background windows and detachment stop it. Existing focus geometry and navigation are preserved.
+- Reveal discovery-banner covers by symmetric center scaling and fading instead of upward movement; keep the pivot centered after resizing and preserve animation switches.
+- Align banner ratings with the description column, retaining provider names/icons and readable values with slightly smaller text and padding. Preserve fixed slots, one row, HD/4K scaling and unchanged screensaver badge sizes.
+- Skip unchanged banner text assignments and avoid replaying cover reveals on metadata-only refreshes.
+
+- Resolve repeated launcher artwork once per publication, including failed lookups shared across preview rows and Watch Next. Retry failures in the next publication; image-tag changes and explicit cover-cache deletion invalidate the temporary results.
+- Avoid a redundant filesystem file-type check when loading cached artwork. Existing size validation, HD fallback and access timestamps remain unchanged.
+
+- Reuse the fully initialized SQLite database handle for reads, allowing its WAL connection pool to serve readers while metadata batches hold the helper monitor. Preserve lazy opening, writer serialization and close/reopen behavior; add blocked-monitor regression coverage.
+
+- Prevent rapid/repeated vertical grid navigation from jumping to the letter shortcut. A deliberate Up at the top still opens it; Down returns to the originating column.
+
+- Restrict Companion resume queries to indexed native candidates plus managed resume IDs before joining metadata. Device profiling measured a 6.3-second local candidate lookup; preserve visibility, sorting, pagination and library filters with differential and query-plan tests.
+
+- Avoid temporary decimal strings when comparing same-type integral metadata values; retain mixed-number normalization, precision and invalid-number handling. Reuse the focus-animation interpolator and read its enable switches once per focus event.
+
+- Show fresh Next Up results before writing their persistent cache; defer shelf snapshot writes to the cache worker. Resume retains its native-data write before Companion reconciliation to preserve watched/resume semantics.
+- Reuse the current Companion capability probe during session validation instead of forcing a second discovery request alongside startup resume loading. Explicit settings refreshes still force discovery.
+- Log home-shelf queue, network and reconciliation timings separately, without titles or credentials.
+
+- Simplify opaque ambient-gradient rendering into separate color and grain passes, retaining the original composed path for alpha/filter effects. Device tracing identified synchronous GPU shader compilation blocking UI drawing. Preserve all eight patterns and fine dithering.
+
+- Batch current-media lookups across the five Android TV recommendation rows, preserving row boundaries, duplicate media across channels, dynamic headings and missing-item fallbacks.
+- Batch cached library-snapshot reads for Android TV publishing; retain library selections, round-robin mixing, media-type filtering and database fallback.
+- Displayed version: 1.3; Android integer versionCode: 108. Includes all unpublished optimization rounds.
+- Avoid duplicate base-channel updates in one Android TV publication. Preserve first-channel ordering, legacy role migration, dynamic names, external-title repair and channel IDs.
+- Read cached Companion tag facts in bounded SQL batches instead of separate queries per fact. Keep existing account scope, metadata-generation fencing, persistence and missing-fact fallback.
+- Add regressions for channel write counts/title repair and state reads across batches, accounts, duplicate/missing keys and parameterized SQL inputs.
+- Avoid clearing and immediately restoring known Companion badges when rebinding the same cover. Recycled and invalidated items still clear stale badges.
+- Avoid rewriting unchanged reserved rating placeholders during focus changes; preserve reserved sizes and stale-result guards.
+- Reuse cover-overlay font metrics and the language-label validation pattern; avoid temporary HDR lookup lists.
+- Add tests for redundant invalidations/text writes, recycled artwork, strict label validation and HDR/language filtering.
+
 ## 1.2.20
 
 - Limit Companion cache-update notices to one per minute during sustained updates, accumulating the intervening entry counts. Metadata and artwork processing remain immediate.

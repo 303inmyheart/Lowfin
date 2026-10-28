@@ -14,6 +14,18 @@ public class RatingsRowTest {
     private LowfinApp app;private RatingsRow row;
     @Before public void setup() { app=(LowfinApp)RuntimeEnvironment.getApplication();app.settings.edit().clear().putBoolean("animations",false).commit();row=new RatingsRow(app); }
     private int height(int width) { row.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));row.layout(0,0,width,row.getMeasuredHeight());return row.getMeasuredHeight(); }
+    @Test public void repeatedEmptyFocusPreparationDoesNotRewritePlaceholderText() {
+        row.reserve(app);java.util.concurrent.atomic.AtomicInteger writes=new java.util.concurrent.atomic.AtomicInteger();
+        for(int i=0;i<row.getChildCount();i++) ((TextView)row.getChildAt(i)).addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){writes.incrementAndGet();}public void afterTextChanged(android.text.Editable value){}});
+        row.clear();writes.set(0);row.clear();row.clear();assertEquals(0,writes.get());
+        row.show(app,Json.obj("imdb",7.8));assertTrue(writes.get()>0);writes.set(0);row.clear();assertTrue(writes.get()>0);assertTrue(((TextView)row.getChildAt(0)).getText().toString().endsWith("—"));
+    }
+    @Test public void denseBannerRetainsAllProviderNamesAndFitsTheDescriptionColumnWithoutDistortion() {
+        row=new RatingsRow(app,true,true);row.reserve(app);row.show(app,Json.obj("imdb",10,"tomatoes",100,"tomatoesaudience",100,"metacritic",100,"tmdb",10,"trakt",100,"letterboxd",5,"mdblist",100));height(Ui.dp(app,696));
+        String[] names={"IMDb","RT",I18n.text("Publikum"),"MC","TMDB","Trakt","LB","MDBList"};assertEquals(names.length,row.getChildCount());
+        for(int i=0;i<names.length;i++) {TextView chip=(TextView)row.getChildAt(i);assertTrue(chip.getText().toString(),chip.getText().toString().contains(names[i]));assertEquals(0,chip.getTop());assertTrue(chip.getRight()<=row.getWidth());assertEquals(1f,chip.getScaleX(),0);assertEquals(1f,chip.getScaleY(),0);assertEquals(9*app.getResources().getDisplayMetrics().scaledDensity,chip.getTextSize(),.01f);assertNotNull(chip.getCompoundDrawables()[0]);}
+        RatingsRow screensaver=new RatingsRow(app,true);screensaver.reserve(app);assertEquals(10*app.getResources().getDisplayMetrics().scaledDensity,((TextView)screensaver.getChildAt(0)).getTextSize(),.01f);
+    }
     @Test public void compactBannerSlotsAreSmallerAndStayFixedWhileScoresChange() {
         row.reserve(app);int ordinary=height(900);RatingsRow full=row;row=new RatingsRow(app,true);row.reserve(app);int compact=height(900);assertTrue(compact<ordinary);assertEquals(full.getChildCount(),row.getChildCount());
         View first=row.getChildAt(0);row.show(app,Json.obj("imdb",10,"tomatoes",100,"tmdb",8.1,"mdblist",100));assertEquals(compact,height(900));assertSame(first,row.getChildAt(0));row.clear();assertEquals(compact,height(900));

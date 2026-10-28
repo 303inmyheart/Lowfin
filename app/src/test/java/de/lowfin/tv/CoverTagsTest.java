@@ -50,6 +50,13 @@ public class CoverTagsTest {
         assertEquals(before,app.api.image(episode(FIRST),320,true));assertEquals("3",db.state("cover-tags-v2-"+FIRST));
         tags.close();tags=new CompanionCoverTags(app,app.api);ArtworkView restored=new ArtworkView(app);tags.bind(restored,episode(FIRST),true);await(()->mask(restored)==3);assertEquals(1,batches.get());
     }
+    @Test public void unchangedRebindingDoesNotClearAndRedrawKnownBadges() throws Exception {
+        ArtworkView view=new ArtworkView(app);tags.bind(view,episode(FIRST),true);await(()->mask(view)==3);
+        android.graphics.drawable.GradientDrawable placeholder=new android.graphics.drawable.GradientDrawable();view.setImageDrawable(placeholder);
+        org.robolectric.shadows.ShadowView shadow=shadowOf((View)view);shadow.clearWasInvalidated();
+        tags.bind(view,episode(FIRST),true);assertEquals(3,mask(view));assertFalse("Unchanged badges must not invalidate the cover",shadow.wasInvalidated());
+        tags.bind(view,episode(SECOND),true);assertEquals("Recycled items must clear old badges immediately",0,mask(view));await(()->mask(view)==1);
+    }
     @Test public void MainThreadBindingAndBatchDispatchDoNotWaitForThePersistenceLock() throws Exception {
         Object gate=org.robolectric.util.ReflectionHelpers.getField(tags,"gate");CountDownLatch locked=new CountDownLatch(1),unlock=new CountDownLatch(1);
         Thread writer=new Thread(()-> {synchronized(gate) {locked.countDown();try {unlock.await(4,TimeUnit.SECONDS);}catch(InterruptedException error) {Thread.currentThread().interrupt();}}});writer.start();assertTrue(locked.await(1,TimeUnit.SECONDS));

@@ -359,4 +359,6 @@
     <string name="tracearr_16">"Tracearr-Verbindung oder Benutzerzuordnung fehlgeschlagen"</string>
     <string name="tracearr_17">"Tracearr nicht erreichbar · Adresse, API-Token und API-v2-Unterstützung prüfen"</string>
     <string name="show_cover_tags">Format-Tags auf Covern anzeigen</string>
+    <string name="focus_pulse">Pulsierende Fokusumrandung</string>
+    <string name="focus_pulse_hint">Dezenter Puls in der Akzentfarbe am ausgewählten Element. Benötigt UI-Animationen.</string>
 </resources>

@@ -1,6 +1,6 @@
 # Lowfin Companion v1 contract
 
-Server plugin 0.3.0 targets Jellyfin 12.2.x / .NET 10. Lowfin 0.10.0 keeps its existing native UI and Media3 player. The configured server was read-only verified as 12.2.0; integration tests use an isolated portable 12.2.0 server. Installation instructions and current limitations are in [the plugin guide](https://github.com/303inmyheart/Lowfin-Companion).
+Server plugin 0.7.0 requires Jellyfin 12.2 or newer / .NET 10; no upper version gate is imposed. Tests cover the 12.2 and 12.3 API packages. Lowfin 0.10.0 keeps its existing native UI and Media3 player. The configured server was read-only verified as 12.2.0; integration tests use an isolated portable 12.2.0 server. Installation instructions and current limitations are in [the plugin guide](https://github.com/303inmyheart/Lowfin-Companion).
 
 ## Authentication and discovery
 

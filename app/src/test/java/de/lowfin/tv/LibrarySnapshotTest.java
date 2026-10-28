@@ -11,6 +11,13 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=30)
 public class LibrarySnapshotTest {
+    @Test public void boundedStateReadsPreserveValuesScopeAndMissingKeys() throws Exception {
+        try(Library db=new Library(RuntimeEnvironment.getApplication(),UUID.randomUUID().toString());Library other=new Library(RuntimeEnvironment.getApplication(),UUID.randomUUID().toString())) {
+            List<String> keys=new ArrayList<>();Map<String,String> values=new LinkedHashMap<>();
+            for(int i=0;i<270;i++) {String key="tag-"+i;keys.add(key);values.put(key,i==0?"":"value-"+i);}db.stateBatch(values);other.state("tag-1","other");keys.add("tag-1");keys.add("missing");keys.add("quote' OR 1=1 --");
+            assertEquals(values,db.states(keys));assertEquals("other",other.states(keys).get("tag-1"));assertFalse(db.states(keys).containsKey("missing"));assertTrue(db.states(Collections.emptyList()).isEmpty());
+        }
+    }
     @Test public void batchedSnapshotsPreserveOrderMissingEntriesDuplicateIdsAndCompanionState() throws Exception {
         String scope=UUID.randomUUID().toString();
         try(Library db=new Library(RuntimeEnvironment.getApplication(),scope);Library other=new Library(RuntimeEnvironment.getApplication(),scope+"-other")) {

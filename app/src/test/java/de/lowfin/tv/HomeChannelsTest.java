@@ -35,6 +35,26 @@ public class HomeChannelsTest {
     }
     @After public void cleanup() { if(app.images!=null) app.images.close(); app.io.shutdownNow(); app.reports.shutdownNow(); }
     private JSONObject episode(String id,long ticks) { return Json.obj("Id",id,"Type","Episode","Name","Eine Folge","SeriesName","Eine Serie","SeriesId","show","ParentIndexNumber",40,"IndexNumber",6,"RunTimeTicks",27000000000L,"UserData",Json.obj("PlaybackPositionTicks",ticks)); }
+    @Test public void baseChannelsAreWrittenOnlyOncePerPublicationAndExternalNamesStillRepair() throws Exception {
+        java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);
+        publish.invoke(app.channels,account);assertEquals(4,provider.count("channel"));assertEquals(0,provider.channelWrites);
+        Set<Long> ids=provider.ids("channel");provider.channelWrites=0;publish.invoke(app.channels,account);assertEquals(4,provider.channelWrites);assertEquals(ids,provider.ids("channel"));
+        ContentValues resume=provider.byProviderId("channel","lowfin-resume"),wrong=new ContentValues();wrong.put("display_name","Externally changed");provider.update(TvContractCompat.buildChannelUri(resume.getAsLong("_id")),wrong,null,null);
+        provider.channelWrites=0;publish.invoke(app.channels,account);assertEquals(4,provider.channelWrites);assertEquals("Fortsetzen",provider.byProviderId("channel","lowfin-resume").getAsString("display_name"));assertEquals(ids,provider.ids("channel"));
+    }
+    @Test public void duplicateCoversAcrossLauncherRowsAndWatchNextResolveOncePerPublication() throws Exception {
+        try(okhttp3.mockwebserver.MockWebServer server=new okhttp3.mockwebserver.MockWebServer()) {
+            server.start();server.enqueue(new okhttp3.mockwebserver.MockResponse().setResponseCode(404));server.enqueue(new okhttp3.mockwebserver.MockResponse().setResponseCode(404));
+            Account selected=new Account(server.url("/").toString(),"user","token","User","device");app.setAccount(selected);
+            JSONObject film=Json.obj("Id","shared","Type","Movie","Name","Shared film","ImageTags",Json.obj("Primary","v1"),"UserData",Json.obj("PlaybackPositionTicks",10000000L));
+            app.library.put(film);app.library.state("home-0",Json.arr(film).toString());app.library.state("home-1",Json.arr(film).toString());
+            JSONArray buckets=new JSONArray();for(int i=0;i<5;i++) buckets.put(Json.obj("RecommendationType","SimilarToRecentlyPlayed","BaselineItemName","Watched "+i,"Items",Json.arr(film)));app.library.state("homeRecommendations",buckets.toString());
+            java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);
+            publish.invoke(app.channels,selected);assertEquals(1,server.getRequestCount());
+            assertEquals(9,provider.count("channel"));assertTrue(provider.count("preview_program")>=7);assertTrue(provider.count("watch_next_program")>0);
+            publish.invoke(app.channels,selected);assertEquals(2,server.getRequestCount());
+        }
+    }
     @Test public void homeRefreshReusesUiSnapshotsWithoutDuplicateServerLists() throws Exception {
         checkRefreshRequests(true);
     }
@@ -144,6 +164,26 @@ public class HomeChannelsTest {
         assertEquals(ids,provider.ids("channel")); ContentValues updated=provider.byProviderId("channel","lowfin-recommendation-0");
         assertEquals(id,(long)updated.getAsLong("_id")); assertEquals(Integer.valueOf(1),updated.getAsInteger("browsable"));
         assertEquals("Weil du „Neuer Film“ gesehen hast",updated.getAsString("display_name"));
+    }
+    @Test public void recommendationRowsKeepTheirTitlesAndBoundariesWhileUsingCurrentMetadata() throws Exception {
+        JSONArray buckets=recommendationRows(5);
+        for(int i=0;i<5;i++) {
+            JSONObject current=Json.obj("Id","recommendation"+i,"Type","Movie","Name","Current "+i,"Overview","Fresh "+i);app.library.put(current);
+            buckets.getJSONObject(i).put("Items",Json.arr(Json.obj("Id","recommendation"+i,"Type","Movie","Name","Old"),Json.obj("Id","fallback-"+i,"Type","Movie","Name","Fallback "+i)));
+        }
+        app.library.state("homeRecommendations",buckets.toString());
+        java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);publish.invoke(app.channels,account);
+        for(int i=0;i<5;i++) {
+            long channel=provider.byProviderId("channel","lowfin-recommendation-"+i).getAsLong("_id");
+            ContentValues fresh=null,fallback=null;
+            for(ContentValues program:provider.all("preview_program")) if(program.getAsLong("channel_id")==channel) {
+                if((account.scope()+":recommendation"+i).equals(program.getAsString("internal_provider_id"))) fresh=program;
+                if((account.scope()+":fallback-"+i).equals(program.getAsString("internal_provider_id"))) fallback=program;
+            }
+            assertNotNull(fresh);assertNotNull(fallback);
+            assertEquals("Current "+i,fresh.getAsString("title"));assertEquals("Fresh "+i,fresh.getAsString("short_description"));assertEquals(channel,fresh.getAsLong("channel_id").longValue());assertEquals(channel,fallback.getAsLong("channel_id").longValue());assertEquals("Fallback "+i,fallback.getAsString("title"));
+            assertEquals("Weil du „Gesehener Film "+(i+1)+"“ gesehen hast",provider.byProviderId("channel","lowfin-recommendation-"+i).getAsString("display_name"));
+        }
     }
     @Test public void publishesFiveMovieRecommendationChannelsAfterContinueAndNextWithDetailLinks() throws Exception {
         app.library.state("homeRecommendations",recommendationRows(5).toString()); app.channels.publish(); await(()->provider.count("watch_next_program")==2);
@@ -263,7 +303,7 @@ public class HomeChannelsTest {
 
     public static final class FakeTvProvider extends ContentProvider {
         volatile boolean zeroChannelUpdates;
-        int previewWrites,watchWrites;
+        int previewWrites,watchWrites,channelWrites;
         private final Map<String,Map<Long,ContentValues>> tables=new HashMap<>(); private long next=1;
         @Override public boolean onCreate() { return true; }
         private String table(Uri uri) { return uri.getPathSegments().get(0); }
@@ -275,7 +315,7 @@ public class HomeChannelsTest {
         synchronized void foreign(String table) { ContentValues v=new ContentValues(); v.put("_id",next++); v.put("package_name","another.app"); v.put("internal_provider_id","foreign"); v.put("browsable",1); rows(table).put(v.getAsLong("_id"),v); }
         synchronized void browse(String table,String id,boolean enabled) { for(ContentValues v:rows(table).values()) if(id.equals(v.getAsString("internal_provider_id"))) v.put("browsable",enabled?1:0); }
         @Override public synchronized Uri insert(Uri uri,ContentValues values) { ContentValues v=new ContentValues(values); v.put("_id",next++); v.put("package_name","de.lowfin.tv"); v.put("browsable",1); rows(table(uri)).put(v.getAsLong("_id"),v); return ContentUris.withAppendedId(uri,v.getAsLong("_id")); }
-        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; if(table(uri).equals("preview_program")) previewWrites++;if(table(uri).equals("watch_next_program")) watchWrites++;v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return zeroChannelUpdates&&table(uri).equals("channel")?0:1; }
+        @Override public synchronized int update(Uri uri,ContentValues values,String where,String[] args) { ContentValues v=rows(table(uri)).get(ContentUris.parseId(uri)); if(v==null) return 0; if(table(uri).equals("channel")) channelWrites++;if(table(uri).equals("preview_program")) previewWrites++;if(table(uri).equals("watch_next_program")) watchWrites++;v.putAll(values); getContext().getContentResolver().notifyChange(uri,null,false); return zeroChannelUpdates&&table(uri).equals("channel")?0:1; }
         @Override public synchronized int delete(Uri uri,String where,String[] args) { return rows(table(uri)).remove(ContentUris.parseId(uri))==null?0:1; }
         @Override public synchronized Cursor query(Uri uri,String[] projection,String where,String[] args,String sort) {
             MatrixCursor out=new MatrixCursor(projection); String channel=uri.getQueryParameter("channel"); Long id=uri.getPathSegments().size()>1?ContentUris.parseId(uri):null;

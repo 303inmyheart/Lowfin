@@ -9,6 +9,19 @@ import java.util.*;
 final class Library extends SQLiteOpenHelper {
     volatile boolean companionAvailable;
     private boolean cacheRetired;
+    // SQLiteDatabase owns the WAL connection pool. Re-entering SQLiteOpenHelper
+    // for an already opened handle would acquire this helper's monitor, which
+    // our batch writers also hold while comparing and persisting many items.
+    private volatile SQLiteDatabase openedDatabase;
+    @Override public SQLiteDatabase getReadableDatabase() {
+        SQLiteDatabase db=openedDatabase;
+        if(db!=null&&db.isOpen()) return db;
+        db=super.getReadableDatabase();openedDatabase=db;return db;
+    }
+    @Override public SQLiteDatabase getWritableDatabase() {
+        SQLiteDatabase db=super.getWritableDatabase();openedDatabase=db;return db;
+    }
+    @Override public synchronized void close() { openedDatabase=null;super.close(); }
     Library(Context context,String scope) { super(context,"library-"+scope+".db",null,8); setWriteAheadLoggingEnabled(true); }
     @Override public void onCreate(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE items (id TEXT PRIMARY KEY,type TEXT,parent TEXT,series TEXT,name TEXT,season INTEGER,episode INTEGER,position INTEGER,played INTEGER,favorite INTEGER,json TEXT,stamp INTEGER)");
@@ -73,7 +86,9 @@ final class Library extends SQLiteOpenHelper {
     }
     List<JSONObject> resumable(String extra,String[] args,int limit,int offset) {
         boolean enabled=companionAvailable;
-        String condition=enabled?"((position>0 AND played=0) OR (companion_has_resume=1 AND companion_resume>0)) AND COALESCE(companion_visible,1)=1":"position>0 AND played=0";
+        // Resolve candidate IDs through the native partial index and the small state
+        // table before joining full metadata. The old cross-table OR scanned all items.
+        String condition=enabled?"id IN (SELECT id FROM items WHERE position>0 AND played=0 UNION SELECT companion_item FROM companion WHERE companion_has_resume=1 AND companion_resume>0) AND COALESCE(companion_visible,1)=1":"position>0 AND played=0";
         List<JSONObject> values=query(condition+(extra==null?"":" AND ("+extra+")"),args,enabled?"CASE WHEN companion_has_resume=1 AND companion_stamp>0 THEN companion_stamp ELSE stamp END DESC":"stamp DESC",limit,offset,enabled);
         values.removeIf(item->!Json.inContinue(item)); return values;
     }
@@ -275,6 +290,17 @@ final class Library extends SQLiteOpenHelper {
         if("true".equals(state("precacheBaselinePending"))&&artworkCount()==0) {
             state("precacheComplete","true");state("precacheBaselinePending","");
         }
+    }
+    /** Bounded state lookups, without one SQLite cursor per artwork fact. */
+    Map<String,String> states(Collection<String> requested) {
+        List<String> keys=new ArrayList<>(new LinkedHashSet<>(requested));Map<String,String> result=new HashMap<>();
+        for(int start=0;start<keys.size();start+=128) {
+            List<String> batch=keys.subList(start,Math.min(start+128,keys.size()));
+            try(Cursor c=getReadableDatabase().rawQuery("SELECT key,value FROM state WHERE key IN ("+String.join(",",Collections.nCopies(batch.size(),"?"))+")",batch.toArray(new String[0]))) {
+                while(c.moveToNext()) result.put(c.getString(0),c.getString(1));
+            }
+        }
+        return result;
     }
     String state(String key) { try(Cursor c=getReadableDatabase().rawQuery("SELECT value FROM state WHERE key=?",new String[]{key})) { return c.moveToFirst()?c.getString(0):""; } }
     synchronized void completeSync(long stamp) { if(cacheRetired) return;

@@ -20,7 +20,9 @@ final class ChannelLibraries {
     static List<JSONObject> cached(Library db,SharedPreferences prefs,Account a,String type) {
         List<String> ids=libraries(db,prefs,a,type); List<List<JSONObject>> groups=new ArrayList<>();
         if(ids.isEmpty()&&selection(prefs,a,type)==null) return db.query("type=?",new String[]{type},"stamp DESC,name",24,0);
-        for(String id:ids) { try { String saved=db.state("tv-library-"+type+"-"+id); List<JSONObject> items=new ArrayList<>(); if(!saved.isEmpty()) { JSONArray data=new JSONArray(saved); for(int i=0;i<data.length();i++) { JSONObject item=data.optJSONObject(i); if(item!=null&&type.equals(item.optString("Type"))) items.add(item); } } else items=db.browse(type,id,null,0,24); groups.add(items); } catch(Exception ignored) {} }
+        List<String> keys=new ArrayList<>();for(String id:ids) keys.add("tv-library-"+type+"-"+id);
+        Map<String,String> snapshots=db.states(keys);
+        for(String id:ids) { try { String saved=snapshots.getOrDefault("tv-library-"+type+"-"+id,""); List<JSONObject> items=new ArrayList<>(); if(!saved.isEmpty()) { JSONArray data=new JSONArray(saved); for(int i=0;i<data.length();i++) { JSONObject item=data.optJSONObject(i); if(item!=null&&type.equals(item.optString("Type"))) items.add(item); } } else items=db.browse(type,id,null,0,24); groups.add(items); } catch(Exception ignored) {} }
         return mix(groups,24);
     }
     static List<JSONObject> mix(List<List<JSONObject>> groups,int limit) {

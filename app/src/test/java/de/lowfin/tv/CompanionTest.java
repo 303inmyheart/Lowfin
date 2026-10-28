@@ -61,6 +61,23 @@ public class CompanionTest {
         context.getSharedPreferences("companion-outbox-"+account.scope(),0).edit().putBoolean("available",true).apply();
         client.replay();assertEquals(0,server.getRequestCount());assertTrue(client.discover());assertEquals(1,server.getRequestCount());
     }
+    @Test public void simultaneousStartupDiscoverySharesProbeAndExplicitRefreshStillReloads() throws Exception {
+        java.util.concurrent.ExecutorService workers=java.util.concurrent.Executors.newFixedThreadPool(2);
+        java.util.concurrent.CountDownLatch start=new java.util.concurrent.CountDownLatch(1);
+        try {
+            java.util.concurrent.Future<Boolean> session=workers.submit(()-> { start.await();return client.discover(); });
+            java.util.concurrent.Future<Boolean> resume=workers.submit(()-> { start.await();return client.discover(); });
+            start.countDown();
+            assertTrue(session.get(10,java.util.concurrent.TimeUnit.SECONDS));
+            assertTrue(resume.get(10,java.util.concurrent.TimeUnit.SECONDS));
+            assertEquals(1,server.getRequestCount());
+            installed=false;
+            assertFalse(client.refreshDiscovery());
+            assertEquals(2,server.getRequestCount());
+            assertFalse(client.discover());
+            assertEquals(2,server.getRequestCount());
+        } finally { workers.shutdownNow(); }
+    }
     @After public void cleanup() throws Exception { library.close(); server.shutdown(); LowfinApp app=(LowfinApp)context; app.io.shutdownNow(); app.cacheIo.shutdownNow(); app.navigationIo.shutdownNow(); app.reports.shutdownNow(); }
     private MockResponse ok(JSONObject value) { return new MockResponse().setHeader("Content-Type","application/json").setBody(value.toString()); }
     private JSONObject state(long revision,long sequence,long position,boolean played) { return Json.obj("revision",revision,"sequence",sequence,"resumeTicks",position,"runtimeTicks",duration,"hasResume",position>0,"played",played,"manualFence",false,"active",true,"resumeVisible",true,"effectiveRule",Json.obj("mode","RemainingTime","remainingSeconds",120,"percentage",99.5,"persistentResume",true)); }

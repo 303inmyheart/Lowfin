@@ -6,6 +6,7 @@ import android.graphics.*;
 final class CoverTags {
     private final Paint fill=new Paint(Paint.ANTI_ALIAS_FLAG),line=new Paint(Paint.ANTI_ALIAS_FLAG),text=new Paint(Paint.ANTI_ALIAS_FLAG);
     final RectF dvd=new RectF(),surround=new RectF(),hdr=new RectF();
+    private final Paint.FontMetrics metrics=new Paint.FontMetrics();
     private int width,height,mask;
     private String[] labels=CoverTagLabels.EMPTY;
     final java.util.List<RectF> extraBoxes=new java.util.ArrayList<>();
@@ -24,7 +25,7 @@ final class CoverTags {
         float scale=Math.min(density,Math.min(width/Math.max(100f,required),height/56f));
         float margin=5*scale,gap=3*scale,h=16*scale,w=31*scale,x=width-margin,y=height-margin-h;
         radius=3*scale;text.setTextSize(9*scale);line.setStrokeWidth(Math.max(.75f,scale*.65f));
-        Paint.FontMetrics metrics=text.getFontMetrics();baseline=y+(h-metrics.ascent-metrics.descent)/2;
+        text.getFontMetrics(metrics);baseline=y+(h-metrics.ascent-metrics.descent)/2;
         if((mask&4)!=0) { hdr.set(x-w,y,x,y+h);x-=w+gap; }
         if((mask&2)!=0) { surround.set(x-w,y,x,y+h);x-=w+gap; }
         if((mask&1)!=0) dvd.set(x-w,y,x,y+h);
@@ -43,7 +44,7 @@ final class CoverTags {
     }
     void draw(Canvas canvas) {
         draw(canvas,dvd,"DVD");draw(canvas,surround,"5.1");draw(canvas,hdr,"HDR");
-        Paint.FontMetrics metrics=text.getFontMetrics();
+        text.getFontMetrics(metrics);
         for(int i=0;i<extraBoxes.size();i++) {RectF box=extraBoxes.get(i);baseline=box.centerY()-(metrics.ascent+metrics.descent)/2;draw(canvas,box,extraText.get(i));}
     }
     private void draw(Canvas canvas,RectF box,String label) {

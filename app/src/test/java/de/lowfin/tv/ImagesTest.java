@@ -110,4 +110,19 @@ public class ImagesTest {
         release.countDown(); Thread.sleep(50); shadowOf(Looper.getMainLooper()).idle();
         assertSame(current,((BitmapDrawable)view.getDrawable()).getBitmap());
     }
+    @Test public void memoryHitReplacesArtworkWithoutAnIntermediateEmptyDrawable() throws Exception {
+        ImageView first=new ImageView(context);images.show(first,item("ready"));awaitImage(first);
+        java.util.concurrent.atomic.AtomicInteger clears=new java.util.concurrent.atomic.AtomicInteger();
+        ImageView reused=new ImageView(context) {
+            @Override public void setImageDrawable(android.graphics.drawable.Drawable drawable) {
+                if(drawable==null) clears.incrementAndGet();super.setImageDrawable(drawable);
+            }
+        };
+        reused.setImageDrawable(new android.graphics.drawable.ColorDrawable(Color.RED));clears.set(0);
+        images.show(reused,item("ready"));
+        assertEquals(0,clears.get());assertSame(((BitmapDrawable)first.getDrawable()).getBitmap(),((BitmapDrawable)reused.getDrawable()).getBitmap());
+        assertEquals(1,server.getRequestCount());
+        images.show(reused,Json.obj("Id","missing","Type","Movie"));
+        assertNull(reused.getDrawable());assertEquals(1,clears.get());
+    }
 }

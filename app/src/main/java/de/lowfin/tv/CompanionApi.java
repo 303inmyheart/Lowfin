@@ -159,16 +159,21 @@ final class CompanionApi {
         return mergeResume(nativeItems,limit,null,null);
     }
     List<JSONObject> mergeResume(List<JSONObject> nativeItems,int limit,String parent,String type) throws Exception {
+        long started=SystemClock.elapsedRealtime();
         if(!discover()) return nativeItems;
+        long discovered=SystemClock.elapsedRealtime();
         // Older plugins cannot prove scope or exclusions; never substitute their global list for a selected library.
         if(parent!=null&&!scopedResume||parent==null&&!resumeVisibility) return nativeItems;
         LinkedHashSet<String> known=new LinkedHashSet<>(); for(JSONObject item:nativeItems) if(CompanionUi.media(item)) known.add(item.optString("Id"));
         List<JSONObject> cached=library.resumable(null,null,100,0);
         for(JSONObject item:cached) if(CompanionUi.media(item)&&known.size()<100) known.add(item.optString("Id"));
+        long cachedAt=SystemClock.elapsedRealtime();
         JSONObject response=call("GET","/resume",null,"limit",limit,"knownItems",known.isEmpty()?null:String.join(",",known),"parentId",parent);
         if(parent!=null&&!parent.replace("-","").equalsIgnoreCase(response.optString("parentId").replace("-",""))) throw new IOException("Companion returned a different library scope");
+        long receivedAt=SystemClock.elapsedRealtime();
         JSONArray states=Json.array(response,"states");
         library.mergeCompanionStates(states);
+        long statesAt=SystemClock.elapsedRealtime();
         JSONArray rows=Json.array(response,"items");
         LinkedHashMap<String,JSONObject> merged=new LinkedHashMap<>();
         for(int i=0;i<rows.length();i++) {
@@ -176,6 +181,7 @@ final class CompanionApi {
             library.companionState(id,state); JSONObject item=library.item(id); if(item==null) { item=api.item(id); library.put(item); }
             merged.put(id,CompanionPolicy.decorate(item,state));
         }
+        long rowsAt=SystemClock.elapsedRealtime();
         Set<String> ids=new LinkedHashSet<>();for(JSONObject item:nativeItems) ids.add(item.optString("Id"));if(parent==null) for(JSONObject item:cached) ids.add(item.optString("Id"));
         Map<String,JSONObject> current=library.itemsById(ids);
         List<JSONObject> missing=new ArrayList<>();for(JSONObject item:nativeItems) if(!current.containsKey(item.optString("Id"))) missing.add(item);
@@ -183,6 +189,7 @@ final class CompanionApi {
         for(JSONObject item:nativeItems) { String id=item.optString("Id");merged.putIfAbsent(id,current.containsKey(id)?current.get(id):fallback.get(id)); }
         if(parent==null) for(JSONObject item:cached) { JSONObject fresh=current.get(item.optString("Id")); if(fresh!=null&&Json.inContinue(fresh)) merged.putIfAbsent(item.optString("Id"),fresh); }
         List<JSONObject> result=new ArrayList<>(merged.values()); result.removeIf(item->type!=null&&!type.equals(item.optString("Type"))||!(parent==null?Json.inContinue(item):Json.canResume(item)));
+        android.util.Log.i("LowfinResume","Merge: discovery="+(discovered-started)+", cached="+(cachedAt-discovered)+", request="+(receivedAt-cachedAt)+", states="+(statesAt-receivedAt)+", items="+(rowsAt-statesAt)+", final="+(SystemClock.elapsedRealtime()-rowsAt)+" ms; states="+states.length()+", items="+rows.length());
         return result.subList(0,Math.min(limit,result.size()));
     }
 }
