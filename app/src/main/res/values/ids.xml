@@ -3,4 +3,5 @@
     <item name="confirm_press" type="id" />
     <item name="scroll_animation_token" type="id" />
     <item name="dialog_row_style" type="id" />
+    <item name="center_reveal_pivot" type="id" />
 </resources>

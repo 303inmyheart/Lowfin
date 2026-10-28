@@ -4,21 +4,23 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.2.20**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.3**.
 
-Optionales **Lowfin Companion 0.6.0** für Jellyfin 12.2.x: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
+Optionales **Lowfin Companion 0.7.0** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
 - Optionales natives Film-Entdeckungsbanner unter Startseite: Hintergrund, Logo/Titel, Poster, Beschreibung, Laufzeit, Genres und kompakte Bewertungen der gewählten Quellen. Links/rechts blättern, OK öffnet Details. Frei einsortierbar, standardmäßig aus.
 - Startanimation ausschließlich mit bestehendem Lowfin-Logo, ohne Statusschriftzug, unter Darstellung (standardmäßig an). Wartet auf frisches Weiterschauen und Next Up sowie sichtbare Bilder; per Fernbedienung überspringbar, bei Fehlern spätestens nach 15 Sekunden beendet.
 
-Version 1.2 reduziert wiederholte lokale Metadaten-Schreibvorgänge, bündelt Abfragen beim Zurückkehren zur Startseite und beim Companion-Fortsetzen-Abgleich und verringert Arbeit bei Cacheprüfungen und Cover-Verdrängung. Cacheinhalt, Kontodaten und Playerverhalten bleiben erhalten. [Optimierungsprüfung](docs/optimization-1.2.0.md).
+Version 1.3 beschleunigt die Aktualisierung der Startseitenreihen, verbessert die Fokusführung in Bibliotheken, bündelt Datenbank- und Launcher-Cover-Abfragen und verwendet statische Hintergründe wieder. Dazu kommen der optionale Fokus-Puls und das überarbeitete Banner. Cacheinhalt, Kontodaten und Playerverhalten bleiben erhalten. Die gesamte integrierte Oberfläche ist auf Englisch (Standard) und Deutsch verfügbar; Server-Metadaten behalten ihre eigene Sprache.
+
+Unter **Darstellung → Pulsierende Fokusumrandung** lässt sich ein dezenter Puls in der Akzentfarbe aktivieren (standardmäßig aus; benötigt UI-Animationen). Banner-Cover blenden aus ihrer Mitte ein; die Bewertungen behalten ihre Namen und passen in dieselbe Textspalte wie die Beschreibung.
 
 ## Installieren
 
-Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.2.20-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.3-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.2.20-release.apk
+adb install -r Lowfin-1.3-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.

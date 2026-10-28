@@ -18,6 +18,15 @@ public class MediaDiffTest {
         after.getJSONArray("MediaSources").getJSONObject(0).getJSONArray("Streams").getJSONObject(0).put("Codec","h264");
         assertFalse(MediaDiff.CALLBACK.areContentsTheSame(before,after));
     }
+    @Test public void integralFastPathKeepsPrecisionAndRejectsNonFiniteNumbers() {
+        assertTrue(MediaDiff.jsonEquals(Long.valueOf(9007199254740993L),Long.valueOf(9007199254740993L)));
+        assertFalse(MediaDiff.jsonEquals(Long.valueOf(Long.MIN_VALUE),Long.valueOf(Long.MAX_VALUE)));
+        assertTrue(MediaDiff.jsonEquals(Short.valueOf((short)32000),Short.valueOf((short)32000)));
+        assertFalse(MediaDiff.jsonEquals(Byte.valueOf((byte)-1),Byte.valueOf((byte)1)));
+        assertTrue(MediaDiff.jsonEquals(32000,32000L));
+        assertFalse(MediaDiff.jsonEquals(Double.NaN,Float.NaN));
+        assertFalse(MediaDiff.jsonEquals(Double.POSITIVE_INFINITY,Float.POSITIVE_INFINITY));
+    }
     @Test public void comparisonPreservesArrayOrderTypesMissingKeysAndNumericPrecision() throws Exception {
         assertFalse(MediaDiff.jsonEquals(new JSONArray("[1,2]"),new JSONArray("[2,1]")));
         assertFalse(MediaDiff.jsonEquals(Json.obj("A",JSONObject.NULL),Json.obj("B",JSONObject.NULL)));

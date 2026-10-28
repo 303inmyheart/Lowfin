@@ -16,8 +16,11 @@ def request(path,method='GET',body=None,expected=200):
         if error.code==expected: return None
         raise RuntimeError('HTTP '+str(error.code)+' for '+method+' '+path.split('?')[0]) from None
 for attempt in range(30):
-    try: public=request('/System/Info/Public'); break
-    except Exception: time.sleep(1)
+    try:
+        public=request('/System/Info/Public')
+        if public.get('Version'): break
+    except Exception: pass
+    time.sleep(1)
 else: raise RuntimeError('Isolated test server did not start')
 assert public['Version']=='12.2.0'
 if not public['StartupWizardCompleted']:

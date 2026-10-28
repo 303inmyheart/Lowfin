@@ -42,6 +42,8 @@ final class Options {
     void appearance() {
         if(app.companion!=null&&app.companion.coverTagsSupported()) { Ui.space(content,8);content.addView(Ui.toggle(activity,I18n.resource(R.string.show_cover_tags),app.settings.getBoolean("showCoverTags",true),on->app.settings.edit().putBoolean("showCoverTags",on).apply())); }
         toggle("UI-Animationen","animations",true);
+        Ui.space(content,8);content.addView(Ui.toggle(activity,I18n.resource(R.string.focus_pulse),app.settings.getBoolean("focusPulse",false),on->app.settings.edit().putBoolean("focusPulse",on).apply()));
+        content.addView(Ui.text(activity,I18n.resource(R.string.focus_pulse_hint),12,Ui.MUTED));
         Ui.space(content,8);content.addView(Ui.toggle(activity,I18n.resource(R.string.startup_logo),app.settings.getBoolean("startupLogo",true),on->app.settings.edit().putBoolean("startupLogo",on).apply()));
         toggle("Weiche Scrollanimationen","scrollAnimations",false);
         content.addView(Ui.text(activity,I18n.resource(R.string.scroll_animation_hint),12,Ui.MUTED));

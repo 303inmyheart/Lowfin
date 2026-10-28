@@ -398,3 +398,26 @@ Batch per-user Companion state reads in bounded chunks, preserve list order and 
 - [x] 1.2.19: Remove the remaining main-thread cover-tag persistence wait; fence retry deadlines by metadata generation and test blocked-writer completion.
 
 - [x] 1.2.20: Rate-limit sustained Companion cache notices while continuing immediate incremental updates.
+
+- [x] 1.21: Reduce redundant badge redraws, rating placeholder layouts and cover-label draw/validation allocations without changing cache or playback policy.
+
+- [x] 1.21: Remove duplicate TV-channel writes and batch persistent Companion tag reads.
+
+- [x] 1.21 (requested release name, versionCode 107): Batch launcher recommendation and selected-library reads; includes previous local optimization rounds.
+
+- [x] Companion 0.7.0: Dashboard-Seitenleiste mit originalem Lowfin-L, gegliederte Einstellungen und optionale Discord-Präsenz inklusive Live-TV-EPG-Zeitachse und manueller Nutzerzuordnung ohne Standalone-Import.
+- [x] Companion 0.7.0: Obere Jellyfin-Versionssperre entfernen, Mindestversion 12.2 behalten; API-Tests gegen 12.2/12.3 und isolierter Server-Ladetest.
+- [x] Companion 0.7.0: Repository-Manifest und meta.json aus dem lokalen Paket erzeugen; Veröffentlichung beider Projekte bis zur erneuten Freigabe zurückgestellt.
+
+- [x] Companion 0.7.0: Discord-Verbindungsaufbau an bereitgestellten Originalcode angleichen (unversionierter Gateway, Client-Header, große READY-Nachrichten); reale lokale WebSocket-Tests und Close-Code-Diagnose.
+- [x] Companion 0.7.0: Discord-Tokens verschlüsselt und nutzergebunden speichern, alte Werte migrieren, persistenten Schlüsselring und Backup-Grenzen dokumentieren.
+
+- [x] Companion 0.7.0: Originalen Discord-Cover-Ablauf von rsbxDev übernehmen, inklusive entfernten Bildern, quadratischem PNG, Originalbild-Fallback, persistentem Upload-Cache und begrenzten Wiederholungen; Herkunft dokumentiert.
+
+- [x] 1.3 (versionCode 108): Prioritize fresh Next Up presentation over cache persistence and share startup Companion discovery; retain resume reconciliation and add shelf-stage timings.
+- [x] 1.3: Reduce repeated numeric metadata-comparison and focus-animation allocations while preserving numeric precision, animation toggles and focus geometry.
+- [x] 1.3: Replace the measured full-library Companion resume candidate scan with indexed native candidates and managed IDs; validate equivalence for visibility, scope and pagination.
+
+- [x] 1.3: Deduplicate launcher artwork resolution within each publication, retain retries/image-tag changes/cache-clear fencing, and remove redundant cover-file checks.
+
+- [x] 1.3: Optional accent focus pulse with lifecycle shutdown, centered banner-cover reveal, aligned compact ratings with labels and fewer redundant banner updates.

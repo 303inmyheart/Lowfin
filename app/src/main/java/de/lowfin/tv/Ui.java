@@ -11,11 +11,12 @@ final class Ui {
     static final int BG=0xff0c0c0d,PANEL=0xff202022,MUTED=0xff96969d;
     static int dp(Context c,int n) { return Math.round(n*c.getResources().getDisplayMetrics().density); }
     static GradientDrawable background(int color,int stroke) {
-        GradientDrawable g=new GradientDrawable(); g.setColor(color); g.setCornerRadius(8); if(stroke!=0) g.setStroke(2,stroke); return g;
+        GradientDrawable g=new FocusBackground(); g.setColor(color); g.setCornerRadius(8); if(stroke!=0) g.setStroke(2,stroke); return g;
     }
     static TextView text(Context c,String s,int size,int color) {
         TextView t=new TextView(c); t.setText(s); t.setTextSize(size); t.setTextColor(color); return t;
     }
+    static void textIfChanged(TextView view,String value) {if(!android.text.TextUtils.equals(view.getText(),value)) view.setText(value);}
     static TextView title(Context c,String s,int size) { TextView t=text(c,s,size,Color.WHITE); t.setTypeface(null,Typeface.BOLD); return t; }
     static LinearLayout column(Context c) { LinearLayout l=new LinearLayout(c); l.setOrientation(LinearLayout.VERTICAL); return l; }
     static LinearLayout row(Context c) { LinearLayout l=new LinearLayout(c); l.setOrientation(LinearLayout.HORIZONTAL); l.setGravity(Gravity.CENTER_VERTICAL); return l; }

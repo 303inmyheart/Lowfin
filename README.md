@@ -2,28 +2,30 @@
 
 ## **100% AI-GENERATED**
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.2.20.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.3.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
+
+The optional **Appearance → Pulsing focus outline** switch adds a subtle accent-colored border pulse (off by default; requires UI animations). Banner covers reveal from their center, and the labeled ratings fit the same text column as the description.
 
 ## Install
 
 Locally built, signed release APKs are published directly without running GitHub Actions. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.2.20-release.apk
+adb install -r Lowfin-1.3-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
 
 ## Features
 
-Version 1.2 reduces repeated local metadata writes, batches home-return and Companion resume lookups, and reduces incremental-check and artwork-eviction work. Cache contents, account data and player behavior are preserved. [Optimization audit](docs/optimization-1.2.0.md).
+Version 1.3 improves startup shelf refresh, library focus handling, batched database and launcher-artwork lookups, and reuse of static backgrounds. It also adds an optional accent-colored focus pulse and refines the home banner. Cache contents, account data and playback behavior are preserved. All built-in UI text is available in English (the default) and German; server-provided metadata keeps its own language.
 
 - Optional native movie-discovery banner under Home settings: backdrop, logo/title, poster, synopsis, runtime, genres and compact rating badges from your selected sources; left/right browse, OK opens details. It is reorderable and off by default.
 - Optional animated startup logo without a status caption under Appearance (on by default), waiting for fresh Continue Watching and Next Up and visible artwork; remote dismissal and a 15-second network-failure fallback remain available.
 
-- Optional **Lowfin Companion 0.6.0** for Jellyfin 12.2.x: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
+- Optional **Lowfin Companion 0.7.0** for Jellyfin 12.2+: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
 
 - Lightweight native UI, muted accent palette, optional small animations, compact 2:3 movie/show/season posters and 16:9 episode thumbnails.
 - Hold remote **OK/Enter** on home/library cards for Continue, Restart, watched/unwatched, Watch later, favorites and series details. **Watch later** is a persistent device-local list scoped to each account, separate from Jellyfin favorites.
@@ -41,7 +43,7 @@ Version 1.2 reduces repeated local metadata writes, batches home-return and Comp
 - OMDb, MDBList and TMDB API keys encrypted on device, selectable rating badges and permanent **on-demand** ratings storage. Ratings are never queried as part of library preloading.
 - Android TV preview channels for Continue watching, Next up, movies, shows and watched-movie recommendations. Separate movie/show library selection mixes cards across chosen libraries. Launcher support and channel visibility depend on Android TV / Google TV.
 
-## Settings in 0.7.0
+## Settings
 
 English is the default language regardless of the device language. Select **Language → Deutsch** to use German; the language picker is also available before sign-in. UI, dialogs, player, trailer messages and TV channel names are translated. Library titles, genres and descriptions retain the server's language.
 

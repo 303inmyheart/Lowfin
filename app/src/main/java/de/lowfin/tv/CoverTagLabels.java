@@ -5,15 +5,16 @@ import java.util.*;
 
 /** Small validated wire labels, independent from bitmap keys and source image dimensions. */
 final class CoverTagLabels {
+    private static final java.util.regex.Pattern LANGUAGE=java.util.regex.Pattern.compile("(?:lang|vost):[a-z]{2,3}");
     static final String[] EMPTY=new String[0];
     static final Set<String> KEYS=new HashSet<>(Arrays.asList("dvd","5.1","hdr","4k","1080p","720p","hdr10","hdr10plus","dv","hlg","3d","h264","hevc","av1","vp9","atmos","dtsx","truehd","dtshdma","7.1","stereo","languages","subtitles"));
     static String[] decode(String stored) {try {return stored.isEmpty()?null:parse(new JSONArray(stored));}catch(Exception ignored){return null;}}
     static String[] parse(JSONArray data) {
         if(data==null||data.length()>32) return null;LinkedHashSet<String> values=new LinkedHashSet<>();
-        for(int i=0;i<data.length();i++) {String value=data.optString(i);if(KEYS.contains(value)||value.matches("(?:lang|vost):[a-z]{2,3}")) values.add(value);}
+        for(int i=0;i<data.length();i++) {String value=data.optString(i);if(KEYS.contains(value)||LANGUAGE.matcher(value).matches()) values.add(value);}
         return values.toArray(EMPTY);
     }
-    static boolean hdr(String key) {return Arrays.asList("hdr","hdr10","hdr10plus","dv","hlg").contains(key);}
+    static boolean hdr(String key) {return "hdr".equals(key)||"hdr10".equals(key)||"hdr10plus".equals(key)||"dv".equals(key)||"hlg".equals(key);}
     static String[] filter(String[] labels,Set<String> enabled,boolean hdr) {
         List<String> visible=new ArrayList<>();for(String key:labels) {
             String group=key.startsWith("lang:")?"languages":key.startsWith("vost:")?"subtitles":key;

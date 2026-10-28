@@ -8,6 +8,8 @@ import android.graphics.drawable.GradientDrawable;
 final class SmoothGradient extends Drawable {
     private static final Bitmap NOISE=noise();
     private final Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.DITHER_FLAG);
+    private final Paint grainPaint=new Paint();
+    private Shader baseShader,combinedShader;
     private final GradientDrawable.Orientation direction;
     private final int[] colors;
     private final int accent,variant;
@@ -40,9 +42,22 @@ final class SmoothGradient extends Drawable {
             shader=new LinearGradient(x0,y0,x1,y1,colors,null,Shader.TileMode.CLAMP);
         }
         Shader grain=new BitmapShader(NOISE,Shader.TileMode.REPEAT,Shader.TileMode.REPEAT);
-        paint.setShader(new ComposeShader(shader,grain,PorterDuff.Mode.SRC_ATOP));
+        baseShader=shader;combinedShader=new ComposeShader(shader,grain,PorterDuff.Mode.SRC_ATOP);
+        grainPaint.setShader(grain);
+        paint.setShader(combinedShader);
     }
-    @Override public void draw(Canvas canvas) { if(paint.getShader()==null) onBoundsChange(getBounds()); canvas.save(); canvas.translate(getBounds().left,getBounds().top); canvas.drawRect(0,0,getBounds().width(),getBounds().height(),paint); canvas.restore(); }
+    @Override public void draw(Canvas canvas) {
+        if(baseShader==null) onBoundsChange(getBounds());
+        // Ambient backgrounds are opaque: grain SRC_ATOP is then equivalent to
+        // a separate SRC_OVER pass, without a third nested shader stage. Keep
+        // the original combined path for alpha fades and color filters.
+        boolean opaqueAmbient=variant>=0&&alpha==255&&paint.getColorFilter()==null;
+        paint.setShader(opaqueAmbient?baseShader:combinedShader);
+        canvas.save();canvas.translate(getBounds().left,getBounds().top);
+        canvas.drawRect(0,0,getBounds().width(),getBounds().height(),paint);
+        if(opaqueAmbient) canvas.drawRect(0,0,getBounds().width(),getBounds().height(),grainPaint);
+        canvas.restore();
+    }
     @Override public void setAlpha(int value) { alpha=value; paint.setAlpha(value); invalidateSelf(); }
     @Override public int getAlpha() { return alpha; }
     @Override public void setColorFilter(ColorFilter filter) { paint.setColorFilter(filter); invalidateSelf(); }

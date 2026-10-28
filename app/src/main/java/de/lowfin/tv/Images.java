@@ -80,8 +80,9 @@ final class Images {
     private void show(ImageView view,JSONObject item,boolean wide,int width) {
         if(view instanceof ArtworkView) coverTags.bind((ArtworkView)view,item,wide);
         String key=key(item,wide,width); if(key.equals(view.getTag())&&view.getDrawable()!=null) return;
-        view.setTag(key); view.setImageDrawable(null); if(closed||!api.hasImage(item,wide)) return;
+        view.setTag(key); if(closed||!api.hasImage(item,wide)) { view.setImageDrawable(null);return; }
         Bitmap ready=memory.get(key); if(ready!=null) { view.setImageBitmap(ready); firstShown(); return; }
+        view.setImageDrawable(null);
         if("TvChannel".equals(item.optString("Type"))) {
             downloads.execute(()-> {
                 if(closed||!key.equals(view.getTag())) return;
@@ -144,8 +145,9 @@ final class Images {
     private File cached(JSONObject item,boolean wide,int width,boolean visible) {
         File target=new File(directory,key(item,wide,width)+".jpg");
         // Existing HD precache files are already larger than the small library cards.
-        if(!target.isFile()&&width>240&&width<=320) target=new File(directory,key(item,wide,240)+".jpg");
-        if(!target.isFile()||target.length()==0) return null;
+        boolean exists=target.isFile();
+        if(!exists&&width>240&&width<=320) {target=new File(directory,key(item,wide,240)+".jpg");exists=target.isFile();}
+        if(!exists||target.length()==0) return null;
         long now=System.currentTimeMillis(); if(visible&&now-target.lastModified()>3600000) target.setLastModified(now); return target;
     }
     File fetch(JSONObject item) throws Exception { return fetch(item,false,displayWidth(240),false); }
@@ -204,6 +206,8 @@ final class Images {
         if(inventorySave!=null) inventorySave.cancel(false);
         inventorySave=inventory.schedule(()-> { synchronized(this) { if(!closed&&scanned.getCount()==0&&activeWrites==0) saveInventory(); } },2,TimeUnit.SECONDS);
     }
+    // Background publisher must observe a completed clear, not its half-deleted directory.
+    synchronized long cacheGeneration() { return epoch; }
     long bytes() { return diskBytes; }
     synchronized void clear() { try { inventoryIndex.beginMutation(); } catch(IOException error) { Log.w("LowfinImages","Unable to mark inventory dirty"); return; } epoch++; memory.evictAll(); File[] files=directory.listFiles(); diskBytes=0; diskFiles=0; if(files!=null) for(File file:files) { if(!file.delete()&&file.isFile()&&file.getName().endsWith(".jpg")) { diskBytes+=file.length(); diskFiles++; } } queueInventorySave(); }
     synchronized void close() { closed=true;coverTags.close(); http.dispatcher().cancelAll(); downloads.shutdownNow(); workers.shutdownNow(); inventory.shutdown(); memory.evictAll(); keyHashes.evictAll(); scanned.countDown(); }
