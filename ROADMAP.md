@@ -412,7 +412,7 @@ Batch per-user Companion state reads in bounded chunks, preserve list order and 
 - [x] Companion 0.7.0: Discord-Verbindungsaufbau an bereitgestellten Originalcode angleichen (unversionierter Gateway, Client-Header, große READY-Nachrichten); reale lokale WebSocket-Tests und Close-Code-Diagnose.
 - [x] Companion 0.7.0: Discord-Tokens verschlüsselt und nutzergebunden speichern, alte Werte migrieren, persistenten Schlüsselring und Backup-Grenzen dokumentieren.
 
-- [x] Companion 0.7.0: Originalen Discord-Cover-Ablauf von rsbxDev übernehmen, inklusive entfernten Bildern, quadratischem PNG, Originalbild-Fallback, persistentem Upload-Cache und begrenzten Wiederholungen; Herkunft dokumentiert.
+- [x] Companion 0.7.0: Discord-Cover-Verarbeitung integrieren, inklusive entfernten Bildern, quadratischem PNG, Originalbild-Fallback, persistentem Upload-Cache und begrenzten Wiederholungen; Herkunft dokumentiert.
 
 - [x] 1.3 (versionCode 108): Prioritize fresh Next Up presentation over cache persistence and share startup Companion discovery; retain resume reconciliation and add shelf-stage timings.
 - [x] 1.3: Reduce repeated numeric metadata-comparison and focus-animation allocations while preserving numeric precision, animation toggles and focus geometry.
