@@ -125,7 +125,7 @@ On Linux, `bash tools/bootstrap.sh` installs project-local build tools under `.t
 
 The `release` APK uses R8/resource shrinking and the local Android debug signing configuration. An existing installation can only be updated using the same signing certificate. The supplied APK preserves the certificate used by earlier Lowfin builds.
 
-Automated tests use JUnit, Robolectric on Android 11, mock HTTP servers and a fake Android TV provider. See `dist/verification.json` for the exact test count, APK checksum and certificate. HD UI renderings are under `design/screenshots/`. Physical TV/live-server behavior is not validated by these simulated tests.
+Automated tests use JUnit, Robolectric on Android 11, mock HTTP servers and a fake Android TV provider. The release includes [BUILD.json](https://github.com/303inmyheart/Lowfin/releases/download/1.4/BUILD.json) with its test count, APK checksum and certificate; the 1.4 verification record links the Actions run. Real device captures are shown above; synthetic UI renderings are produced under `app/build/qa/` during tests. Physical TV/live-server behavior is not validated by these simulated tests.
 
 ## GitHub builds
 
