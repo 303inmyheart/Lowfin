@@ -45,8 +45,12 @@ if abis != ['arm64-v8a', 'armeabi-v7a', 'x86', 'x86_64']:
     raise SystemExit(f'Missing native decoder ABI: {abis}')
 output = root / 'ci-artifacts'
 output.mkdir(exist_ok=True)
-filename = f'Lowfin-{version}.apk'
+filename = f'Lowfin-{version}-release.apk'
 shutil.copy2(apk, output / filename)
+update = json.loads((apk_dir / 'update.json').read_text())
+if update['versionCode'] != metadata['versionCode'] or update['sha256'] != hashlib.sha256(apk.read_bytes()).hexdigest():
+    raise SystemExit('Updater metadata does not match APK')
+shutil.copy2(apk_dir / 'update.json', output / 'update.json')
 digest = hashlib.sha256(apk.read_bytes()).hexdigest()
 (output / 'SHA256SUMS').write_text(f'{digest}  {filename}\n')
 report = {'version': version, 'version_code': metadata['versionCode'],

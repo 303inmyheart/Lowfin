@@ -97,8 +97,9 @@ public class IdleScreensaverTest {
     @Test public void settingsRowsHaveConsistentGapsAndIgnoreDuplicateLegacySpacers() {
         SettingsColumn column=new SettingsColumn(activity.get());Button first=Ui.button(activity.get(),"First",()->{}),second=Ui.button(activity.get(),"Second",()->{});
         column.addView(first);Ui.space(column,8);Ui.space(column,20);column.addView(second);
-        assertEquals(2,column.getChildCount());assertEquals(Ui.dp(activity.get(),8),((LinearLayout.LayoutParams)second.getLayoutParams()).topMargin);
-        TextView hint=Ui.text(activity.get(),"Hint",12,Ui.MUTED);column.addView(hint);assertEquals(Ui.dp(activity.get(),4),((LinearLayout.LayoutParams)hint.getLayoutParams()).topMargin);
+        assertEquals(2,column.getChildCount());assertEquals(Ui.dp(activity.get(),4),((LinearLayout.LayoutParams)second.getLayoutParams()).topMargin);
+        TextView hint=Ui.text(activity.get(),"Hint",12,Ui.MUTED);column.addView(hint);assertEquals(Ui.dp(activity.get(),2),((LinearLayout.LayoutParams)hint.getLayoutParams()).topMargin);
+        TextView heading=Ui.title(activity.get(),"Section",16);column.addView(heading);assertEquals(Ui.dp(activity.get(),18),((LinearLayout.LayoutParams)heading.getLayoutParams()).topMargin);
     }
     private boolean contains(View view,java.util.function.Predicate<View> match) { if(match.test(view)) return true;if(view instanceof android.view.ViewGroup) {android.view.ViewGroup group=(android.view.ViewGroup)view;for(int i=0;i<group.getChildCount();i++) if(contains(group.getChildAt(i),match)) return true;}return false; }
 }

@@ -8,6 +8,8 @@ import android.widget.Switch;
 
 /** One native, accessible remote-focus target for every boolean setting. */
 final class SettingSwitch extends Switch {
+    private boolean row;
+    void settingsRow() {row=true;setTextSize(14);setMinHeight(Ui.dp(getContext(),50));focusStyle(Accent.color);}
     SettingSwitch(Context context,String label,boolean checked,java.util.function.Consumer<Boolean> changed) {
         super(context); setText(label); setTextSize(13); setMaxLines(2); setTextColor(Color.WHITE); setShowText(false);
         setGravity(Gravity.CENTER_VERTICAL); setPadding(Ui.dp(context,14),Ui.dp(context,8),Ui.dp(context,14),Ui.dp(context,8));
@@ -28,5 +30,5 @@ final class SettingSwitch extends Switch {
         track.addState(new int[]{android.R.attr.state_checked},shape(accent,46,24));
         track.addState(new int[]{},shape(0xff414148,46,24)); setTrackDrawable(track);
     }
-    private void focusStyle(int accent) { setBackground(Ui.background(isFocused()?0xff333337:Ui.PANEL,isFocused()?accent:0)); }
+    private void focusStyle(int accent) { if(!(getBackground() instanceof GradientDrawable))setBackground(Ui.background(0,0));GradientDrawable background=(GradientDrawable)getBackground();background.setColor(isFocused()?0xff2d2d32:row?0x00000000:Ui.PANEL);background.setCornerRadius(Ui.dp(getContext(),8));background.setStroke(isFocused()?Ui.dp(getContext(),2):0,accent); }
 }

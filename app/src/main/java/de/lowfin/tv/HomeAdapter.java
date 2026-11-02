@@ -146,6 +146,9 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     }
     private void focusPending(Shelf shelf) {
         if(pendingRow<0||logical(shelf.getBindingAdapterPosition())!=pendingRow||owner.hasPendingAdapterUpdates()) return;
+        // Moving focus into a row still passing through the viewport can recycle that
+        // very card before vertical motion finishes, losing the pending selection.
+        if(owner.getScrollState()!=RecyclerView.SCROLL_STATE_IDLE||owner.getLayoutManager().isSmoothScrolling()) return;
         if(shelf.banner!=null) {pendingRow=-1;shelf.banner.requestFocus();return;}
         if(entryPending&&rows.get(pendingRow).isEmpty()) return;
         int column=pendingColumn; pendingRow=-1;
@@ -240,7 +243,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     @Override public int getItemCount() { return rows.size(); }
     @Override public long getItemId(int position) { return logical(position); }
     @Override public Shelf onCreateViewHolder(ViewGroup parent,int type) {
-        if(type==1) {DiscoveryBanner view=new DiscoveryBanner(parent.getContext());RecyclerView.LayoutParams size=new RecyclerView.LayoutParams(-1,Ui.dp(parent.getContext(),220));size.setMargins(0,Ui.dp(parent.getContext(),6),0,Ui.dp(parent.getContext(),10));view.setLayoutParams(size);return new Shelf(view,null,null,null);}
+        if(type==1) {DiscoveryBanner view=new DiscoveryBanner(parent.getContext());RecyclerView.LayoutParams size=new RecyclerView.LayoutParams(-1,Ui.dp(parent.getContext(),220));size.setMargins(0,Ui.dp(parent.getContext(),6),0,Ui.dp(parent.getContext(),48));view.setLayoutParams(size);return new Shelf(view,null,null,null);}
         Context c=parent.getContext(); LinearLayout box=Ui.column(c); box.setPadding(0,Ui.dp(c,8),0,Ui.dp(c,4));
         LinearLayout head=Ui.row(c); TextView label=Ui.title(c,"",18); label.setSingleLine(true); label.setEllipsize(android.text.TextUtils.TruncateAt.END); head.addView(label,new LinearLayout.LayoutParams(0,-2,1));
         box.addView(head); Ui.space(box,3);
@@ -260,9 +263,9 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         }
         if(shelf.key!=null) positions.put(shelf.key,shelf.list.getLayoutManager().onSaveInstanceState());
         shelf.itemView.setVisibility(hidden(index)?View.GONE:focusedShelf<0||index==focusedShelf||scrollingShelf?View.VISIBLE:View.INVISIBLE);
-        shelf.key="home-row-"+index; shelf.label.setText(labels.get(index)); shelfHeading(shelf,index);
-        ViewGroup.LayoutParams rowSize=shelf.itemView.getLayoutParams(); rowSize.height=hidden(index)?0:ViewGroup.LayoutParams.WRAP_CONTENT; shelf.itemView.setLayoutParams(rowSize);
-        List<JSONObject> data=rows.get(index); shelf.empty.setVisibility(data.isEmpty()&&index<2?View.VISIBLE:View.GONE); shelf.empty.setText(I18n.text("Hier erscheinen deine ")+(index==0?I18n.text("angefangenen Filme und Folgen"):index==1?I18n.text("nächsten Folgen"):index>=2?labels.get(index)+I18n.text("-Filme"):I18n.text("neuen Filme und Serien")));
+        shelf.key="home-row-"+index; Ui.textIfChanged(shelf.label,labels.get(index)); shelfHeading(shelf,index);
+        ViewGroup.LayoutParams rowSize=shelf.itemView.getLayoutParams(); int rowHeight=hidden(index)?0:ViewGroup.LayoutParams.WRAP_CONTENT;if(rowSize.height!=rowHeight){rowSize.height=rowHeight;shelf.itemView.setLayoutParams(rowSize);}
+        List<JSONObject> data=rows.get(index); shelf.empty.setVisibility(data.isEmpty()&&index<2?View.VISIBLE:View.GONE); Ui.textIfChanged(shelf.empty,I18n.text("Hier erscheinen deine ")+(index==0?I18n.text("angefangenen Filme und Folgen"):index==1?I18n.text("nächsten Folgen"):index>=2?labels.get(index)+I18n.text("-Filme"):I18n.text("neuen Filme und Serien")));
         shelf.list.setVisibility(View.VISIBLE);
         Cards adapter=(Cards)shelf.list.getAdapter();
         if(adapter==null) {
@@ -272,7 +275,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         ((ShelfList)shelf.list).openMenu=openMenu;
         List<JSONObject> cards=new ArrayList<>(data); if(!libraries(index)&&(!data.isEmpty()||!entryPending)) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=feature(index); adapter.wide=index<2||libraries(index); adapter.update(cards);
         int height=index<2||libraries(index)?180:204; for(JSONObject item:data) { double ratio=index<2||libraries(index)?16.0/9:Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
-        ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); dimensions.height=Ui.dp(shelf.list.getContext(),height); shelf.list.setLayoutParams(dimensions);
+        ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); int pixels=Ui.dp(shelf.list.getContext(),height);if(dimensions.height!=pixels){dimensions.height=pixels;shelf.list.setLayoutParams(dimensions);}
         if(positions.containsKey(shelf.key)) shelf.list.getLayoutManager().onRestoreInstanceState(positions.get(shelf.key));
         shelf.list.post(()->focusPending(shelf));
     }
@@ -290,6 +293,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     static final class ShelfList extends RecyclerView {
         Runnable afterLayout,openMenu;
         private int pendingCard=-1;
+        private boolean recoveryPosted;
         ShelfList(Context context) { super(context); }
         @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) { super.onLayout(changed,left,top,right,bottom); focusCard(); if(afterLayout!=null) post(afterLayout); }
         void requestCard(int position) {
@@ -304,6 +308,12 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             if(pendingCard<0||hasPendingAdapterUpdates()||getLayoutManager()==null||getAdapter()==null||getAdapter().getItemCount()==0) return;
             pendingCard=Math.min(pendingCard,getAdapter().getItemCount()-1);
             View next=getLayoutManager().findViewByPosition(pendingCard); if(next!=null&&next.requestFocus()) pendingCard=-1;
+            // A row can restore its layout after an interrupted/replaced smooth scroll.
+            // Keep the explicit target authoritative when the list is idle but it is absent.
+            if(next==null&&!recoveryPosted&&isShown()&&getScrollState()==SCROLL_STATE_IDLE&&!getLayoutManager().isSmoothScrolling()) {
+                recoveryPosted=true;
+                post(()-> { recoveryPosted=false; if(pendingCard>=0&&isAttachedToWindow()&&isShown()&&!hasPendingAdapterUpdates()&&getScrollState()==SCROLL_STATE_IDLE&&!getLayoutManager().isSmoothScrolling()&&getLayoutManager().findViewByPosition(pendingCard)==null) scrollToPosition(pendingCard); });
+            }
         }
         void moveCard(View focused,int direction) {
             View card=findContainingItemView(focused); int current=pendingCard>=0?pendingCard:card==null?NO_POSITION:getChildAdapterPosition(card);

@@ -4,25 +4,58 @@
 
 > **Persönlich getestet:** Als Projektbetreiber habe ich alle Funktionen selbst ausgiebig getestet.
 
+> **Optionales Server-Plugin: [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion).** Ergänzt Smart Completion und dauerhaftes Fortsetzen pro Medium, inkrementelle Cache-Updates, Cover-Tags und zentral verwaltete Anbieterzugänge. Lowfin funktioniert auch vollständig ohne das Plugin.
+
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.3**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.4**.
 
 Optionales **Lowfin Companion 0.7.0** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
 - Optionales natives Film-Entdeckungsbanner unter Startseite: Hintergrund, Logo/Titel, Poster, Beschreibung, Laufzeit, Genres und kompakte Bewertungen der gewählten Quellen. Links/rechts blättern, OK öffnet Details. Frei einsortierbar, standardmäßig aus.
 - Startanimation ausschließlich mit bestehendem Lowfin-Logo, ohne Statusschriftzug, unter Darstellung (standardmäßig an). Wartet auf frisches Weiterschauen und Next Up sowie sichtbare Bilder; per Fernbedienung überspringbar, bei Fehlern spätestens nach 15 Sekunden beendet.
 
-Version 1.3 beschleunigt die Aktualisierung der Startseitenreihen, verbessert die Fokusführung in Bibliotheken, bündelt Datenbank- und Launcher-Cover-Abfragen und verwendet statische Hintergründe wieder. Dazu kommen der optionale Fokus-Puls und das überarbeitete Banner. Cacheinhalt, Kontodaten und Playerverhalten bleiben erhalten. Die gesamte integrierte Oberfläche ist auf Englisch (Standard) und Deutsch verfügbar; Server-Metadaten behalten ihre eigene Sprache.
+Version 1.4 ergänzt TV-Programm, ein neues Einstellungsraster mit überarbeiteten Untermenüs, sortierbare Seitenleiste, einstellbare Seitengrößen und einen optionalen Updateprüfer. Fokusführung, Startseitenlayout und Bewertungen wurden überarbeitet; unnötige Layoutarbeit sowie Metadaten- und EPG-Abfragen wurden reduziert. Die integrierte Oberfläche ist vollständig auf Englisch (Standard) und Deutsch verfügbar; Server-Metadaten behalten ihre Sprache.
 
 Unter **Darstellung → Pulsierende Fokusumrandung** lässt sich ein dezenter Puls in der Akzentfarbe aktivieren (standardmäßig aus; benötigt UI-Animationen). Banner-Cover blenden aus ihrer Mitte ein; die Bewertungen behalten ihre Namen und passen in dieselbe Textspalte wie die Beschreibung.
 
+## Screenshots
+
+Echte Aufnahmen von einem Android-TV-Gerät in 1280 × 720. Die Beispiele zeigen die deutsche Oberfläche; Englisch ist ebenfalls vollständig verfügbar.
+
+![Startseite mit Banner](docs/showcase/screenshots/01-home.png)
+
+| Bibliothek | Detailansicht |
+|---|---|
+| ![Film-Bibliothek](docs/showcase/screenshots/02-library.png) | ![Details mit integrierten Bewertungen](docs/showcase/screenshots/03-details.png) |
+
+Empfehlungs- und Genre-Reihen verbinden Poster, Hintergrund, Beschreibung und Bewertungen:
+
+![Weil du gesehen hast](docs/showcase/screenshots/06-because-you-watched.png)
+
+![Genre-Reihe](docs/showcase/screenshots/07-genre-shelf.png)
+
+| Einstellungen | TV-Programm |
+|---|---|
+| ![Einstellungsraster](docs/showcase/screenshots/04-settings.png) | ![TV-Programm](docs/showcase/screenshots/05-tv-guide.png) |
+
+## Einstellungen
+
+Version 1.4 zeigt die zwölf Einstellungskategorien in einem Raster mit drei Spalten und Icons in der Akzentfarbe. Die Pfeiltasten bleiben in der jeweiligen Zeile beziehungsweise Spalte; am linken Rand öffnet Links die Seitenleiste. Zurück aus einem Untermenü stellt die gewählte Kachel wieder her. Beim ersten Öffnen erhält „Startseite“ den Fokus; das Raster skaliert für HD und 4K.
+
+Die Untermenüs zeigen links die Kategorie und rechts kompakte, thematisch gruppierte Einstellungen. Unter **Darstellung → Seitenleiste anordnen** lassen sich Menüeinträge und Bibliotheken getrennt sortieren. Die Menüsortierung gilt pro Konto auf diesem Gerät; die Bibliotheksreihenfolge wird im Jellyfin-Benutzerprofil gespeichert und von anderen Clients beim Aktualisieren übernommen. Mit OK eine Zeile aufnehmen, mit Hoch/Runter bewegen, mit OK ablegen und anschließend speichern. Abbrechen verwirft den Entwurf; bei einer zwischenzeitlich geänderten Serverreihenfolge wird neu geladen und erneut geprüft. [Details](docs/settings-submenus-and-sidebar-1.3.md).
+
+Noch unveröffentlichte lokale Builds bieten **Einstellungen → Diagnose** mit begrenzter Leistungsaufzeichnung im RAM und privatem ADB-Zugang. Lokal standardmäßig an, in öffentlichen Release-Builds standardmäßig aus. [Befehle, Datenumfang und Build-Optionen](docs/diagnostics.md).
+
+Zusätzlich gibt es in Version 1.4 **Einstellungen → App-Updates**: optionale tägliche GitHub-Prüfungen und Benachrichtigungen, manuelle Prüfung und lesbaren Changelog. Download und Installation starten ausschließlich über die jeweiligen Knöpfe. Android kann eine Freigabe oder Bestätigung verlangen. [Verhalten und lokale Release-Vorbereitung](docs/app-updater.md).
+
+- Detailaktionen erhalten dezente durchscheinende Akzentflächen, mittig gruppierte Symbole und Texte sowie einen klaren Fernbedienungsfokus. Bewertungen passen sich in Detailansicht, Banner und Startseitenreihen ohne kräftige Einzelrahmen ein; Anzeige- und Cache-Einstellungen bleiben erhalten.
 ## Installieren
 
-Die lokal gebaute und direkt als GitHub-Release veröffentlichte APK heißt `Lowfin-1.3-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die über einen manuell gestarteten GitHub-Actions-Workflow gebaute Release-APK heißt `Lowfin-1.4-release.apk`. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.3-release.apk
+adb install -r Lowfin-1.4-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.
@@ -73,6 +106,9 @@ Die Version 1.0 bündelt den bisherigen Funktionsumfang mit Companion-Unterstüt
 
 ## Neu in 0.5.0
 
+- Bibliotheken halten beim schnellen vertikalen Navigieren die gewählte Spalte. Kompakte Tabs **Alle Serien / Begonnene Folgen** markieren die aktive Ansicht; der Buchstabensprung nutzt einen passenden Text-/Symbolbutton. Ein bewusstes Hoch aus der ersten Reihe führt zur Kopfzeile, Runter zur vorher ausgewählten Karte.
+- **Einstellungen → Bibliothek und Cache → Einträge pro Bibliotheksseite** bietet 50–150 Einträge für Bibliotheken und Folgenlisten (Standard 60). Beide Seitengrößen werden per Schieberegler gewählt: Links/Rechts ändert den Wert um eins, Gedrückthalten beschleunigt schrittweise, Speichern übernimmt ihn. Kompakte Pfeile in Akzentfarbe ersetzen die großen Seitenbuttons in den Listenansichten.
+- **Live TV → TV-Programm** öffnet die Programmübersicht mit Senderlogos, einer Zeitleiste über zwei Stunden, Tages-/Zeitauswahl und Sendungsbeschreibungen. OK öffnet die Sendungsdetails; **Sender ansehen** schaltet ein. Zurück führt zur Senderliste. Standardmäßig enthält eine Seite 25 Sender; unter **Einstellungen → Live TV** sind 10–50 wählbar. Sender ohne aktuelle/kommende EPG-Daten werden nur im Programmführer standardmäßig ausgeblendet; der Filter ist ausschaltbar. Die normale Senderliste bleibt vollständig. Die Programmübersicht per langem OK auf einem Sender bleibt erhalten.
 - Live-TV verwendet eine eigene Route nach dem [aktuellen Moonfin-Core-Resolver](https://github.com/Moonfin-Client/Moonfin-Core/blob/main/packages/playback_jellyfin/lib/src/jellyfin_media_stream_resolver.dart): geöffneten HTTP-Quellpfad bevorzugen, danach `DirectStreamUrl`, danach aktive Jellyfin-Streamroute. `AutoOpenLiveStream=true` bleibt aktiv; falls der Server trotzdem eine ungeöffnete Quelle liefert, öffnet Lowfin sie ausdrücklich über `/LiveStreams/Open`. Interne `LiveStreamFiles`-Adressen werden auf die konfigurierte Serveradresse inklusive Reverse-Proxy-Unterpfad umgeschrieben. Fehler wechseln zur nächsten verfügbaren Route derselben geöffneten Sitzung. Jellyfin-Authentifizierung wird ausschließlich an den konfigurierten Server gesendet. Filme und Serien behalten die bisherige Wiedergabelogik. Wie Moonfin ist für Live-TV zusätzlich der Jellyfin-FFmpeg-Audiodecoder als lokaler Fallback eingebunden, unter anderem für MP2-Ton; Stereo-Downmix bleibt lokal. Die TS-Auswertung erlaubt wie Moonfin auch Non-IDR-Keyframes, damit Sender ohne regelmäßige IDR-Frames beim Einstieg nicht auf ein nie eintreffendes Startbild warten. Transcoding bleibt standardmäßig ausgeschaltet; eine explizite Codec-copy-Remux-Route ist ohne Neukodierung zulässig.
 - **Einstellungen → Bewertungen · Anbieter und API-Keys** bietet OMDb, MDBList und TMDB. Je Anbieter öffnet sich ein Textfeld für den API-Key; TMDB akzeptiert auch den Read Access Token. Schlüssel werden mit Android Keystore verschlüsselt gespeichert. Leeres Feld entfernt einen Key. Ohne Keys werden keine externen Anfragen gestellt.
 - Die sichtbaren Bewertungen sind einzeln auswählbar: **IMDb, Rotten Tomatoes Kritiker/Publikum, Metacritic, TMDB, Trakt, Letterboxd und MDBList**. Kompakte Badges mit passenden Icons und ausdrücklichen Skalen erscheinen unter der fokussierten Genre-Reihe und auf Film-/Seriendetailseiten. Fehlende Werte bleiben ausgeblendet. Lange Badge-Reihen brechen innerhalb des verfügbaren HD-Inhaltsbereichs um.
@@ -203,6 +239,8 @@ Eigenständige Implementierung in Java, ohne laufende WebView oder Flutter-Engin
 
 ## API-Keys per TXT importieren
 
+**Mit Lowfin Companion:** OMDb, MDBList, TMDB und Tracearr zentral im Jellyfin-Plugin-Dashboard einrichten und für alle oder ausgewählte Jellyfin-Nutzer freigeben. Für diese Freigaben blendet Lowfin lokale Schlüssel-, Import- und Tracearr-Verbindungsfelder aus. Anbieter, einzelne Bewertungen und den lokalen Bewertungscache wählt man weiterhin pro TV. Die folgende TXT-Anleitung gilt für lokal konfigurierte Zugänge ohne entsprechende Serverfreigabe. Der Companion verwaltet Zugangsdaten zentral; er liest nicht die Android-Download-TXT.
+
 Wenn noch keine Bewertungs-API-Keys gespeichert sind, erstellt Lowfin beim Start **Download/Lowfin-API-Keys.txt**. Die Datei erklärt alle Anbieter. Keys hinter `=` eintragen, als UTF-8 speichern und zu Lowfin zurückkehren. Die App prüft im Vordergrund alle fünf Sekunden, speichert ausgefüllte Keys verschlüsselt und löscht die Datei nach erfolgreichem Import. Ungenutzte Anbieter dürfen leer bleiben. Bestehende Keys deaktivieren den automatischen Import. Wenn der Texteditor die ursprüngliche Datei ersetzt, lässt sie sich in den Bewertungseinstellungen über den TXT-Dateiauswahldialog importieren.
 
 ```ini
@@ -239,6 +277,6 @@ Companion 0.5.0 ergänzt einen persistenten Tag-Index mit Ereignisaktualisierung
 
 ## Veröffentlichung und Sprache
 
-Der Android-Workflow wird ausschließlich manuell gestartet. Quellcode-Pushes verbrauchen keine Build-Minuten; diese Releases werden lokal gebaut und direkt hochgeladen. [Companion-Quellcode, README und Changelog](https://github.com/303inmyheart/Lowfin-Companion) liegen in einem eigenen Repository.
+Der Android-Workflow wird ausschließlich manuell gestartet. Quellcode-Pushes starten keinen Build. Lowfin 1.4 wird über den manuell gestarteten GitHub-Actions-Workflow gebaut und geprüft; das bestehende Signing-Secret ist zwingend erforderlich. [Companion-Quellcode, README und Changelog](https://github.com/303inmyheart/Lowfin-Companion) liegen in einem eigenen Repository.
 
 Die Standardsprache ist Englisch. Unter Einstellungen → Konto und Sprache kann zwischen Englisch und Deutsch gewechselt werden. Titel, Genres, Inhaltsbeschreibungen und Fehlermeldungen des Servers bleiben in der von Jellyfin gelieferten Sprache.

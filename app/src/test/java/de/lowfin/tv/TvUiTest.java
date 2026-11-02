@@ -33,9 +33,14 @@ public class TvUiTest {
     private volatile boolean recommendationsOffline;
     private volatile boolean companionInstalled;
     private volatile boolean liveConfigured=true;
+    private volatile int guideChannelCount=1;
+    private volatile boolean guideEmpty,guideOffline,guideWindowEmpty;
+    private final java.util.Set<String> guideAbsent=java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.atomic.AtomicInteger guideQueries=new java.util.concurrent.atomic.AtomicInteger();
     private volatile String blockedHomePath="";
     private final java.util.concurrent.CountDownLatch homeBlocked=new java.util.concurrent.CountDownLatch(1),homeRelease=new java.util.concurrent.CountDownLatch(1);
     private volatile JSONObject companionState;
+    private volatile JSONObject userConfiguration=Json.obj("OrderedViews",Json.arr("films","shows"),"SubtitleMode","Default","RememberAudioSelections",true);
     @Before public void setup() throws Exception { RuntimeEnvironment.getApplication().getSharedPreferences("settings",0).edit().putString("language","de").putBoolean("startupLogo",false).commit(); I18n.init(RuntimeEnvironment.getApplication());
         app=(LowfinApp)RuntimeEnvironment.getApplication(); series=Json.obj("Id","show","Type","Series","Name","Die lange Serie","Overview","45 Staffeln. Direkt zu deiner Lieblingsfolge.","ImageTags",Json.obj("Primary","poster"),"PrimaryImageAspectRatio",2.0/3);
         movie=Json.obj("Id","movie","Type","Movie","Name","Zwischen den Sternen","Overview","Eine Crew folgt einem rätselhaften Signal durch die Nacht. Als ihr Schiff die vertrauten Routen verlässt, wird aus der Suche nach Antworten eine Reise nach Hause.","ProductionYear",2025,"OfficialRating","FSK 12","RunTimeTicks",67200000000L,"Genres",Json.arr("Science-Fiction","Drama"),"ImageTags",Json.obj("Primary","poster"),"BackdropImageTags",Json.arr("backdrop"),"RemoteTrailers",Json.arr(Json.obj("Url","https://www.youtube.com/watch?v=M7lc1UVf-VE")));
@@ -61,8 +66,12 @@ public class TvUiTest {
                 if(path.equals("/Users/user/Items")&&request.getRequestUrl().queryParameter("PersonIds")!=null) return new MockResponse().setBody(Json.obj("Items",Json.arr(movie,series),"TotalRecordCount",2).toString());
                 if(path.equals("/Users/user/Items/movie")) return new MockResponse().setBody(movie.toString());
                 if(path.equals("/Genres")) return new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","genre","Name","Drama","MovieCount",1)),"TotalRecordCount",1).toString());
-                if(path.equals("/Users/user/Views")) return new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","films","Name","Meine Filme","CollectionType","movies"),Json.obj("Id","shows","Name","Serien","CollectionType","tvshows"))).toString());
-                if(path.equals("/LiveTv/Channels")) return new MockResponse().setBody(Json.obj("Items",liveConfigured?Json.arr(Json.obj("Id","channel","Name","Sender Eins","Type","TvChannel")):new JSONArray(),"TotalRecordCount",liveConfigured?1:0).toString());
+                if(path.equals("/Users/user"))return new MockResponse().setBody(Json.obj("Id","user","Configuration",userConfiguration).toString());
+                if(path.equals("/Users/Configuration")&&request.getMethod().equals("POST")) {try {userConfiguration=new JSONObject(request.getBody().readUtf8());return new MockResponse().setResponseCode(204);}catch(Exception error) {return new MockResponse().setResponseCode(400);}}
+                if(path.equals("/Users/user/Views")) {JSONArray order=userConfiguration.optJSONArray("OrderedViews");JSONObject films=Json.obj("Id","films","Name","Meine Filme","CollectionType","movies"),shows=Json.obj("Id","shows","Name","Serien","CollectionType","tvshows");return new MockResponse().setBody(Json.obj("Items",order!=null&&"shows".equals(order.optString(0))?Json.arr(shows,films):Json.arr(films,shows)).toString());}
+                if(path.equals("/LiveTv/Channels")) {JSONArray channels=new JSONArray();int offset=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("StartIndex"),"0")),limit=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("Limit"),"200"));if(liveConfigured)for(int n=offset;n<Math.min(guideChannelCount,offset+limit);n++)channels.put(Json.obj("Id",n==0?"channel":"channel"+n,"Name",n==0?"Sender Eins":"Sender "+(n+1),"Type","TvChannel"));return new MockResponse().setBody(Json.obj("Items",channels,"TotalRecordCount",liveConfigured?guideChannelCount:0).toString());}
+                if(path.equals("/LiveTv/Programs")&&"513".equals(request.getRequestUrl().queryParameter("Limit"))){if(guideOffline)return new MockResponse().setResponseCode(503);JSONArray items=new JSONArray();java.time.Instant now=java.time.Instant.now();if(!guideEmpty)for(String id:request.getRequestUrl().queryParameter("ChannelIds").split(","))if(!guideAbsent.contains(id))items.put(Json.obj("ChannelId",id,"StartDate",now.plusSeconds(86400).toString(),"EndDate",now.plusSeconds(90000).toString()));return new MockResponse().setBody(Json.obj("Items",items).toString());}
+                if(path.equals("/LiveTv/Programs")&&"257".equals(request.getRequestUrl().queryParameter("Limit"))) {guideQueries.incrementAndGet();if(guideOffline)return new MockResponse().setResponseCode(503);JSONArray items=new JSONArray();java.time.Instant since=java.time.Instant.parse(request.getRequestUrl().queryParameter("MinEndDate"));if(!guideEmpty&&!guideWindowEmpty)for(String id:request.getRequestUrl().queryParameter("ChannelIds").split(","))for(int n=0;n<4;n++)items.put(Json.obj("ChannelId",id,"Name",(id.equals("channel")?"Programm ":"Zweiter Sender ")+n,"Overview","Ausführliche Beschreibung der Sendung "+n,"StartDate",since.plusSeconds(n*1800-600).toString(),"EndDate",since.plusSeconds((n+1)*1800-600).toString()));return new MockResponse().setBody(Json.obj("Items",items).toString());}
                 if(path.equals("/LiveTv/Programs")) {JSONArray programmes=new JSONArray();int offset=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("StartIndex"),"0")),limit=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("Limit"),"1"));java.time.Instant now=java.time.Instant.now();for(int n=offset;n<Math.min(15,offset+limit);n++)programmes.put(Json.obj("ChannelId","channel","Name",n==0?"Aktuelle Sendung":"Spätere Sendung "+n,"Overview","Programm-Beschreibung "+n,"StartDate",now.plusSeconds(n*1200-600).toString(),"EndDate",now.plusSeconds((n+1)*1200-600).toString()));return new MockResponse().setBody(Json.obj("Items",programmes).toString());}
                 if(path.equals("/Shows/show/Seasons")) {
                     JSONArray seasons=new JSONArray(); for(int i=1;i<=45;i++) seasons.put(Json.obj("Id","s"+i,"ParentId","show","SeriesId","show","Type","Season","IndexNumber",i,"Name","Staffel "+i,"RecursiveItemCount",24,"ImageTags",Json.obj("Primary","season-poster"),"PrimaryImageAspectRatio",2.0/3));
@@ -129,7 +138,17 @@ public class TvUiTest {
     private void assertBannerGeometry(DiscoveryBanner banner,RatingsRow ratings) {
         TextView description=org.robolectric.util.ReflectionHelpers.getField(banner,"description");assertEquals(4,description.getMaxLines());
         for(int i=0;i<ratings.getChildCount();i++) {View chip=ratings.getChildAt(i);assertEquals(0,chip.getTop());assertTrue(chip.getRight()<=ratings.getWidth());assertEquals(1f,chip.getScaleX(),0);assertEquals(1f,chip.getScaleY(),0);}
-        android.graphics.Rect text=new android.graphics.Rect();description.getDrawingRect(text);banner.offsetDescendantRectToMyCoords(description,text);assertTrue(text.bottom<=ratings.getTop());assertEquals(text.left,ratings.getLeft());assertEquals(text.right,ratings.getRight());
+        android.graphics.Rect text=new android.graphics.Rect();description.getDrawingRect(text);banner.offsetDescendantRectToMyCoords(description,text);assertTrue(text.bottom<=ratings.getTop());assertEquals(text.left,ratings.getLeft());assertEquals(text.right,ratings.getRight());if(ratings.getChildCount()>1){assertEquals(0,ratings.getChildAt(0).getLeft());assertEquals(ratings.getWidth(),ratings.getChildAt(ratings.getChildCount()-1).getRight());}
+    }
+    @Test public void bannerSpacingKeepsSecondShelfHeadingBelowTheInitialViewport() throws Exception {bannerSpacing();}
+    @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void bannerSpacingKeepsSecondShelfHeadingBelowTheInitial4kViewport() throws Exception {viewportWidth=3840;viewportHeight=2160;bannerSpacing();}
+    private void bannerSpacing() throws Exception {
+        app.settings.edit().putBoolean("discoveryBanner",true).putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&recycler().findViewHolderForAdapterPosition(0)!=null);HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();adapter.requestRow(adapter.firstRow());layout();
+        HomeAdapter.Shelf banner=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);assertNotNull(banner);assertEquals(Ui.dp(app,48),((RecyclerView.LayoutParams)banner.itemView.getLayoutParams()).bottomMargin);
+        await(()->{HomeAdapter.Shelf ready=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);return ready!=null&&ready.list.getChildCount()>0;});
+        HomeAdapter.Shelf first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);assertNotNull(first);View card=first.list.getChildAt(0);assertNotNull(card);android.graphics.Rect cardRect=new android.graphics.Rect();card.getDrawingRect(cardRect);recycler().offsetDescendantRectToMyCoords(card,cardRect);assertTrue("First card clipped: "+cardRect,cardRect.bottom<=recycler().getHeight()-recycler().getPaddingBottom());
+        HomeAdapter.Shelf second=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);if(second!=null){android.graphics.Rect rect=new android.graphics.Rect();second.label.getDrawingRect(rect);recycler().offsetDescendantRectToMyCoords(second.label,rect);assertTrue("Second heading enters initial viewport: "+rect,rect.top>=recycler().getHeight()-recycler().getPaddingBottom());}
     }
     @Test public void nextUpRefreshDoesNotWaitForSlowResumeOrBusyGeneralWorkers() throws Exception { independentHomeRefresh(0); }
     @Test public void resumeRefreshDoesNotWaitForSlowNextUpOrBusyGeneralWorkers() throws Exception { independentHomeRefresh(1); }
@@ -221,7 +240,7 @@ public class TvUiTest {
             Button play=(Button)action.invoke(activity.get(),label,R.drawable.detail_play,false,true,(Runnable)()->{});Button other=Ui.button(activity.get(),"Other",()->{});row.addView(play);row.addView(other);layout();
             android.graphics.drawable.GradientDrawable shape=(android.graphics.drawable.GradientDrawable)play.getBackground();
             other.requestFocus();int unfocused=shape.getColor().getDefaultColor();play.requestFocus();assertTrue(play.hasFocus());assertEquals(0xfff5f5f7,shape.getColor().getDefaultColor());assertNotEquals(unfocused,shape.getColor().getDefaultColor());assertEquals(0xff111113,play.getCurrentTextColor());
-            Accent.apply(play);assertEquals(0xfff5f5f7,shape.getColor().getDefaultColor());assertSame(shape,play.getBackground());other.requestFocus();assertEquals(Accent.color,shape.getColor().getDefaultColor());row.removeAllViews();
+            Accent.apply(play);assertEquals(0xfff5f5f7,shape.getColor().getDefaultColor());assertSame(shape,play.getBackground());other.requestFocus();assertEquals(0x28000000|(Accent.color&0xffffff),shape.getColor().getDefaultColor());row.removeAllViews();
         }
     }
     @Test public void detailActionsFillTheContentGridWithFewActionsAndAtLargerViewports() throws Exception {
@@ -294,6 +313,47 @@ public class TvUiTest {
         Button api=findButton(activity.get().findViewById(android.R.id.content),"API"); api.requestFocus(); api.performClick(); layout();
         activity.get().onBackPressed(); layout(); assertTrue(findButton(activity.get().findViewById(android.R.id.content),"API").hasFocus());
     }
+    @Test public void settingsGridOpensEveryCategoryAndReturnsToItsTileInHd() throws Exception { settingsGridRoundTrip(false); }
+    @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void settingsGridScalesIconsAndKeepsAllCategoriesAndReturnFocusIn4k() throws Exception {settingsGridRoundTrip(true);}
+    private void settingsGridRoundTrip(boolean uhd) throws Exception {
+        if(uhd) {viewportWidth=3840;viewportHeight=2160;}
+        app.settings.edit().putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();
+        View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();layout();
+        String[] titles={"Startseite","Genre-Reihen","Darstellung",I18n.resource(R.string.screensaver_title),"Wiedergabe","Live TV","Bibliothek und Cache","Android-TV-Hauptmenü","API","Konto und Sprache",I18n.resource(R.string.diagnostics_title),I18n.resource(R.string.updates_title)};
+        String[] kinds={"homeSettings","genreSettings","appearanceSettings","screensaverSettings","playbackSettings","liveSettings","cacheSettings","channelSettings","ratings","accountSettings","diagnosticsSettings","updatesSettings"};
+        Button first=findButton(root,titles[0]);assertTrue(first.hasFocus());int previousTop=-1;
+        for(int i=0;i<titles.length;i++) {
+            Button tile=findButton(root,titles[i]);assertNotNull(tile);android.graphics.Rect visible=new android.graphics.Rect();assertTrue(tile.getGlobalVisibleRect(visible));assertEquals(tile.getHeight(),visible.height());assertEquals(Ui.dp(activity.get(),28),tile.getCompoundDrawables()[1].getBounds().height());
+            if(i%3==0) {assertTrue(tile.getTop()>=0);int[] location=new int[2];tile.getLocationInWindow(location);assertTrue(location[1]>previousTop);previousTop=location[1];}
+            tile.requestFocus();remote(KeyEvent.KEYCODE_DPAD_CENTER,1);layout();Object screen=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"screen");assertEquals(kinds[i],org.robolectric.util.ReflectionHelpers.getField(screen,"kind"));
+            if(i==4)screenshot(uhd?"settings-playback-4k.png":"settings-playback-hd.png");
+            activity.get().onBackPressed();layout();assertTrue("Lost category "+titles[i],findButton(root,titles[i]).hasFocus());
+        }
+        screenshot(uhd?"settings-grid-4k.png":"settings-grid-hd.png");
+    }
+    @Test public void settingsGridLeftMovesWithinTheRowAndDrawerReturnsToItsExactTile() throws Exception {
+        app.settings.edit().putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();layout();
+        remote(KeyEvent.KEYCODE_DPAD_DOWN,1);remote(KeyEvent.KEYCODE_DPAD_RIGHT,2);assertTrue(findButton(root,"Live TV").hasFocus());
+        remote(KeyEvent.KEYCODE_DPAD_RIGHT,25);assertTrue(findButton(root,"Live TV").hasFocus());assertFalse((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerOpen"));
+        remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(findButton(root,"Wiedergabe").hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);Button saver=findButton(root,I18n.resource(R.string.screensaver_title));assertTrue(saver.hasFocus());assertFalse((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerOpen"));
+        remote(KeyEvent.KEYCODE_DPAD_LEFT,1);layout();assertTrue((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerOpen"));remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);layout();assertFalse((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerOpen"));assertTrue(saver.hasFocus());
+        remote(KeyEvent.KEYCODE_DPAD_DOWN,50);assertTrue(findButton(root,"Konto und Sprache").hasFocus());remote(KeyEvent.KEYCODE_DPAD_RIGHT,2);assertTrue(findButton(root,I18n.resource(R.string.updates_title)).hasFocus());remote(KeyEvent.KEYCODE_DPAD_DOWN,15);assertTrue(findButton(root,I18n.resource(R.string.updates_title)).hasFocus());
+    }
+    @Test public void nestedSettingsScrollAndFocusedValueSurviveAValueChange() throws Exception {
+        app.settings.edit().putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();findButton(root,"Wiedergabe").performClick();layout();
+        Button value=findButton(root,"Player-Menü ausblenden · Sekunden: 5");value.requestFocus();layout();ScrollView scroll=null;for(View node=value;node.getParent() instanceof View;node=(View)node.getParent())if(node instanceof ScrollView){scroll=(ScrollView)node;break;}assertNotNull(scroll);int before=scroll.getScrollY();assertTrue(before>0);value.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getListView().performItemClick(null,2,2);layout();assertTrue(findButton(root,"Player-Menü ausblenden · Sekunden: 8").hasFocus());ScrollView restored=(ScrollView)find(root,v->v instanceof ScrollView&&((ScrollView)v).findFocus()!=null);assertNotNull(restored);assertEquals(before,restored.getScrollY());
+    }
+    private View openSidebarLayoutSettings() throws Exception {
+        app.settings.edit().putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();findButton(root,"Darstellung").performClick();layout();Button entry=findButton(root,I18n.resource(R.string.sidebar_layout));entry.requestFocus();entry.performClick();layout();return root;
+    }
+    private void dialogKey(android.app.AlertDialog dialog,int code) {dialog.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,code));dialog.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,code));shadowOf(Looper.getMainLooper()).idle();}
+    @Test public void menuOrderChangesOnlyAfterSaveAndImmediatelyUpdatesTheSidebar() throws Exception {
+        View root=openSidebarLayoutSettings();findButton(root,I18n.resource(R.string.sidebar_items)).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View content=dialog.getWindow().getDecorView();await(()->findButton(content,"1 · Start")!=null);Button row=findButton(content,"1 · Start");row.requestFocus();row.performClick();dialogKey(dialog,KeyEvent.KEYCODE_DPAD_DOWN);assertEquals("home",SidebarLayout.read(app.settings,app.account,SidebarLayout.ALL).get(0));dialogKey(dialog,KeyEvent.KEYCODE_DPAD_CENTER);dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();await(()->!dialog.isShowing());assertEquals("search",SidebarLayout.read(app.settings,app.account,SidebarLayout.ALL).get(0));remote(KeyEvent.KEYCODE_MENU,1);layout();LinearLayout sidebar=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"sidebar");assertEquals("Suche",((Button)sidebar.getChildAt(0)).getText().toString());
+    }
+    @Test public void libraryOrderRoundTripUsesJellyfinAndPreservesOtherUserConfiguration() throws Exception {
+        View root=openSidebarLayoutSettings();findButton(root,I18n.resource(R.string.sidebar_libraries)).performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View content=dialog.getWindow().getDecorView();await(()->findButton(content,"1 · Meine Filme")!=null);screenshotDialog(dialog,"settings-library-order-hd.png");Button row=findButton(content,"1 · Meine Filme");row.requestFocus();row.performClick();dialogKey(dialog,KeyEvent.KEYCODE_DPAD_DOWN);assertEquals("films",userConfiguration.getJSONArray("OrderedViews").getString(0));dialogKey(dialog,KeyEvent.KEYCODE_DPAD_CENTER);dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();await(()->!dialog.isShowing());assertEquals("shows",userConfiguration.getJSONArray("OrderedViews").getString(0));assertEquals("Default",userConfiguration.getString("SubtitleMode"));assertTrue(userConfiguration.getBoolean("RememberAudioSelections"));
+        remote(KeyEvent.KEYCODE_MENU,1);layout();LinearLayout sidebar=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"sidebar");java.util.List<String> libraries=new java.util.ArrayList<>();for(int i=0;i<sidebar.getChildCount();i++)if(sidebar.getChildAt(i).getTag(R.id.sidebar_key)!=null&&sidebar.getChildAt(i).getTag(R.id.sidebar_key).toString().startsWith("library:"))libraries.add(((Button)sidebar.getChildAt(i)).getText().toString());assertEquals(java.util.Arrays.asList("Serien","Meine Filme"),libraries);
+    }
     @Test public void settingsOpenWithoutWaitingForTheDatabaseOpeningLock() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
@@ -315,12 +375,22 @@ public class TvUiTest {
         Button login=findButton(root,"Anmelden"); assertNotNull(login); assertTrue(login.isFocusable());
         assertTrue(login.getBottom()<720); screenshot("login-hd.png");
     }
+    @Test public void seriesCardsOpenDetailsFromLibrariesAndFavoritesAndReturnToTheirOrigin() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());series.put("UserData",Json.obj("IsFavorite",true));app.library.put(series);
+        activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Serien")!=null);findButton(root,"Serien").performClick();await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);layout();recycler().getChildAt(0).requestFocus();recycler().getChildAt(0).performClick();
+        await(()->findButton(root,"Staffeln ansehen")!=null);assertNull(findButton(root,"Zur Staffel"));assertNotNull(findText(root,"Die lange Serie"));
+        activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&recycler().getAdapter().getItemCount()==1);layout();assertTrue(recycler().hasFocus());assertNotNull(findButton(root,"Alle Serien"));
+        findButton(root,"Favoriten").performClick();await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);layout();recycler().getChildAt(0).performClick();
+        await(()->findButton(root,"Staffeln ansehen")!=null);assertNull(findButton(root,"Zur Staffel"));activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter);assertNull(findButton(root,"Alle Serien"));
+    }
     @Test public void fortyFiveSeasonsAreVirtualizedAndStaffelFortyCanOpen() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis()); app.library.put(series);
         activity=Robolectric.buildActivity(MainActivity.class).setup(); layout();
         findButton(activity.get().findViewById(android.R.id.content),"Serien").performClick();
         await(()-> { RecyclerView r=recycler(); return r!=null&&r.getAdapter().getItemCount()==1; }); layout();
         RecyclerView grid=recycler(); assertTrue(grid.getChildCount()>0); grid.getChildAt(0).performClick();
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen")!=null);findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen").performClick();
         await(()-> { RecyclerView r=recycler(); return r!=null&&r.getAdapter().getItemCount()==45; });
         layout(); RecyclerView seasons=recycler(); assertEquals(45,seasons.getAdapter().getItemCount()); assertEquals(8,((GridLayoutManager)seasons.getLayoutManager()).getSpanCount()); assertTrue(seasons.getChildCount()<45);
         LinearLayoutManager manager=(LinearLayoutManager)seasons.getLayoutManager();
@@ -337,6 +407,7 @@ public class TvUiTest {
         activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->findButton(activity.get().findViewById(android.R.id.content),"Serien")!=null);
         findButton(activity.get().findViewById(android.R.id.content),"Serien").performClick(); await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1); layout(); recycler().getChildAt(0).performClick();
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen")!=null);findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen").performClick();
         await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==45); layout(); View card=recycler().getChildAt(0); card.requestFocus();
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_CENTER));
         shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(ViewConfiguration.getLongPressTimeout()+20));
@@ -430,6 +501,12 @@ public class TvUiTest {
         shelf.list.getChildAt(0).performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity(); assertNotNull(intent);
         assertEquals(600000L,intent.getLongExtra("position",-1)); assertEquals("ep5",new JSONObject(intent.getStringExtra("item")).optString("Id")); assertFalse(intent.getBooleanExtra("returnEpisodeDetail",false));
     }
+    @Test public void compactSeriesTabsKeepTheirSelectionAndHaveExplicitHeaderNavigation() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);await(()->findButton(root,"Serien")!=null);findButton(root,"Serien").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0&&!recycler().hasPendingAdapterUpdates());
+        Button all=findButton(root,"Alle Serien"),started=findButton(root,"Begonnene Folgen"),letters=findButton(root,"Zu Buchstaben springen");assertTrue(all.isSelected());assertFalse(started.isSelected());assertNotNull(letters.getCompoundDrawables()[0]);assertTrue(recycler().hasFocus());screenshot("library-series-header-hd.png");
+        remote(KeyEvent.KEYCODE_DPAD_UP,1);layout();assertTrue("Series header focus="+activity.get().getWindow().getDecorView().findFocus(),all.hasFocus()||started.hasFocus());if(all.hasFocus())remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(started.hasFocus());remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(letters.hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(started.hasFocus());
+        started.performClick();await(()->recycler()!=null&&recycler().getChildCount()>0&&!recycler().hasPendingAdapterUpdates());assertTrue(findButton(root,"Begonnene Folgen").isSelected());assertFalse(findButton(root,"Alle Serien").isSelected());screenshot("library-started-header-hd.png");findButton(root,"Alle Serien").performClick();await(()->findButton(root,"Zu Buchstaben springen")!=null);assertTrue(findButton(root,"Alle Serien").isSelected());
+    }
     @Test public void seriesLibraryHasScopedResumeTabAndLaunchesAtSavedPosition() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
@@ -478,6 +555,55 @@ public class TvUiTest {
         liveConfigured=false;app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->"false".equals(app.library.state("liveTvAvailable")));assertNull(findButton(activity.get().findViewById(android.R.id.content),"Live TV"));
     }
+    private LiveGuide openProgrammeGuide() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Live TV")!=null);findButton(root,"Live TV").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0);assertEquals(0,guideQueries.get());assertTrue(recycler().hasFocus());
+        Button entry=findButton(root,"TV-Programm");assertNotNull(entry);entry.performClick();await(()->find(root,v->v instanceof LiveGuide)!=null&&guideQueries.get()>0);return (LiveGuide)find(root,v->v instanceof LiveGuide);
+    }
+    @Test public void programmeGuideIsOpenedOnlyThroughLiveButtonAndUsesTimeAlignedRemoteNavigation() throws Exception {
+        guideChannelCount=12;app.settings.edit().putInt("guideChannelsPerPage",10).apply();LiveGuide guide=openProgrammeGuide();View root=activity.get().findViewById(android.R.id.content);await(()->findButton(guide,"Programm 1")!=null&&guide.hasFocus());
+        Button programme=findButton(guide,"Programm 1");programme.requestFocus();remote(KeyEvent.KEYCODE_DPAD_DOWN,1);assertEquals("Zweiter Sender 1",((Button)activity.get().getWindow().getDecorView().findFocus()).getText().toString());remote(KeyEvent.KEYCODE_DPAD_UP,1);assertTrue(programme.hasFocus());
+        remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(findButton(guide,"Programm 0").hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertEquals("Sender Eins",activity.get().getWindow().getDecorView().findFocus().getContentDescription());remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(findButton(guide,"Programm 0").hasFocus());
+        remote(KeyEvent.KEYCODE_DPAD_UP,1);Button date=(Button)activity.get().getWindow().getDecorView().findFocus();assertFalse(date.getText().toString().isEmpty());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(findButton(guide,"Sender").hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertNotNull(findText(root,"LOWFIN"));remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(findButton(guide,"Sender").hasFocus());
+        assertEquals(View.GONE,((Button)guide.findViewById(R.id.page_previous)).getVisibility());assertEquals(View.VISIBLE,((Button)guide.findViewById(R.id.page_next)).getVisibility());screenshot("live-programme-guide-hd.png");
+        int before=guideQueries.get();((Button)guide.findViewById(R.id.page_next)).performClick();await(()->guideQueries.get()>before&&find(guide,v->"Sender 11".equals(v.getContentDescription()))!=null);assertEquals(View.VISIBLE,((Button)guide.findViewById(R.id.page_previous)).getVisibility());assertEquals(View.GONE,((Button)guide.findViewById(R.id.page_next)).getVisibility());
+        assertNull(shadowOf(activity.get()).getNextStartedActivity());activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter);assertNotNull(findButton(root,"TV-Programm"));
+    }
+    @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void programmeGuideScalesTo4kAndProgrammeDetailsReturnFocus() throws Exception {
+        viewportWidth=3840;viewportHeight=2160;guideChannelCount=8;LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Programm 1")!=null);Button entry=findButton(guide,"Programm 1");entry.requestFocus();entry.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertTrue(dialog.isShowing());assertNotNull(find(dialog.getWindow().getDecorView(),v->v instanceof TextView&&((TextView)v).getText().toString().contains("Ausführliche Beschreibung")));assertNull(shadowOf(activity.get()).getNextStartedActivity());dialog.dismiss();layout();assertTrue(entry.hasFocus());screenshot("live-programme-guide-4k.png");
+        entry.performClick();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();dialog.getButton(android.content.DialogInterface.BUTTON_POSITIVE).performClick();layout();android.content.Intent player=shadowOf(activity.get()).getNextStartedActivity();assertNotNull(player);assertEquals(PlayerActivity.class.getName(),player.getComponent().getClassName());assertEquals("channel",new JSONObject(player.getStringExtra("item")).optString("Id"));
+    }
+    @Test public void emptyProgrammeDataKeepsChannelsPlayableAndFailureOffersRetry() throws Exception {
+        guideEmpty=true;app.settings.edit().putBoolean("guideHideEmpty",false).apply();LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Keine Programminformationen")!=null);assertNull(shadowOf(activity.get()).getNextStartedActivity());assertEquals(1,guideQueries.get());
+        guideOffline=true;findButton(guide,"Jetzt").performClick();await(()->findButton(guide,"Erneut versuchen")!=null&&findButton(guide,"Erneut versuchen").getVisibility()==View.VISIBLE);assertNotNull(find(guide,v->"Sender Eins".equals(v.getContentDescription())));
+        guideOffline=false;guideEmpty=false;findButton(guide,"Erneut versuchen").performClick();await(()->findButton(guide,"Programm 0")!=null);assertEquals(View.GONE,findButton(guide,"Erneut versuchen").getVisibility());
+        int count=guideQueries.get();activity.pause();Shadows.shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMinutes(3));assertEquals(count,guideQueries.get());activity.resume();await(()->guideQueries.get()>count);
+    }
+    @Test public void programmeGuideDayAndTimeControlsKeepTheirFocusAndUseTheSelectedWindow() throws Exception {
+        LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Programm 1")!=null);LiveGuide.State state=org.robolectric.util.ReflectionHelpers.getField(guide,"state");long initial=state.since;int calls=guideQueries.get();Button later=findButton(guide,"Später →");later.requestFocus();later.performClick();await(()->guideQueries.get()>calls&&!(Boolean)org.robolectric.util.ReflectionHelpers.getField(guide,"busy"));assertEquals(initial+GuideWindow.DURATION,state.since);assertTrue(later.hasFocus());assertFalse(state.followNow);
+        remote(KeyEvent.KEYCODE_DPAD_LEFT,3);Button day=(Button)activity.get().getWindow().getDecorView().findFocus();day.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertEquals(7,dialog.getListView().getAdapter().getCount());dialog.getListView().performItemClick(dialog.getListView().getChildAt(1),1,1);layout();await(()->!(Boolean)org.robolectric.util.ReflectionHelpers.getField(guide,"busy"));assertEquals(java.time.LocalDate.now().plusDays(1),java.time.Instant.ofEpochMilli(state.since).atZone(java.time.ZoneId.systemDefault()).toLocalDate());assertTrue(day.hasFocus());
+        findButton(guide,"Jetzt").performClick();await(()->!(Boolean)org.robolectric.util.ReflectionHelpers.getField(guide,"busy"));assertEquals(GuideWindow.now(java.time.Instant.now()),state.since);assertTrue(state.followNow);
+    }
+    @Test public void lateProgrammeResponseCannotReopenTheGuideOrStealFocusAfterBack() throws Exception {
+        LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Programm 0")!=null);blockedHomePath="/LiveTv/Programs";findButton(guide,"Später →").performClick();assertTrue(homeBlocked.await(2,java.util.concurrent.TimeUnit.SECONDS));activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getChildCount()>0);homeRelease.countDown();await(()->guideQueries.get()>=2);layout();assertNull(find(activity.get().findViewById(android.R.id.content),v->v instanceof LiveGuide));assertTrue(recycler().hasFocus());assertFalse(guide.isAttachedToWindow());
+    }
+    @Test public void programmeGuideDefaultsTo25AndRecycles50RowsThroughFastInput() throws Exception {
+        guideChannelCount=60;LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Programm 1")!=null);RecyclerView list=org.robolectric.util.ReflectionHelpers.getField(guide,"list");assertEquals(25,list.getAdapter().getItemCount());assertTrue(list.getChildCount()<25);LiveGuide.State state=org.robolectric.util.ReflectionHelpers.getField(guide,"state");assertEquals(25,state.pageSize);
+        ((Button)guide.findViewById(R.id.page_next)).performClick();await(()->state.page==1&&list.getAdapter().getItemCount()==25&&!((Boolean)org.robolectric.util.ReflectionHelpers.getField(guide,"busy")));assertEquals("channel25",((java.util.List<GuideWindow.Channel>)org.robolectric.util.ReflectionHelpers.getField(guide,"displayed")).get(0).item.optString("Id"));
+        activity.pause();app.settings.edit().putInt("guideChannelsPerPage",50).apply();activity.resume();await(()->list.getAdapter().getItemCount()==50&&!((Boolean)org.robolectric.util.ReflectionHelpers.getField(guide,"busy")));assertEquals(0,state.page);assertTrue(list.getChildCount()<15);
+        await(()->"channel25".equals(state.channel)&&list.hasFocus());remote(KeyEvent.KEYCODE_DPAD_UP,25);await(()->"channel".equals(state.channel));findButton(guide,"Programm 1").requestFocus();remote(KeyEvent.KEYCODE_DPAD_DOWN,45);await(()->"channel45".equals(state.channel));assertTrue(list.hasFocus());assertTrue(list.getChildCount()<15);screenshot("live-guide-50-rows-hd.png");
+        remote(KeyEvent.KEYCODE_DPAD_UP,45);await(()->"channel".equals(state.channel));assertTrue(findButton(guide,"Programm 1").hasFocus());assertTrue(list.getChildCount()<15);
+    }
+    @Test public void pageSizeSettingsUseSeekbarsAndRetainFocusAfterSaving() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();layout();findButton(root,"Live TV").performClick();layout();Button entry=findButton(root,"Sender pro Programmseite: 25");assertNotNull(entry);entry.requestFocus();entry.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();RangeChoice.Slider slider=(RangeChoice.Slider)find(dialog.getWindow().getDecorView(),v->v instanceof RangeChoice.Slider);assertEquals(10,slider.getMin());assertEquals(50,slider.getMax());slider.setProgress(37);dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();layout();assertEquals(37,app.settings.getInt("guideChannelsPerPage",0));assertTrue(findButton(root,"Sender pro Programmseite: 37").hasFocus());
+        activity.get().onBackPressed();layout();findButton(root,"Bibliothek und Cache").performClick();layout();entry=findButton(root,"Einträge pro Bibliotheksseite: 60");assertNotNull(entry);entry.requestFocus();entry.performClick();dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();slider=(RangeChoice.Slider)find(dialog.getWindow().getDecorView(),v->v instanceof RangeChoice.Slider);assertEquals(50,slider.getMin());assertEquals(150,slider.getMax());slider.setProgress(73);screenshotDialog(dialog,"library-page-size-slider.png");dialog.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();layout();assertEquals(73,app.settings.getInt("libraryPageSize",0));assertTrue(findButton(root,"Einträge pro Bibliotheksseite: 73").hasFocus());
+    }
+    @Test public void guideOnlyFilterHidesChannelsWithoutAnyDataButRetainsProgrammeGaps() throws Exception {
+        guideChannelCount=35;for(int i=1;i<=10;i++)guideAbsent.add("channel"+i);LiveGuide guide=openProgrammeGuide();await(()->findButton(guide,"Programm 0")!=null);RecyclerView list=org.robolectric.util.ReflectionHelpers.getField(guide,"list");assertEquals(25,list.getAdapter().getItemCount());java.util.List<GuideWindow.Channel> data=org.robolectric.util.ReflectionHelpers.getField(guide,"displayed");assertFalse(data.stream().anyMatch(row->guideAbsent.contains(row.item.optString("Id"))));assertEquals(View.GONE,guide.findViewById(R.id.page_next).getVisibility());
+        activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).items.size()==35);assertTrue(((MediaAdapter)recycler().getAdapter()).items.stream().anyMatch(row->guideAbsent.contains(row.optString("Id"))));
+        guideWindowEmpty=true;findButton(activity.get().findViewById(android.R.id.content),"TV-Programm").performClick();await(()->findButton(activity.get().findViewById(android.R.id.content),"Keine Programminformationen")!=null);LiveGuide gap=(LiveGuide)find(activity.get().findViewById(android.R.id.content),v->v instanceof LiveGuide);RecyclerView gapList=org.robolectric.util.ReflectionHelpers.getField(gap,"list");assertEquals(25,gapList.getAdapter().getItemCount());activity.get().onBackPressed();layout();
+        guideEmpty=true;guideAbsent.clear();findButton(activity.get().findViewById(android.R.id.content),"TV-Programm").performClick();await(()->findText(activity.get().findViewById(android.R.id.content),I18n.resource(R.string.epg_no_guide_channels))!=null);assertNull(shadowOf(activity.get()).getNextStartedActivity());
+    }
     @Test public void channelLongPressShowsCurrentProgrammeWithoutStartingPlayback() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
         await(()->findButton(root,"Live TV")!=null);findButton(root,"Live TV").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&recycler().getChildCount()>0);
@@ -487,8 +613,36 @@ public class TvUiTest {
     @Test public void channelGuideShowsUpcomingAndOnlyOffersAvailablePages() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
         await(()->findButton(root,"Live TV")!=null);findButton(root,"Live TV").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0);recycler().getChildAt(0).performLongClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();View guide=dialog.getWindow().getDecorView();
-        await(()->findText(guide,"Spätere Sendung 11")!=null);assertNull(findText(guide,"Spätere Sendung 12"));assertEquals(View.GONE,findButton(guide,"← Vorherige Seite").getVisibility());findButton(guide,"Nächste Seite →").performClick();
-        await(()->findText(guide,"Spätere Sendung 12")!=null);assertEquals(View.VISIBLE,findButton(guide,"← Vorherige Seite").getVisibility());assertEquals(View.GONE,findButton(guide,"Nächste Seite →").getVisibility());findButton(guide,"← Vorherige Seite").performClick();await(()->findText(guide,"Aktuelle Sendung")!=null);assertNull(shadowOf(activity.get()).getNextStartedActivity());
+        await(()->findText(guide,"Spätere Sendung 11")!=null);assertNull(findText(guide,"Spätere Sendung 12"));assertEquals(View.GONE,((Button)guide.findViewById(R.id.page_previous)).getVisibility());((Button)guide.findViewById(R.id.page_next)).performClick();
+        await(()->findText(guide,"Spätere Sendung 12")!=null);assertEquals(View.VISIBLE,((Button)guide.findViewById(R.id.page_previous)).getVisibility());assertEquals(View.GONE,((Button)guide.findViewById(R.id.page_next)).getVisibility());((Button)guide.findViewById(R.id.page_previous)).performClick();await(()->findText(guide,"Aktuelle Sendung")!=null);assertNull(shadowOf(activity.get()).getNextStartedActivity());
+    }
+    @Test public void updateNoticeOpensItsOwnSettingsWithNativeTogglesAndPreservesReturnFocus() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        findButton(root,"Einstellungen").performClick();layout();Button entry=findButton(root,"App-Updates");assertNotNull(entry);entry.requestFocus();entry.performClick();layout();
+        assertNotNull(findButton(root,"Jetzt prüfen"));assertNotNull(findButton(root,"Update herunterladen"));assertNotNull(findButton(root,"Heruntergeladenes Update installieren"));assertNotNull(findText(root,"Changelog der Veröffentlichung"));
+        SettingSwitch daily=(SettingSwitch)find(root,view->view instanceof SettingSwitch&&((SettingSwitch)view).getText().toString().equals("GitHub alle 24 Stunden prüfen"));assertNotNull(daily);daily.requestFocus();daily.performClick();assertFalse(app.settings.getBoolean("updateCheck",true));assertTrue(daily.hasFocus());daily.performClick();assertTrue(app.settings.getBoolean("updateCheck",false));
+        activity.get().onBackPressed();layout();assertTrue(findButton(root,"App-Updates").hasFocus());
+        activity.newIntent(new android.content.Intent(activity.get(),MainActivity.class).setAction(AppUpdater.OPEN));layout();assertNotNull(findButton(root,"Jetzt prüfen"));assertFalse(AppUpdater.OPEN.equals(activity.get().getIntent().getAction()));
+    }
+    @Test public void manualUpdateCheckKeepsItsFocusedButtonDuringTheRequestAndOnFailure() throws Exception {
+        app.updater.close();app.updater=new AppUpdater(app,new okhttp3.OkHttpClient.Builder().callTimeout(4,java.util.concurrent.TimeUnit.SECONDS).build(),server.url("/update-test"));blockedHomePath="/update-test";
+        try {
+            app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class,new android.content.Intent().setAction(AppUpdater.OPEN)).setup();layout();
+            View root=activity.get().findViewById(android.R.id.content);Button check=findButton(root,"Jetzt prüfen");assertNotNull(check);check.requestFocus();check.performClick();
+            assertTrue(homeBlocked.await(2,java.util.concurrent.TimeUnit.SECONDS));layout();assertEquals(AppUpdater.State.CHECKING,app.updater.state());assertTrue(check.isEnabled());assertTrue(check.hasFocus());
+            check.performClick();homeRelease.countDown();await(()->!app.updater.busy());assertEquals(AppUpdater.State.ERROR,app.updater.state());assertTrue(check.hasFocus());
+        } finally {homeRelease.countDown();app.updater.close();}
+    }
+    @Test public void diagnosticsObserveRealLibraryLoadsAndExposeTheSettingsSwitch() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());app.diagnostics.setEnabled(true);
+        activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Meine Filme")!=null);findButton(root,"Meine Filme").performClick();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh);layout();
+        boolean seen=false;JSONArray events=app.diagnostics.snapshot().getJSONArray("events");
+        for(int i=0;i<events.length();i++) {JSONObject event=events.getJSONObject(i);if("NAV_SERVER".equals(event.optString("event"))&&event.optLong("d")>0) {assertTrue(event.getLong("a")>=0);assertTrue(event.getLong("b")>=0);assertTrue(event.getLong("c")>=0);seen=true;}}
+        assertTrue("Fresh library timing must reach the diagnostic ring",seen);
+        findButton(root,"Einstellungen").performClick();findButton(root,"Diagnose").performClick();layout();
+        assertNotNull(findText(root,"Leistungsdiagnose aufzeichnen"));assertNotNull(findButton(root,"Aktuelle Diagnose anzeigen"));assertNotNull(findButton(root,"Aufzeichnung leeren"));
     }
     @Test public void sidebarUsesActualLibraryNamesAndLiveTvOnlyShowsChannels() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
@@ -499,6 +653,20 @@ public class TvUiTest {
         await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);
         assertNull(findButton(root,"Programm")); assertNull(findButton(root,"Aufnahmen"));
         screenshot("live-channels-hd.png");
+    }
+    @Test public void unchangedDetailActionRefreshDoesNotRewriteTextButFreshMetadataStillUpdates() throws Exception {
+        Dispatcher original=server.getDispatcher();java.util.concurrent.atomic.AtomicReference<JSONObject> response=new java.util.concurrent.atomic.AtomicReference<>(new JSONObject(movie.toString()));java.util.concurrent.atomic.AtomicInteger reads=new java.util.concurrent.atomic.AtomicInteger();
+        server.setDispatcher(new Dispatcher() { @Override public MockResponse dispatch(RecordedRequest request) throws InterruptedException {if(request.getRequestUrl().encodedPath().equals("/Users/user/Items/movie")) {reads.incrementAndGet();return new MockResponse().setBody(response.get().toString());}return original.dispatch(request);}});
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Meine Filme")!=null);findButton(root,"Meine Filme").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0);layout();recycler().getChildAt(0).performClick();
+        await(()->reads.get()>0&&((java.util.concurrent.ThreadPoolExecutor)app.navigationIo).getActiveCount()==0&&findText(root,movie.optString("Overview"))!=null);
+        TextView title=findText(root,movie.optString("Name")),overview=findText(root,movie.optString("Overview"));assertNotNull(title);assertNotNull(overview);
+        java.util.concurrent.atomic.AtomicInteger titleWrites=new java.util.concurrent.atomic.AtomicInteger(),overviewWrites=new java.util.concurrent.atomic.AtomicInteger();
+        title.addTextChangedListener(new android.text.TextWatcher() {public void beforeTextChanged(CharSequence s,int start,int count,int after) {}public void onTextChanged(CharSequence s,int start,int before,int count) {titleWrites.incrementAndGet();}public void afterTextChanged(android.text.Editable e) {}});
+        overview.addTextChangedListener(new android.text.TextWatcher() {public void beforeTextChanged(CharSequence s,int start,int count,int after) {}public void onTextChanged(CharSequence s,int start,int before,int count) {overviewWrites.incrementAndGet();}public void afterTextChanged(android.text.Editable e) {}});
+        findButton(root,"Später ansehen").requestFocus();findButton(root,"Später ansehen").performClick();layout();assertEquals(0,titleWrites.get());assertEquals(0,overviewWrites.get());assertTrue(findButton(root,"Vorgemerkt").isSelected());assertTrue(findButton(root,"Vorgemerkt").hasFocus());
+        response.set(new JSONObject(movie.toString()).put("Name","Updated detail title").put("Overview","Updated detail description"));((Runnable)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"detailReload")).run();
+        await(()->"Updated detail description".contentEquals(overview.getText()));assertEquals("Updated detail title",title.getText().toString());assertEquals(1,titleWrites.get());assertEquals(1,overviewWrites.get());
     }
     @Test public void detailWatchLaterAndFavoritesAreIndependentReversibleAndKeepTheirFocus() throws Exception {
         Dispatcher original=server.getDispatcher();java.util.concurrent.atomic.AtomicBoolean favorite=new java.util.concurrent.atomic.AtomicBoolean(),played=new java.util.concurrent.atomic.AtomicBoolean();java.util.concurrent.atomic.AtomicInteger writes=new java.util.concurrent.atomic.AtomicInteger();
@@ -740,7 +908,11 @@ public class TvUiTest {
         card.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_LEFT)); layout();
         assertSame(findButton(activity.get().findViewById(android.R.id.content),"Meine Filme"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP));
-        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Zufälliger Film"),activity.get().findViewById(android.R.id.content).findFocus());
+        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Später ansehen"),activity.get().findViewById(android.R.id.content).findFocus());
+        activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP));
+        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Favoriten"),activity.get().findViewById(android.R.id.content).findFocus());
+        activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN));
+        assertSame(findButton(activity.get().findViewById(android.R.id.content),"Später ansehen"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_DOWN));
         assertSame(findButton(activity.get().findViewById(android.R.id.content),"Meine Filme"),activity.get().findViewById(android.R.id.content).findFocus());
         activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_RIGHT)); activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_RIGHT));
@@ -793,7 +965,7 @@ public class TvUiTest {
         await(()->findButton(root,"Lowfin Companion · lange Videos")!=null);
         findButton(root,"Lowfin Companion · lange Videos").performClick(); android.app.AlertDialog dialog=(android.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog(); assertTrue(dialog.isShowing()); assertNotNull(find(dialog.getWindow().getDecorView(),v->v instanceof SettingSwitch));
     }
-    @Test public void genreAndDetailsRatingsWrapInsideHdContentAndRespectSourceSelection() throws Exception {
+    @Test public void genreAndDetailsRatingsFitInsideHdContentAndRespectSourceSelection() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->recycler()!=null&&((HomeAdapter)recycler().getAdapter()).rows.get(7).size()==1);
@@ -803,8 +975,27 @@ public class TvUiTest {
         for(int i=0;i<badges.getChildCount();i++) { View child=badges.getChildAt(i); assertTrue(child.getRight()<=badges.getWidth()); assertTrue(child.getBottom()<=badges.getHeight()); }
         screenshot("home-genre-ratings-hd.png");
         HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(7); shelf.list.getChildAt(0).performClick(); layout();
-        badges=(RatingsRow)find(activity.get().findViewById(android.R.id.content),v->v instanceof RatingsRow); badges.show(app,scores); layout(); screenshot("details-ratings-hd.png");
+        badges=(RatingsRow)find(activity.get().findViewById(android.R.id.content),v->v instanceof RatingsRow); badges.show(app,scores); layout(); assertRatingsSingleRow(badges);screenshot("details-ratings-hd.png");
         app.settings.edit().putBoolean("rating-show-tmdb",false).apply(); badges.show(app,scores); assertEquals(7,badges.getChildCount());
+    }
+    private void assertRatingsSingleRow(RatingsRow row) {
+        assertEquals(8,row.getChildCount());
+        for(int i=0;i<row.getChildCount();i++){TextView value=(TextView)row.getChildAt(i);assertEquals(value.getText().toString(),0,value.getTop());assertTrue(value.getRight()<=row.getWidth());assertEquals(1f,value.getScaleX(),0);assertEquals(1f,value.getScaleY(),0);assertEquals(2,value.getLineCount());assertEquals(0,value.getLayout().getEllipsisCount(0));assertEquals(0,value.getLayout().getEllipsisCount(1));assertNull(value.getBackground());}
+    }
+    @Test public void homeHeadingIsAbsentAndAllDetailScoresFitHd() throws Exception { homeHeadingAndDetailRatings(); }
+    @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void homeHeadingIsAbsentAndAllDetailScoresFit4k() throws Exception {viewportWidth=3840;viewportHeight=2160;homeHeadingAndDetailRatings();}
+    private void homeHeadingAndDetailRatings() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();layout();
+        LinearLayout heading=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"heading");assertEquals(View.GONE,heading.getVisibility());
+        java.lang.reflect.Method open=MainActivity.class.getDeclaredMethod("open",JSONObject.class);open.setAccessible(true);
+        JSONObject maximum=Json.obj("imdb",10,"tomatoes",100,"tomatoesaudience",100,"metacritic",100,"tmdb",10,"trakt",100,"letterboxd",5,"mdblist",100);
+        for(String language:new String[]{"de","en"})for(String type:new String[]{"Movie","Episode"}){
+            app.settings.edit().putString("language",language).commit();I18n.init(app);JSONObject media=new JSONObject(movie.toString());media.put("Type",type);open.invoke(activity.get(),media);layout();
+            await(()->((java.util.concurrent.ThreadPoolExecutor)app.navigationIo).getActiveCount()==0&&((java.util.concurrent.ThreadPoolExecutor)app.navigationIo).getQueue().isEmpty());layout();
+            RatingsRow row=(RatingsRow)find(activity.get().findViewById(android.R.id.content),v->v instanceof RatingsRow);row.show(app,maximum);layout();assertRatingsSingleRow(row);
+            if(type.equals("Movie")&&language.equals("de"))screenshot(viewportWidth==3840?"details-single-row-4k.png":"details-single-row-hd.png");
+            assertEquals(View.VISIBLE,((LinearLayout)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"heading")).getVisibility());activity.get().onBackPressed();layout();
+        }
     }
     @Test public void genreDescriptionFitsHdAndNavigationReachesOffscreenPostersAndLastRow() throws Exception {
         movie.put("Overview", "Eine sehr lange Beschreibung. ".repeat(150));
@@ -905,17 +1096,19 @@ public class TvUiTest {
         for(int i=0;i<count;i++) { activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,key)); activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,key)); }
     }
     private void awaitAnimatedShelf(int row,int column) throws Exception {
-        await(()-> { HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(row);if(shelf==null) return false;View card=shelf.list.getLayoutManager().findViewByPosition(column);return card!=null&&card.hasFocus()&&!recycler().getLayoutManager().isSmoothScrolling()&&recycler().getScrollState()==RecyclerView.SCROLL_STATE_IDLE&&!shelf.list.getLayoutManager().isSmoothScrolling()&&shelf.list.getScrollState()==RecyclerView.SCROLL_STATE_IDLE; });layout();awaitShelf(row,column);
+        try {await(()-> { HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(row);if(shelf==null) return false;View card=shelf.list.getLayoutManager().findViewByPosition(column);return card!=null&&card.hasFocus()&&!recycler().getLayoutManager().isSmoothScrolling()&&recycler().getScrollState()==RecyclerView.SCROLL_STATE_IDLE&&!shelf.list.getLayoutManager().isSmoothScrolling()&&shelf.list.getScrollState()==RecyclerView.SCROLL_STATE_IDLE; });}
+        catch(AssertionError failure) {HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(row);HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();View target=shelf==null?null:shelf.list.getLayoutManager().findViewByPosition(column);String targetState=target==null?"absent":"visible="+target.isShown()+",focusable="+target.isFocusable()+",rect="+target.getLeft()+","+target.getRight();throw new AssertionError("Target="+targetState+" range="+(shelf==null?"":((LinearLayoutManager)shelf.list.getLayoutManager()).findFirstVisibleItemPosition()+".."+((LinearLayoutManager)shelf.list.getLayoutManager()).findLastVisibleItemPosition())+" Animated row="+row+" column="+column+" parentSmooth="+recycler().getLayoutManager().isSmoothScrolling()+" parentState="+recycler().getScrollState()+" pendingRow="+org.robolectric.util.ReflectionHelpers.getField(adapter,"pendingRow")+" focusedShelf="+org.robolectric.util.ReflectionHelpers.getField(adapter,"focusedShelf")+" rowSize="+adapter.rows.get(row).size()+" shelf="+(shelf==null?"missing":"top="+shelf.itemView.getTop()+", smooth="+shelf.list.getLayoutManager().isSmoothScrolling()+", state="+shelf.list.getScrollState()+", pending="+org.robolectric.util.ReflectionHelpers.getField(shelf.list,"pendingCard"))+" focus="+activity.get().getWindow().getDecorView().findFocus(),failure);}
+        layout();awaitShelf(row,column);
     }
     @Test public void recommendationHeadingAppearsWhenFullyVisibleBeforeItsRowIsSelected() throws Exception {
         HomeAdapter adapter=stressHome();adapter.requestRow(0);layout();
         HomeAdapter.Shelf first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);
-        if(first!=null) assertEquals(View.INVISIBLE,((View)first.label.getParent()).getVisibility());
+        if(first!=null) assertEquals(View.VISIBLE,((View)first.label.getParent()).getVisibility());
         adapter.requestRow(1);layout();
         await(()-> { HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);return shelf!=null&&((View)shelf.label.getParent()).getVisibility()==View.VISIBLE; });
         HomeAdapter.Shelf next=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);assertTrue(next.list.hasFocus());
         adapter.requestRow(2);layout();awaitShelf(2,0);first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);assertEquals(View.VISIBLE,((View)first.label.getParent()).getVisibility());
-        adapter.requestRow(0);layout();first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);if(first!=null) assertEquals(View.INVISIBLE,((View)first.label.getParent()).getVisibility());
+        adapter.requestRow(0);layout();first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);if(first!=null) assertEquals(View.VISIBLE,((View)first.label.getParent()).getVisibility());
     }
     @Test public void unchangedHomeSnapshotKeepsPendingNavigationButRefreshesActionMetadata() throws Exception {
         app.settings.edit().putBoolean("scrollAnimations",true).commit();HomeAdapter adapter=stressHome();adapter.requestRow(7);awaitAnimatedShelf(7,0);
@@ -964,7 +1157,7 @@ public class TvUiTest {
 
     @Test public void exitCanBeCanceledAndMenuHasLiveAndRandomAboveLibrariesWithoutHeadingButton() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
-        activity=Robolectric.buildActivity(MainActivity.class).setup(); await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null); layout();
+        activity=Robolectric.buildActivity(MainActivity.class).setup(); await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null&&findButton(activity.get().findViewById(android.R.id.content),"Live TV")!=null); layout();
         View root=activity.get().findViewById(android.R.id.content); assertNull(findButton(root,"☰ Menü"));
         activity.get().onBackPressed(); android.app.AlertDialog dialog=(android.app.AlertDialog)org.robolectric.shadows.ShadowDialog.getLatestDialog();
         shadowOf(Looper.getMainLooper()).idle(); assertTrue("Cancel should have focus, actual: "+dialog.getWindow().getDecorView().findFocus(),dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).hasFocus()); dialog.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).performClick(); shadowOf(Looper.getMainLooper()).idle(); assertFalse(activity.get().isFinishing());
@@ -1054,6 +1247,17 @@ public class TvUiTest {
         java.io.File cover=new java.io.File(images.directory,"test.jpg");try(java.io.OutputStream out=new java.io.FileOutputStream(cover)) {out.write(posterImage);}
         java.util.concurrent.atomic.AtomicBoolean done=new java.util.concurrent.atomic.AtomicBoolean();java.util.concurrent.atomic.AtomicReference<Exception> error=new java.util.concurrent.atomic.AtomicReference<>();app.clearPrecache(()->done.set(true),error::set);long until=System.nanoTime()+java.util.concurrent.TimeUnit.SECONDS.toNanos(5);while(!done.get()&&error.get()==null&&System.nanoTime()<until) { shadowOf(Looper.getMainLooper()).idle();Thread.sleep(10); }assertNull(error.get());assertTrue(done.get());assertSame(account,app.account);assertNotSame(old,app.library);assertNotSame(images,app.images);assertEquals(0,app.library.count());assertEquals("saved-rating",app.library.state("ratings-values-movie"));assertEquals(1234,app.library.companionState("movie").optLong("resumeTicks"));assertTrue(app.settings.getBoolean("hdrPlayback",false));assertFalse(cover.exists());assertFalse(app.clearingCache);old.put(movie);assertNull(app.library.item("movie"));
     }
+    @Test public void libraryInitialFocusWaitsForItsFirstCardInsteadOfSelectingThePagerBeforeLayout() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);await(()->findButton(root,"Meine Filme")!=null);findButton(root,"Meine Filme").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh);
+        RecyclerView grid=recycler();PageControls pager=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"pageControls");boolean[] cardsReady={false};
+        grid.setLayoutManager(new GridLayoutManager(activity.get(),3) {
+            @Override public void onLayoutChildren(RecyclerView.Recycler recycler,RecyclerView.State state) {if(cardsReady[0])super.onLayoutChildren(recycler,state);}
+        });
+        MediaAdapter replacement=new MediaAdapter(app.images,false,item->{});grid.setAdapter(replacement);replacement.set(java.util.Collections.singletonList(movie));replacement.fresh=true;pager.update(true);layout();grid.setFocusableInTouchMode(true);grid.requestFocus();assertEquals(0,grid.getChildCount());assertTrue(grid.hasFocus());
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod(activity.get(),"restoreFocus");shadowOf(Looper.getMainLooper()).idle();assertFalse("Nonempty results have not laid out yet; the pager must not take initial focus",pager.hasFocus());
+        cardsReady[0]=true;grid.requestLayout();
+        await(()->grid.findViewHolderForAdapterPosition(0)!=null&&grid.findViewHolderForAdapterPosition(0).itemView.hasFocus());
+    }
     @Test public void LibraryEntryFocusStaysOnFirstMediumAndLetterJumpReachesLaterPages() throws Exception {
         Dispatcher original=server.getDispatcher();
         server.setDispatcher(new Dispatcher() { @Override public MockResponse dispatch(RecordedRequest request) throws InterruptedException {
@@ -1064,10 +1268,22 @@ public class TvUiTest {
             }return original.dispatch(request);
         } });
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null);
-        findButton(activity.get().findViewById(android.R.id.content),"Meine Filme").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&recycler().getAdapter().getItemCount()==60);layout();assertTrue(recycler().findViewHolderForAdapterPosition(0).itemView.hasFocus());
+        findButton(activity.get().findViewById(android.R.id.content),"Meine Filme").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&recycler().getAdapter().getItemCount()==60);layout();assertTrue("Initial library focus="+activity.get().getWindow().getDecorView().findFocus()+", updates="+recycler().hasPendingAdapterUpdates(),recycler().findViewHolderForAdapterPosition(0).itemView.hasFocus());
         Button letters=findButton(activity.get().findViewById(android.R.id.content),"Zu Buchstaben springen");assertNotNull(letters);assertFalse(letters.hasFocus());screenshot("library-letter-header-hd.png");letters.performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
         View dialogRoot=dialog.getWindow().getDecorView();shadowOf(Looper.getMainLooper()).idle();dialogRoot.measure(View.MeasureSpec.makeMeasureSpec(dialog.getWindow().getAttributes().width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.AT_MOST));dialogRoot.layout(0,0,dialogRoot.getMeasuredWidth(),dialogRoot.getMeasuredHeight());Bitmap dialogImage=Bitmap.createBitmap(dialogRoot.getWidth(),dialogRoot.getHeight(),Bitmap.Config.ARGB_8888);dialogRoot.draw(new Canvas(dialogImage));try(java.io.OutputStream out=new java.io.FileOutputStream("build/qa/library-letter-menu-hd.png")) { dialogImage.compress(Bitmap.CompressFormat.PNG,100,out); }dialogImage.recycle();findButton(dialogRoot,"M").performClick();
         await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id").equals("letter-60"));await(()->recycler().findViewHolderForAdapterPosition(13)!=null&&recycler().findViewHolderForAdapterPosition(13).itemView.hasFocus());assertEquals("Mango 73",((MediaAdapter)recycler().getAdapter()).items.get(13).optString("Name"));
+    }
+    @Test public void chosenLibraryPageSizesKeepLookaheadLetterJumpAndDetailReturnConsistent() throws Exception {
+        Dispatcher original=server.getDispatcher();server.setDispatcher(new Dispatcher(){@Override public MockResponse dispatch(RecordedRequest request) throws InterruptedException {String path=request.getRequestUrl().encodedPath();
+            if(path.equals("/Users/user/Items")&&"films".equals(request.getRequestUrl().queryParameter("ParentId"))){int limit=Integer.parseInt(request.getRequestUrl().queryParameter("Limit"));if(limit==0)return new MockResponse().setBody(Json.obj("Items",new JSONArray(),"TotalRecordCount",request.getRequestUrl().queryParameter("NameStartsWithOrGreater")==null?317:144).toString());int start=Integer.parseInt(request.getRequestUrl().queryParameter("StartIndex"));JSONArray items=new JSONArray();for(int n=start;n<Math.min(317,start+limit);n++)items.put(Json.obj("Id","custom-page-"+n,"Type","Movie","Name",String.format("Title %03d",n),"Overview","Description"));return new MockResponse().setBody(Json.obj("Items",items,"TotalRecordCount",317).toString());}
+            if(path.startsWith("/Users/user/Items/custom-page-"))return new MockResponse().setBody(Json.obj("Id",path.substring(path.lastIndexOf('/')+1),"Type","Movie","Name","Selected movie","Overview","Description").toString());return original.dispatch(request);
+        }});
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);await(()->findButton(root,"Meine Filme")!=null);
+        for(int size:new int[]{50,73,150}){app.settings.edit().putInt("libraryPageSize",size).apply();findButton(root,"Meine Filme").performClick();await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).serverCommitted&&recycler().getAdapter().getItemCount()==size);assertEquals("custom-page-0",((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id"));
+            ((Button)root.findViewById(R.id.page_next)).performClick();await(()->((MediaAdapter)recycler().getAdapter()).serverCommitted&&((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id").equals("custom-page-"+size));assertEquals(size,recycler().getAdapter().getItemCount());((Button)root.findViewById(R.id.page_previous)).performClick();await(()->((MediaAdapter)recycler().getAdapter()).serverCommitted&&((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id").equals("custom-page-0"));
+            findButton(root,"Zu Buchstaben springen").performClick();android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();findButton(dialog.getWindow().getDecorView(),"M").performClick();int first=173/size*size,index=173%size;await(()->((MediaAdapter)recycler().getAdapter()).serverCommitted&&((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id").equals("custom-page-"+first));await(()->recycler().findViewHolderForAdapterPosition(index)!=null&&recycler().findViewHolderForAdapterPosition(index).itemView.hasFocus());
+            remote(KeyEvent.KEYCODE_DPAD_CENTER,1);layout();try{await(()->findButton(root,"Abspielen")!=null);}catch(AssertionError error){throw new AssertionError("Detail did not open for size "+size,error);}app.settings.edit().putInt("libraryPageSize",size==150?50:150).apply();activity.get().onBackPressed();try{await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).serverCommitted&&recycler().findViewHolderForAdapterPosition(index)!=null&&recycler().findViewHolderForAdapterPosition(index).itemView.hasFocus());}catch(AssertionError error){Object selected=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"screen");throw new AssertionError("Back size="+size+", index="+index+", first="+((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id")+", storedLimit="+org.robolectric.util.ReflectionHelpers.getField(selected,"pageSize")+", focus="+activity.get().getWindow().getDecorView().findFocus()+", requested="+org.robolectric.util.ReflectionHelpers.getField(selected,"gridFocusId"),error);}assertEquals("custom-page-"+first,((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id"));assertEquals(size,recycler().getAdapter().getItemCount());
+        }
     }
     @Test public void AnimatedLibraryPagingKeepsFooterAndReturnFocus() throws Exception {
         app.settings.edit().putBoolean("scrollAnimations",true).putBoolean("animations",true).apply();PagingLookaheadDoesNotDuplicateItemsOrOfferAnEmptyFinalPage();
@@ -1085,24 +1301,24 @@ public class TvUiTest {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup(); View root=activity.get().findViewById(android.R.id.content); await(()->findButton(root,"Meine Filme")!=null); findButton(root,"Meine Filme").performClick();
         await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&recycler().getAdapter().getItemCount()==60); layout();
-        assertFalse(findButton(root,"← Vorherige Seite").isShown()); assertTrue(findButton(root,"Nächste Seite →").isShown());
+        assertFalse(((Button)root.findViewById(R.id.page_previous)).isShown()); assertTrue(((Button)root.findViewById(R.id.page_next)).isShown());
         layout(); recycler().clearFocus(); ((GridLayoutManager)recycler().getLayoutManager()).scrollToPositionWithOffset(59,0); layout(); await(()->recycler().findViewHolderForAdapterPosition(59)!=null); recycler().findViewHolderForAdapterPosition(59).itemView.requestFocus();
-        remote(KeyEvent.KEYCODE_DPAD_DOWN,1); layout(); assertTrue(findButton(root,"Nächste Seite →").hasFocus());
+        remote(KeyEvent.KEYCODE_DPAD_DOWN,1); layout(); assertTrue(((Button)root.findViewById(R.id.page_next)).hasFocus());
         remote(KeyEvent.KEYCODE_DPAD_UP,1); layout(); assertTrue(recycler().findViewHolderForAdapterPosition(59).itemView.hasFocus());
-        findButton(root,"Nächste Seite →").performClick(); await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1); layout();
-        assertEquals("paged-60",((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id")); assertTrue(findButton(root,"← Vorherige Seite").isShown()); assertFalse(findButton(root,"Nächste Seite →").isShown());
+        ((Button)root.findViewById(R.id.page_next)).performClick(); await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1); layout();
+        assertEquals("paged-60",((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Id")); assertTrue(((Button)root.findViewById(R.id.page_previous)).isShown()); assertFalse(((Button)root.findViewById(R.id.page_next)).isShown());
         recycler().findViewHolderForAdapterPosition(0).itemView.requestFocus(); remote(KeyEvent.KEYCODE_DPAD_DOWN,1); layout();
-        Button previous=findButton(root,"← Vorherige Seite"); assertTrue(previous.hasFocus()); java.lang.reflect.Method restore=MainActivity.class.getDeclaredMethod("restoreFocus"); restore.setAccessible(true); restore.invoke(activity.get()); layout(); assertTrue(previous.hasFocus()); assertEquals(1f,previous.getScaleX(),0); assertEquals(1f,previous.getScaleY(),0); screenshot("paging-previous-focus-hd.png");
+        Button previous=((Button)root.findViewById(R.id.page_previous)); assertTrue(previous.hasFocus()); java.lang.reflect.Method restore=MainActivity.class.getDeclaredMethod("restoreFocus"); restore.setAccessible(true); restore.invoke(activity.get()); layout(); assertTrue(previous.hasFocus()); assertEquals(1f,previous.getScaleX(),0); assertEquals(1f,previous.getScaleY(),0); screenshot("paging-previous-focus-hd.png");
         remote(KeyEvent.KEYCODE_DPAD_UP,1); layout(); assertTrue(recycler().findViewHolderForAdapterPosition(0).itemView.hasFocus());
-        available.set(60); findButton(root,"← Vorherige Seite").performClick(); await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&recycler().getAdapter().getItemCount()==60); layout();
-        assertFalse(findButton(root,"← Vorherige Seite").isShown()); assertFalse(findButton(root,"Nächste Seite →").isShown());
+        available.set(60); ((Button)root.findViewById(R.id.page_previous)).performClick(); await(()->recycler()!=null&&recycler().getAdapter() instanceof MediaAdapter&&((MediaAdapter)recycler().getAdapter()).fresh&&recycler().getAdapter().getItemCount()==60); layout();
+        assertFalse(((Button)root.findViewById(R.id.page_previous)).isShown()); assertFalse(((Button)root.findViewById(R.id.page_next)).isShown());
     }
     @Test public void SinglePageListsHidePagingAndSkipSettingsContainOnlySeparateControls() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup(); View root=activity.get().findViewById(android.R.id.content);
         await(()->findButton(root,"Meine Filme")!=null); findButton(root,"Meine Filme").performClick();
         await(()->recycler()!=null&&recycler().getAdapter().getItemCount()>0); layout();
-        assertFalse(findButton(root,"← Vorherige Seite").isShown()); assertFalse(findButton(root,"Nächste Seite →").isShown());
+        assertFalse(((Button)root.findViewById(R.id.page_previous)).isShown()); assertFalse(((Button)root.findViewById(R.id.page_next)).isShown());
         findButton(root,"Einstellungen").performClick(); findButton(root,"Wiedergabe").performClick(); layout();
         assertNull(findButton(root,"Intros und Outros automatisch überspringen"));
         assertTrue(findButton(root,"Intros automatisch überspringen") instanceof SettingSwitch); assertTrue(findButton(root,"Outros automatisch überspringen") instanceof SettingSwitch);
@@ -1147,10 +1363,11 @@ public class TvUiTest {
         ByteArrayOutputStream bytes=new ByteArrayOutputStream(); bitmap.compress(Bitmap.CompressFormat.PNG,100,bytes); bitmap.recycle(); return bytes.toByteArray();
     }
     private JSONObject episode(String id,int index,long position) { return Json.obj("Id",id,"Type","Episode","Name",index==5?"Der Rückweg":"Ein neuer Anfang","SeriesName","Die lange Serie","SeriesId","show","ParentIndexNumber",40,"IndexNumber",index,"RunTimeTicks",27000000000L,"ImageTags",Json.obj("Primary","episode-thumb"),"PrimaryImageAspectRatio",4.0/3,"UserData",Json.obj("PlaybackPositionTicks",position)); }
-    @Test public void launcherSeriesLinkOpensItsSeasonsDirectly() throws Exception {
+    @Test public void launcherSeriesLinkOpensItsDetailsFirst() throws Exception {
         Account account=new Account(server.url("/").toString(),"user","token","Demo User","device"); app.setAccount(account); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class,HomeChannels.link(app,account,"show","open")).setup();
-        await(()-> { RecyclerView r=recycler(); return r!=null&&r.getAdapter().getItemCount()==45; });
+        await(()->findButton(activity.get().findViewById(android.R.id.content),"Staffeln ansehen")!=null);
+        assertNull(findButton(activity.get().findViewById(android.R.id.content),"Zur Staffel"));
         assertNotNull(findText(activity.get().findViewById(android.R.id.content),"Die lange Serie"));
     }
     @Test public void launcherLinkFromAnotherAccountCannotStartPlayback() throws Exception {

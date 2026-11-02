@@ -14,7 +14,7 @@ import java.util.function.Consumer;
 final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
     private final AsyncListDiffer<JSONObject> differ=new AsyncListDiffer<>(this,MediaDiff.CALLBACK);
     final List<JSONObject> items=new AbstractList<JSONObject>() { public JSONObject get(int index) { return differ.getCurrentList().get(index); } public int size() { return differ.getCurrentList().size(); } };
-    boolean fresh;
+    boolean fresh,serverCommitted;
     private Runnable openMenu=()->{};
     void onOpenMenu(Runnable action) { openMenu=action; }
     private Consumer<JSONObject> actions=item->{};
@@ -42,13 +42,13 @@ final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
         return new Card(box,image,title,subtitle);
     }
     @Override public void onBindViewHolder(Card holder,int position) {
-        JSONObject item=items.get(position); holder.title.setText(Json.label(item)); holder.image.ratio(wide?16.0/9:Artwork.ratio(item,false)); holder.image.crop(Artwork.crop(item,false));
+        JSONObject item=items.get(position);String label=Json.label(item);Ui.textIfChanged(holder.title,label); holder.image.ratio(wide?16.0/9:Artwork.ratio(item,false)); holder.image.crop(Artwork.crop(item,false));
         holder.image.transparent("TvChannel".equals(item.optString("Type")));
         JSONObject user=Json.object(item,"UserData"); String sub=item.optString("Type").equals("Season")?item.optInt("RecursiveItemCount",item.optInt("ChildCount"))+I18n.text(" Folgen"):item.optString("ChannelNumber",item.optString("ProductionYear",""));
         if(Json.played(item)) sub+="  ✓";
         if(Json.position(item)>0) sub+="  ↻ "+Json.position(item)/60000+" min";
         if(user.optBoolean("IsFavorite")) sub+="  ★";
-        holder.subtitle.setText(sub.trim()); holder.itemView.setContentDescription(Json.label(item));
+        Ui.textIfChanged(holder.subtitle,sub.trim());if(!android.text.TextUtils.equals(holder.itemView.getContentDescription(),label))holder.itemView.setContentDescription(label);
         ConfirmPress.bind(holder.itemView,(view,key,event)-> {
             if(key!=KeyEvent.KEYCODE_DPAD_LEFT) return false;
             RecyclerView recycler=(RecyclerView)view.getParent(); int cardPosition=holder.getBindingAdapterPosition();

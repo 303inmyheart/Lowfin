@@ -30,9 +30,14 @@ public final class MainActivity extends Activity {
     private Runnable homeReload;
     private boolean startupPending=true;
     private StartupOverlay startupOverlay;
+    private UpdateSettings updateSettings;
+    private SettingsGrid settingsGrid;
+    private LiveGuide liveGuide;
     private LinearLayout sidebar;
     private final List<JSONObject> views=new ArrayList<>();
     private boolean viewsLoading;
+    private volatile int viewsRequest;
+    private long viewsChecked;
     private boolean liveAvailable,liveChecking;private Api liveApi;private long liveChecked;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView cacheStatusView;
@@ -56,7 +61,7 @@ public final class MainActivity extends Activity {
 
     private static final class Screen {
         final String kind,title,type,parent; JSONObject item;
-        int page,detailScroll; int jumpIndex=-1; String castFocus="",gridFocusId=""; int gridFocusIndex=-1,gridFocusOffset; Parcelable scroll; Ui.SettingsPosition settingsPosition; HomeAdapter.State homeState;
+        int page,detailScroll,pageSize; int jumpIndex=-1; String castFocus="",gridFocusId=""; int gridFocusIndex=-1,gridFocusOffset; Parcelable scroll; Ui.SettingsPosition settingsPosition; HomeAdapter.State homeState; LiveGuide.State guideState;
         Screen(String kind,String title,String type,String parent,JSONObject item) { this.kind=kind; this.title=title; this.type=type; this.parent=parent; this.item=item; }
     }
     @Override public void onCreate(Bundle state) {
@@ -68,14 +73,15 @@ public final class MainActivity extends Activity {
             show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); checkSession();
             loadViews();
             String last=app.settings.getString("lastChannel","");
-            if(hasHomeLink(getIntent())) handleHomeLink(getIntent());
+            if(AppUpdater.OPEN.equals(getIntent().getAction()))openUpdates();
+            else if(hasHomeLink(getIntent())) handleHomeLink(getIntent());
             else if(savedNone(state)&&app.settings.getBoolean("liveOnLaunch",false)&&!last.isEmpty()) play(Json.obj("Id",last,"Type","TvChannel","Name","Live TV"),0);
         }
     }
     private boolean savedNone(Bundle state) { return state==null; }
-    @Override protected void onResume() { super.onResume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
-    @Override protected void onPause() { if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
-    @Override protected void onDestroy() { if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override protected void onResume() { super.onResume();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
+    @Override protected void onPause() { if(liveGuide!=null)liveGuide.pause();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
+    @Override protected void onDestroy() { if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void checkSession() {
         final Api api=app.api;
         app.io.execute(()-> {
@@ -92,6 +98,8 @@ public final class MainActivity extends Activity {
         });
     }
     private void login(String error) {
+        settingsGrid=null;
+        if(updateSettings!=null) {updateSettings.pause();updateSettings=null;}
         generation++; screen=null; grid=null;
         LinearLayout outer=Ui.column(this); outer.setGravity(Gravity.CENTER); Accent.background(outer);
         LinearLayout form=Ui.column(this); outer.addView(form,new LinearLayout.LayoutParams(Ui.dp(this,470),-2));
@@ -141,6 +149,9 @@ public final class MainActivity extends Activity {
     private String focusedHomeId="";
     private Runnable homeBackdropUpdate;
     private void shell(String title) {
+        if(liveGuide!=null){liveGuide.close();liveGuide=null;}
+        settingsGrid=null;
+        if(updateSettings!=null) {updateSettings.pause();updateSettings=null;}
         if(startupOverlay!=null) {startupOverlay.dismiss();startupOverlay=null;}
         pageControls=null;cacheStatusView=null;preloadButton=null;detailStateRefresh=null;detailReload=null;detailNeedsReload=false;
         root=new FrameLayout(this); boolean artworkScreen=screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"));
@@ -163,7 +174,7 @@ public final class MainActivity extends Activity {
             View fade=new View(this); Accent.background(fade,(c,variant)-> { int tint=AccentBackground.colors(c,variant)[0]&0x00ffffff; return SmoothGradient.linear(android.graphics.drawable.GradientDrawable.Orientation.BOTTOM_TOP,0xef000000|tint,0x20000000|tint); }); artwork.addView(fade,new FrameLayout.LayoutParams(-1,-1));
         }
         LinearLayout content=Ui.column(this); content.setPadding(Ui.dp(this,artworkScreen?30:10),Ui.dp(this,artworkScreen?22:4),Ui.dp(this,artworkScreen?30:10),Ui.dp(this,artworkScreen?18:0)); stage.addView(content,new FrameLayout.LayoutParams(-1,-1));
-        heading=Ui.row(this); menuButton=null; headingTitle=Ui.title(this,title,22); headingTitle.setMaxLines(1); headingTitle.setEllipsize(android.text.TextUtils.TruncateAt.END); heading.addView(headingTitle,new LinearLayout.LayoutParams(0,-2,1)); content.addView(heading); Ui.space(content,8);
+        heading=Ui.row(this); menuButton=null; headingTitle=Ui.title(this,title,22); headingTitle.setMaxLines(1); headingTitle.setEllipsize(android.text.TextUtils.TruncateAt.END); heading.addView(headingTitle,new LinearLayout.LayoutParams(0,-2,1)); content.addView(heading); if(screen!=null&&screen.kind.equals("home"))heading.setVisibility(View.GONE);else Ui.space(content,8);
         body=Ui.column(this); content.addView(body,new LinearLayout.LayoutParams(-1,0,1));
         drawerShade=new View(this); drawerShade.setBackgroundColor(0x99000000); drawerShade.setVisibility(View.GONE); drawerShade.setOnClickListener(v->setDrawer(false)); root.addView(drawerShade,new FrameLayout.LayoutParams(-1,-1));
         LinearLayout left=Ui.column(this); drawer=left; left.setPadding(Ui.dp(this,14),Ui.dp(this,14),Ui.dp(this,14),Ui.dp(this,12)); Accent.background(left);
@@ -181,6 +192,8 @@ public final class MainActivity extends Activity {
         if(drawer==null||drawerOpen==open) return; drawerOpen=open; boolean animate=app.settings.getBoolean("animations",true);
         drawer.animate().withEndAction(null).cancel(); drawerShade.animate().withEndAction(null).cancel();
         if(open) {
+            if(grid instanceof LibraryGrid)((LibraryGrid)grid).stopPendingNavigation();
+            if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews();
             drawerReturnFocus=root.findFocus()==menuButton?lastContentFocus:root.findFocus(); contentStage.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
             drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
             drawerShade.setVisibility(View.VISIBLE); drawer.setVisibility(View.VISIBLE); updateStatus();
@@ -206,7 +219,7 @@ public final class MainActivity extends Activity {
             } else { drawer.setVisibility(View.GONE); drawerShade.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); }
             if(drawerReturnFocus!=null&&drawerReturnFocus!=menuButton&&drawerReturnFocus.isAttachedToWindow()&&drawerReturnFocus.isShown()) drawerReturnFocus.requestFocus();
             else if(grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).requestRow(focusedHomeRow>=0?focusedHomeRow:((HomeAdapter)grid.getAdapter()).firstRow());
-            else if(grid!=null&&grid.getChildCount()>0) grid.getChildAt(0).requestFocus(); else if(body!=null) { body.setFocusable(true); body.requestFocus(); }
+            else if(grid!=null&&grid.getChildCount()>0) grid.getChildAt(0).requestFocus(); else if(liveGuide!=null)liveGuide.focusSelected();else if(settingsGrid!=null)settingsGrid.focusFirst();else if(body!=null&&screen!=null&&isSettingsPage(screen.kind))SettingsPage.focusFirst(body);else if(body!=null) { body.setFocusable(true); body.requestFocus(); }
         }
     }
     @Override public boolean dispatchTouchEvent(MotionEvent event) { if(screensaver!=null&&screensaver.touch(event)) return true;return super.dispatchTouchEvent(event); }
@@ -226,6 +239,7 @@ public final class MainActivity extends Activity {
         if(startupOverlay!=null&&startupOverlay.showing()&&event.getAction()==KeyEvent.ACTION_DOWN) {startupOverlay.dismiss();if(event.getKeyCode()==KeyEvent.KEYCODE_BACK) return true;}
 
         if(event.getAction()==KeyEvent.ACTION_DOWN&&screen!=null&&grid!=null&&grid.hasFocus()&&(event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_RIGHT||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_UP||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_DOWN||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_CENTER||event.getKeyCode()==KeyEvent.KEYCODE_ENTER)) { screen.jumpIndex=-1;screen.gridFocusId="";screen.gridFocusIndex=-1; }
+        if(!drawerOpen&&grid instanceof LibraryGrid&&((LibraryGrid)grid).hasPendingNavigation()&&(event.getKeyCode()==KeyEvent.KEYCODE_DPAD_UP||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_DOWN||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_CENTER||event.getKeyCode()==KeyEvent.KEYCODE_ENTER||event.getKeyCode()==KeyEvent.KEYCODE_NUMPAD_ENTER))return grid.dispatchKeyEvent(event);
         if(!drawerOpen&&pageControls!=null&&pageControls.navigate(root.findFocus(),event)) return true;
         if(!drawerOpen&&root!=null&&(event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_RIGHT)) {
             View focused=root.findFocus();
@@ -243,7 +257,8 @@ public final class MainActivity extends Activity {
             }
             return true;
         }
-        if(app.account!=null&&!drawerOpen&&grid==null&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) { if(event.getAction()==KeyEvent.ACTION_DOWN) setDrawer(true); return true; }
+        if(!drawerOpen&&liveGuide!=null&&liveGuide.navigate(event))return true;
+        if(app.account!=null&&!drawerOpen&&grid==null&&settingsGrid==null&&liveGuide==null&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) { if(event.getAction()==KeyEvent.ACTION_DOWN) setDrawer(true); return true; }
         if(!drawerOpen&&grid!=null&&grid.getLayoutManager() instanceof GridLayoutManager&&event.getKeyCode()==KeyEvent.KEYCODE_DPAD_LEFT) {
             View focused=root.findFocus(); View card=focused==null?null:grid.findContainingItemView(focused); int position=card==null?RecyclerView.NO_POSITION:grid.getChildAdapterPosition(card);
             GridLayoutManager layout=(GridLayoutManager)grid.getLayoutManager();
@@ -267,28 +282,57 @@ public final class MainActivity extends Activity {
         }
         return super.dispatchKeyEvent(event);
     }
-    private void sideButton(String label,Runnable action) {
+    private void sideButton(String key,String label,Runnable action) {
         Button button=Ui.button(this,label,action); button.setGravity(Gravity.START|Gravity.CENTER_VERTICAL); button.setSingleLine(true); button.setStateListAnimator(null); button.setElevation(0); button.setEllipsize(android.text.TextUtils.TruncateAt.END);
         boolean selected=screen!=null&&(label.equals(screen.title)||label.equals(I18n.text("Start"))&&screen.kind.equals("home")||label.equals(I18n.text("Suche"))&&screen.kind.equals("search")&&screen.type.equals("term"));
+        selected=selected||"nav:live".equals(key)&&screen!=null&&screen.kind.equals("liveGuide");
         selected=selected||label.equals("Genres")&&screen!=null&&screen.kind.startsWith("genre");
-        button.setTag(selected); Ui.navigation(button,selected); sidebar.addView(button,new LinearLayout.LayoutParams(-1,Ui.dp(this,44))); Ui.space(sidebar,3);
+        button.setTag(selected);button.setTag(R.id.sidebar_key,key); Ui.navigation(button,selected); sidebar.addView(button,new LinearLayout.LayoutParams(-1,Ui.dp(this,44))); Ui.space(sidebar,3);
     }
+    private List<String> sidebarEntries() {List<String> keys=new ArrayList<>(SidebarLayout.ALL);if(!liveAvailable||liveApi!=app.api)keys.remove("live");return keys;}
     private void buildSidebar() {
-        String focusedLabel=sidebar.findFocus() instanceof Button?((Button)sidebar.findFocus()).getText().toString():null;
-        sidebar.removeAllViews(); sideButton(I18n.text("Start"),()->show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false)); sideButton(I18n.text("Suche"),this::search); sideButton("Genres",()->show(new Screen("genres","Genres",null,null,null),false));
-        if(liveAvailable&&liveApi==app.api) sideButton("Live TV",()->show(new Screen("live","Live TV",null,null,null),false));
-        sideButton(I18n.text("Zufälliger Film"),()-> { String parent=screen.kind.equals("browse")&&screen.type.contains("Movie")?screen.parent:null; setDrawer(false); randomMovieMenu(parent); });
-        if(screen.kind.equals("genre")) sideButton(HomeGenres.read(app.settings,app.account).contains(screen.parent)?I18n.text("Von Startseite lösen"):I18n.text("Auf Startseite anheften"),()-> { HomeGenres.toggle(app.settings,app.account,screen.parent); show(screen,false); });
-        Ui.space(sidebar,12); sidebar.addView(Ui.text(this,I18n.text("BIBLIOTHEKEN"),11,Ui.MUTED)); Ui.space(sidebar,10);
-        if(views.isEmpty()) {
-            sideButton(I18n.text("Filme"),()->show(new Screen("browse",I18n.text("Filme"),"Movie",null,null),false)); sideButton(I18n.text("Serien"),()->show(new Screen("browse",I18n.text("Serien"),"Series",null,null),false));
-        } else for(JSONObject library:views) {
-            if("livetv".equals(library.optString("CollectionType"))) continue;
-            sideButton(library.optString("Name"),()->show(new Screen("browse",library.optString("Name"),viewTypes(library),library.optString("Id"),library),false));
+        String focusedKey=sidebar.findFocus()==null?null:(String)sidebar.findFocus().getTag(R.id.sidebar_key);
+        sidebar.removeAllViews();
+        for(String key:SidebarLayout.read(app.settings,app.account,sidebarEntries())) {
+            Runnable action;
+            switch(key) {
+                case "home":action=()->show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false);break;
+                case "search":action=this::search;break;
+                case "genres":action=()->show(new Screen("genres","Genres",null,null,null),false);break;
+                case "live":action=()->show(new Screen("live","Live TV",null,null,null),false);break;
+                case "random":action=()->{String parent=screen.kind.equals("browse")&&screen.type.contains("Movie")?screen.parent:null;setDrawer(false);randomMovieMenu(parent);};break;
+                case "favorites":action=()->special(I18n.text("Favoriten"),"favorites");break;
+                default:action=()->special(I18n.text("Später ansehen"),"watchLater");break;
+            }
+            sideButton("nav:"+key,SidebarLayout.label(key),action);
         }
-        sideButton(I18n.text("Später ansehen"),()->special(I18n.text("Später ansehen"),"watchLater"));
-        sideButton(I18n.text("Favoriten"),()->special(I18n.text("Favoriten"),"favorites")); sideButton(I18n.text("Einstellungen"),()->show(new Screen("settings",I18n.text("Einstellungen"),null,null,null),false));
-        if(drawerOpen&&focusedLabel!=null) {boolean restored=false;for(int i=0;i<sidebar.getChildCount();i++) { View button=sidebar.getChildAt(i); if(button instanceof Button&&focusedLabel.equals(((Button)button).getText().toString())) { button.requestFocus();restored=true;break; } }if(!restored&&sidebar.getChildCount()>0)sidebar.getChildAt(0).requestFocus();}
+        if(screen.kind.equals("genre"))sideButton("context:pin",HomeGenres.read(app.settings,app.account).contains(screen.parent)?I18n.text("Von Startseite lösen"):I18n.text("Auf Startseite anheften"),()->{HomeGenres.toggle(app.settings,app.account,screen.parent);show(screen,false);});
+        Ui.space(sidebar,12);sidebar.addView(Ui.text(this,I18n.text("BIBLIOTHEKEN"),11,Ui.MUTED));Ui.space(sidebar,10);
+        if(views.isEmpty()) {
+            sideButton("fallback:movies",I18n.text("Filme"),()->show(new Screen("browse",I18n.text("Filme"),"Movie",null,null),false));sideButton("fallback:series",I18n.text("Serien"),()->show(new Screen("browse",I18n.text("Serien"),"Series",null,null),false));
+        } else for(JSONObject library:views) {
+            if("livetv".equals(library.optString("CollectionType")))continue;
+            sideButton("library:"+LibraryOrder.normalize(library.optString("Id")),library.optString("Name"),()->show(new Screen("browse",library.optString("Name"),viewTypes(library),library.optString("Id"),library),false));
+        }
+        sideButton("settings",I18n.text("Einstellungen"),()->show(new Screen("settings",I18n.text("Einstellungen"),null,null,null),false));
+        if(drawerOpen&&focusedKey!=null) {boolean restored=false;for(int i=0;i<sidebar.getChildCount();i++) {View button=sidebar.getChildAt(i);if(focusedKey.equals(button.getTag(R.id.sidebar_key))) {button.requestFocus();restored=true;break;}}if(!restored&&sidebar.getChildCount()>0)sidebar.getChildAt(0).requestFocus();}
+    }
+    private void sidebarSettings() {
+        LinearLayout content=SettingsPage.content(this,body,"sidebarSettings");
+        content.addView(Ui.title(this,I18n.resource(R.string.sidebar_items_group),16));content.addView(Ui.text(this,I18n.resource(R.string.sidebar_items_hint),13,Ui.MUTED));
+        content.addView(Ui.button(this,I18n.resource(R.string.sidebar_items),()-> {
+            final Account account=app.account;final List<String> visible=sidebarEntries();
+            OrderEditor.open(this,app,I18n.resource(R.string.sidebar_items),()->{List<OrderEditor.Item> items=new ArrayList<>();for(String key:SidebarLayout.read(app.settings,account,visible))items.add(new OrderEditor.Item(key,SidebarLayout.label(key)));return items;},order->{if(app.account!=account)throw new IllegalStateException("Account changed");SidebarLayout.save(app.settings,account,visible,order);},this::buildSidebar);
+        }));
+        content.addView(Ui.title(this,I18n.resource(R.string.sidebar_libraries_group),16));content.addView(Ui.text(this,I18n.resource(R.string.sidebar_libraries_hint),13,Ui.MUTED));
+        content.addView(Ui.button(this,I18n.resource(R.string.sidebar_libraries),()-> {
+            final Api api=app.api;final LibraryOrder.Snapshot[] state={null};
+            OrderEditor.open(this,app,I18n.resource(R.string.sidebar_libraries),()->{state[0]=LibraryOrder.load(api);return state[0].items;},order->{state[0]=LibraryOrder.save(api,state[0],order);},()->acceptLibraryOrder(api,state[0]));
+        }));
+    }
+    private void acceptLibraryOrder(Api api,LibraryOrder.Snapshot state) {
+        if(app.api!=api)return;final Library db=app.library;final int request=++viewsRequest;viewsLoading=false;viewsChecked=SystemClock.elapsedRealtime();publishViews(state.views);
+        app.cacheIo.execute(()->{if(app.api==api&&request==viewsRequest){db.state("views",new JSONArray(state.views).toString());app.channels.refreshLibraries();}});
     }
     static String viewTypes(JSONObject library) { switch(library.optString("CollectionType")) { case "movies":return "Movie"; case "tvshows":return "Series"; case "homevideos":return "Video"; case "boxsets":return "BoxSet"; default:return "Movie,Series,Video,BoxSet"; } }
     private void checkLiveTv() {
@@ -310,19 +354,18 @@ public final class MainActivity extends Activity {
     }
     private void loadViews() {
         checkLiveTv();
-        if(viewsLoading||app.api==null) return; viewsLoading=true; final Api api=app.api; final Library db=app.library;
+        if(viewsLoading||app.api==null) return; viewsLoading=true; final Api api=app.api; final Library db=app.library;final int request=++viewsRequest;
         final boolean[] fresh={false};
         app.cacheIo.execute(()-> {
             try { String saved=db.state("views"); if(!saved.isEmpty()) { List<JSONObject> cached=list(new JSONArray(saved));
-                runOnUiThread(()-> { if(app.api==api&&sidebar!=null&&!fresh[0]) { publishViews(cached); } });
+                runOnUiThread(()-> { if(app.api==api&&request==viewsRequest&&sidebar!=null&&!fresh[0]) { publishViews(cached); } });
             } } catch(Exception ignored) {}
         });
         app.navigationIo.execute(()-> {
-            try { JSONArray a=Json.array(api.get("/Users/"+api.account.user+"/Views"),"Items"); List<JSONObject> result=list(a);
-                runOnUiThread(()-> { if(app.api==api&&sidebar!=null) { fresh[0]=true; publishViews(result); } });
-                app.cacheIo.execute(()-> { db.state("views",a.toString()); if(app.api==api) app.channels.refreshLibraries(); });
-            } catch(Exception e) { runOnUiThread(()-> { if(app.api==api) toast(I18n.text("Bibliotheken konnten nicht aktualisiert werden: ")+e.getMessage()); }); }
-            finally { runOnUiThread(()-> { if(app.api==api) viewsLoading=false; }); }
+            try { JSONArray a=Json.array(api.get("/Users/"+api.account.user+"/Views"),"Items"); List<JSONObject> result=list(a);final String serialized=a.toString();
+                runOnUiThread(()-> { if(app.api==api&&request==viewsRequest&&sidebar!=null) {boolean changed=!SidebarViews.sameData(views,result);fresh[0]=true;viewsChecked=SystemClock.elapsedRealtime(); publishViews(result);if(changed)app.cacheIo.execute(()->{if(app.api==api&&request==viewsRequest){db.state("views",serialized);app.channels.refreshLibraries();}}); } });
+            } catch(Exception e) { runOnUiThread(()-> { if(app.api==api&&request==viewsRequest) toast(I18n.text("Bibliotheken konnten nicht aktualisiert werden: ")+e.getMessage()); }); }
+            finally { runOnUiThread(()-> { if(app.api==api&&request==viewsRequest) viewsLoading=false; }); }
         });
     }
     private void show(Screen next,boolean push) {
@@ -355,36 +398,46 @@ public final class MainActivity extends Activity {
             case "seasons": seasons(next.item); break;
             case "episodes": episodes(); break;
             case "live": live(); break;
+            case "liveGuide": programmeGuide(); break;
             case "recordings": recordings(); break;
             case "settings": settings(); break;
-            case "genreSettings": new Options(this,app,body,this::refreshOptions).genres(); break;
-            case "screensaverSettings": new Options(this,app,body,this::refreshOptions).screensaver(); break;
-            case "appearanceSettings": new Options(this,app,body,this::refreshOptions).appearance(); break;
-            case "homeSettings": new Options(this,app,body,this::refreshOptions).home(); break;
-            case "playbackSettings": case "liveSettings": case "cacheSettings": case "channelSettings": case "accountSettings": settingsSection(); break;
+            case "genreSettings": new Options(this,app,body,this::refreshOptions,next.kind).genres(); break;
+            case "screensaverSettings": new Options(this,app,body,this::refreshOptions,next.kind).screensaver(); break;
+            case "appearanceSettings": Options appearance=new Options(this,app,body,this::refreshOptions,next.kind);appearance.appearance();appearance.sidebar(()->show(new Screen("sidebarSettings",I18n.resource(R.string.sidebar_layout),null,null,null),true));break;
+            case "homeSettings": new Options(this,app,body,this::refreshOptions,next.kind).home(); break;
+            case "sidebarSettings": sidebarSettings();break;
+            case "playbackSettings": case "liveSettings": case "cacheSettings": case "channelSettings": case "accountSettings": case "diagnosticsSettings": settingsSection(); break;
             case "ratings": ratingSettings(); break;
+            case "updatesSettings": updateSettings=new UpdateSettings(this,app,body); break;
             case "search": results(); break;
         }
+        if(isSettingsPage(next.kind)&&!next.kind.equals("settings"))headingTitle.setText(I18n.text("Einstellungen")+"  /  "+next.title);
         if(settingsPosition!=null) settingsPosition.restore(body);
         Motion.enter(contentStage,true);
+        app.diagnostics.record(Diagnostics.Event.SCREEN_BUILD,SystemClock.elapsedRealtime()-renderStarted,0,0,0);
         android.util.Log.i("LowfinNavigation","Screen "+next.kind+" built in "+(SystemClock.elapsedRealtime()-renderStarted)+" ms");
     }
     private static boolean isSettingsPage(String kind) {
         return kind.equals("settings")||kind.endsWith("Settings")||kind.equals("ratings");
     }
+    private int pageSize(Screen selected) {
+        if(selected.pageSize==0)selected.pageSize=selected.kind.equals("browse")||selected.kind.equals("episodes")||selected.kind.equals("seriesResume")?LibraryPageSize.read(app.settings):PAGE;
+        return selected.pageSize;
+    }
     private interface Work { List<JSONObject> run() throws Exception; }
     private void async(MediaAdapter adapter,Work work,TextView note) {
-        int g=generation; final PageControls paging=pageControls;
-        (note==null?app.cacheIo:app.navigationIo).execute(()-> { if(g!=generation||isFinishing()) return; try { List<JSONObject> data=work.run(); runOnUiThread(()-> { if(g!=generation||isFinishing()||(note==null&&adapter.fresh)) return;
-            if(paging!=null) paging.update(data.size()>PAGE);
-            List<JSONObject> displayed=paging!=null&&data.size()>PAGE?new ArrayList<>(data.subList(0,PAGE)):data;
-            boolean first=adapter.items.isEmpty(); adapter.set(displayed,()-> { if(g==generation&&(first||screen.jumpIndex>=0||!screen.gridFocusId.isEmpty())) restoreFocus(); }); if(note!=null) { adapter.fresh=true; note.setText(data.isEmpty()?I18n.text("Keine Einträge"):""); }
-        }); } catch(Exception e) { runOnUiThread(()-> { if(g==generation&&note!=null) note.setText(adapter.items.isEmpty()?I18n.text("Laden fehlgeschlagen: ")+e.getMessage():I18n.text("Gespeicherte Daten · Server aktuell nicht erreichbar")); }); } });
+        int g=generation;final int limit=pageSize(screen); final PageControls paging=pageControls;final long queued=SystemClock.elapsedRealtime();
+        (note==null?app.cacheIo:app.navigationIo).execute(()-> { if(g!=generation||isFinishing()) {app.diagnostics.record(Diagnostics.Event.NAV_DISCARDED,SystemClock.elapsedRealtime()-queued,0,0,0);return;} final long started=SystemClock.elapsedRealtime();try { List<JSONObject> data=work.run();final long received=SystemClock.elapsedRealtime(); runOnUiThread(()-> { if(g!=generation||isFinishing()||(note==null&&adapter.fresh)) {app.diagnostics.record(Diagnostics.Event.NAV_DISCARDED,started-queued,received-started,SystemClock.elapsedRealtime()-received,0);return;}
+            app.diagnostics.record(note==null?Diagnostics.Event.NAV_CACHE:Diagnostics.Event.NAV_SERVER,started-queued,received-started,SystemClock.elapsedRealtime()-received,data.size());
+            if(paging!=null) paging.update(data.size()>limit);
+            List<JSONObject> displayed=paging!=null&&data.size()>limit?new ArrayList<>(data.subList(0,limit)):data;
+            boolean first=adapter.items.isEmpty(); adapter.set(displayed,()-> { if(note!=null)adapter.serverCommitted=true;if(g==generation&&(first||screen.jumpIndex>=0||!screen.gridFocusId.isEmpty())) restoreFocus(); }); if(note!=null) { adapter.fresh=true; note.setText(data.isEmpty()?I18n.text("Keine Einträge"):""); }
+        }); } catch(Exception e) {app.diagnostics.record(Diagnostics.Event.NAV_ERROR,started-queued,SystemClock.elapsedRealtime()-started,0,0); runOnUiThread(()-> { if(g==generation&&note!=null) note.setText(adapter.items.isEmpty()?I18n.text("Laden fehlgeschlagen: ")+e.getMessage():I18n.text("Gespeicherte Daten · Server aktuell nicht erreichbar")); }); } });
     }
     private static List<JSONObject> list(JSONArray a) { List<JSONObject> out=new ArrayList<>(); for(int i=0;i<a.length();i++) { JSONObject j=a.optJSONObject(i); if(j!=null) out.add(j); } return out; }
     private TextView note(String s) { TextView t=Ui.text(this,s,13,Ui.MUTED); body.addView(t); Ui.space(body,5); return t; }
     private MediaAdapter cards(boolean compact) {
-        grid=new LibraryGrid(this); int columns=app.settings.getInt("gridColumns",8);
+        grid=new LibraryGrid(this);((LibraryGrid)grid).onOpenMenu(()->setDrawer(true)); int columns=app.settings.getInt("gridColumns",8);
         GridLayoutManager layout=ScrollMotion.grid(this,columns); grid.setLayoutManager(layout); grid.setItemAnimator(null); grid.setHasFixedSize(true); grid.setItemViewCacheSize(4);
         MediaAdapter adapter=new MediaAdapter(app.images,compact,this::open); adapter.wide=screen!=null&&"resume".equals(screen.type); adapter.onActions(this::itemActions); adapter.onOpenMenu(()->setDrawer(true)); grid.setAdapter(adapter);
         layout.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() { @Override public int getSpanSize(int position) { return adapter.span(position); } });
@@ -399,6 +452,7 @@ public final class MainActivity extends Activity {
         final String requestedId=screen.gridFocusId;final int savedIndex=screen.gridFocusIndex,savedOffset=screen.gridFocusOffset;
         grid.post(()-> {
             if(grid!=target||focusGeneration!=generation||pageControls!=null&&pageControls.hasFocus()) return;
+            if(requestedJump<0&&requestedId.isEmpty()&&target instanceof LibraryGrid&&(((LibraryGrid)target).userNavigated()||((LibraryGrid)target).headerFocused()||((LibraryGrid)target).hasPendingNavigation()))return;
             if(requestedJump<0&&!requestedId.isEmpty()&&target.getAdapter() instanceof MediaAdapter) {
                 if(!requestedId.equals(screen.gridFocusId)) return;
                 MediaAdapter adapter=(MediaAdapter)target.getAdapter();if(adapter.items.isEmpty()) { if(adapter.fresh&&pageControls!=null) pageControls.focusAvailable();return; }
@@ -416,7 +470,7 @@ public final class MainActivity extends Activity {
                     if(current<0) current=Math.max(0,Math.min(savedIndex,adapter.items.size()-1));
                     RecyclerView.ViewHolder holder=target.findViewHolderForAdapterPosition(current);
                     if(holder==null) { if(!target.isLayoutRequested()) target.scrollToPosition(current);return; }
-                    if(holder.itemView.requestFocus()) { if(target.getLayoutManager() instanceof LinearLayoutManager) ((LinearLayoutManager)target.getLayoutManager()).scrollToPositionWithOffset(current,savedOffset);screen.gridFocusId="";screen.gridFocusIndex=-1;target.removeOnChildAttachStateChangeListener(listener[0]); }
+                    if(holder.itemView.requestFocus()) { if(target.getLayoutManager() instanceof LinearLayoutManager) ((LinearLayoutManager)target.getLayoutManager()).scrollToPositionWithOffset(current,savedOffset);if(adapter.serverCommitted){screen.gridFocusId="";screen.gridFocusIndex=-1;}target.removeOnChildAttachStateChangeListener(listener[0]); }
                 };
                 target.addOnChildAttachStateChangeListener(listener[0]);
                 if(!restoredScroll&&target.findViewHolderForAdapterPosition(index)==null) target.scrollToPosition(index);
@@ -429,7 +483,26 @@ public final class MainActivity extends Activity {
             Runnable focus=()-> { if(grid!=target||focusGeneration!=generation||screen.jumpIndex!=requestedJump||pageControls!=null&&pageControls.hasFocus()) return; RecyclerView.ViewHolder holder=target.findViewHolderForAdapterPosition(index);if(holder!=null) holder.itemView.requestFocus(); };
             target.addOnLayoutChangeListener(new View.OnLayoutChangeListener() { @Override public void onLayoutChange(View v,int l,int t,int r,int b,int ol,int ot,int or,int ob) { target.removeOnLayoutChangeListener(this);focus.run(); } }); target.post(focus); return;
         } View existing=target.findFocus();if(existing!=null&&existing!=target) return;
-        if(target.getChildCount()>0) target.getChildAt(0).requestFocus(); else if(pageControls!=null&&target.getAdapter() instanceof MediaAdapter&&((MediaAdapter)target.getAdapter()).fresh) pageControls.focusAvailable(); });
+        if(target.getChildCount()>0) target.getChildAt(0).requestFocus();
+        else if(target.getAdapter()!=null&&target.getAdapter().getItemCount()>0) {
+            // Committed list data can precede the first attached card. A nonempty
+            // library must wait for layout instead of focusing its page controls.
+            target.addOnChildAttachStateChangeListener(new RecyclerView.OnChildAttachStateChangeListener() {
+                private boolean posted;
+                public void onChildViewAttachedToWindow(View view) {
+                    if(posted)return;posted=true;
+                    target.post(()-> {
+                        posted=false;
+                        View current=target.findFocus();
+                        if(target instanceof LibraryGrid&&((LibraryGrid)target).userNavigated()){target.removeOnChildAttachStateChangeListener(this);return;}
+                        if(grid!=target||generation!=focusGeneration||drawerOpen||pageControls!=null&&pageControls.hasFocus()||current!=null&&current!=target) {target.removeOnChildAttachStateChangeListener(this);return;}
+                        if(target.getChildCount()>0&&target.getChildAt(0).requestFocus())target.removeOnChildAttachStateChangeListener(this);
+                    });
+                }
+                public void onChildViewDetachedFromWindow(View view) {}
+            });
+            target.requestLayout();
+        } else if(target.getAdapter() instanceof MediaAdapter&&((MediaAdapter)target.getAdapter()).serverCommitted) {if(pageControls==null||!pageControls.focusAvailable())if(target instanceof LibraryGrid)((LibraryGrid)target).focusEmptyHeader();} });
     }
     private void home() {
         final List<String> pinned=app.settings.getBoolean("genreRows",true)?HomeGenres.read(app.settings,app.account):new ArrayList<>();
@@ -513,7 +586,7 @@ public final class MainActivity extends Activity {
                         if(row==0&&resumeCompanion!=null&&app.api==api) loaded=resumeCompanion.mergeResume(loaded,18);
                         final List<JSONObject> data=loaded;
                         long reconciled=SystemClock.elapsedRealtime();
-                        runOnUiThread(()-> { if(g==generation&&!isFinishing()&&app.api==api) { fresh[row]=true;adapter.update(row,data);android.util.Log.i("LowfinHome","Fresh shelf "+row+": "+data.size()+" items after "+(SystemClock.elapsedRealtime()-queued)+" ms (queue="+(started-queued)+", network="+(received-started)+", store="+(stored-received)+", companion="+(reconciled-stored)+")"); } });
+                        runOnUiThread(()-> { if(g==generation&&!isFinishing()&&app.api==api) { fresh[row]=true;adapter.update(row,data);app.diagnostics.record(row==0?Diagnostics.Event.HOME_RESUME:Diagnostics.Event.HOME_NEXT,started-queued,received-started,stored-received,reconciled-stored);android.util.Log.i("LowfinHome","Fresh shelf "+row+": "+data.size()+" items after "+(SystemClock.elapsedRealtime()-queued)+" ms (queue="+(started-queued)+", network="+(received-started)+", store="+(stored-received)+", companion="+(reconciled-stored)+")"); } });
                         app.cacheIo.execute(()-> {
                             if(app.api!=api||g!=generation) return;
                             try {
@@ -594,16 +667,24 @@ public final class MainActivity extends Activity {
         Screen s=new Screen("search",title,kind,null,null); show(s,true);
     }
     private void browse() {
-        final Screen s=screen;
-        if("Series".equals(s.type)) { LinearLayout tabs=Ui.row(this); Ui.addButton(tabs,Ui.button(this,I18n.text("Alle Serien"),()->{})); Ui.addButton(tabs,Ui.button(this,I18n.text("Begonnene Folgen"),()->show(new Screen("seriesResume",I18n.text("Begonnene Folgen"),null,s.parent,null),true))); body.addView(tabs); }
+        final Screen s=screen;final int limit=pageSize(s);
+        final List<View> topControls=new ArrayList<>();
+        if("Series".equals(s.type))topControls.addAll(seriesControls(s,false));
         TextView note=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();
         addLetterButton(adapter);
+        ((LibraryGrid)grid).topControls(topControls.toArray(new View[0]));
         final Api api=app.api; final Library db=app.library;
-        async(adapter,()->db.browse(s.type,s.parent,null,s.page*PAGE,PAGE+1),null);
-        async(adapter,()-> { JSONArray a=Json.array(api.items(s.page*PAGE,PAGE+1,s.type,s.parent,null),"Items"); long stamp=System.currentTimeMillis(); db.put(a,stamp); if(s.parent!=null) db.link(s.parent,a,stamp); return list(a); },note);
+        async(adapter,()->db.browse(s.type,s.parent,null,s.page*limit,limit+1),null);
+        async(adapter,()-> { JSONArray a=Json.array(api.items(s.page*limit,limit+1,s.type,s.parent,null),"Items"); long stamp=System.currentTimeMillis(),storeStarted=app.diagnostics.enabled()?SystemClock.elapsedRealtime():-1;
+            db.put(a,stamp,s.parent);if(storeStarted>=0)app.diagnostics.record(Diagnostics.Event.LIBRARY_STORE,SystemClock.elapsedRealtime()-storeStarted,a.length(),s.parent==null?0:1,0);return list(a); },note);
+    }
+    private List<View> seriesControls(Screen selected,boolean started) {
+        LinearLayout tabs=Ui.row(this);tabs.setClipChildren(false);tabs.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));
+        Button all=LibraryHeader.button(this,I18n.text("Alle Serien"),!started,false,()->{if(started){if(!history.isEmpty()&&history.peek().kind.equals("browse")&&Objects.equals(history.peek().parent,selected.parent))onBackPressed();else show(new Screen("browse",selected.title,"Series",selected.parent,null),false);}});
+        Button resume=LibraryHeader.button(this,I18n.text("Begonnene Folgen"),started,false,()->{if(!started)show(new Screen("seriesResume",selected.title,null,selected.parent,null),true);});Ui.addButton(tabs,all);Ui.addButton(tabs,resume);body.addView(tabs);return Arrays.asList(all,resume);
     }
     private void addLetterButton(MediaAdapter adapter) {
-        Button jump=Ui.quiet(this,I18n.resource(R.string.jump_to_letter),()->letterMenu());jump.setTextSize(12);Ui.fixedFocus(jump);jump.setFocusable(false);
+        Button jump=LibraryHeader.button(this,I18n.resource(R.string.jump_to_letter),false,true,()->letterMenu());jump.setFocusable(false);
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-2,Ui.dp(this,34));params.setMargins(Ui.dp(this,16),0,0,0);heading.addView(jump,params);
         if(grid instanceof LibraryGrid) ((LibraryGrid)grid).letterShortcut(jump);
         final RecyclerView target=grid;final int g=generation;
@@ -612,6 +693,7 @@ public final class MainActivity extends Activity {
             public void onGlobalLayout() {
                 if(grid!=target||generation!=g) { target.getViewTreeObserver().removeOnGlobalLayoutListener(this);return; }
                 if(adapter.getItemCount()==0||target.hasPendingAdapterUpdates()) return;
+                if(firstEntry&&target instanceof LibraryGrid&&((LibraryGrid)target).userNavigated()){target.getViewTreeObserver().removeOnGlobalLayoutListener(this);return;}
                 if(firstEntry) {
                     RecyclerView.ViewHolder first=target.findViewHolderForAdapterPosition(0);
                     if(first==null||!first.itemView.requestFocus()) return;
@@ -632,25 +714,26 @@ public final class MainActivity extends Activity {
         dialog[0]=LowfinDialog.builder(this).setTitle(I18n.resource(R.string.jump_to_letter)).setView(content).setNegativeButton(I18n.text("Abbrechen"),null).show();letters.getChildAt(0).requestFocus();
     }
     private void jumpToLetter(String letter) {
-        final Screen selected=screen;final int g=generation;final Api api=app.api;final Library db=app.library;
+        final Screen selected=screen;final int limit=pageSize(selected);final int g=generation;final Api api=app.api;final Library db=app.library;
         app.navigationIo.execute(()-> {
             int offset;
             try { offset=api.letterOffset(selected.type,selected.parent,letter); }
             catch(Exception error) { if(error instanceof Api.Failure&&(((Api.Failure)error).status==401||((Api.Failure)error).status==403)) { runOnUiThread(()-> { if(g==generation) toast(error.getMessage()); });return; } offset=db.letterOffset(selected.type,selected.parent,letter); }
             final int target=offset;
             runOnUiThread(()-> { if(g!=generation||screen!=selected||app.api!=api||isFinishing()) return;if(target<0) { toast(I18n.resource(R.string.jump_letter_empty));return; }
-                selected.page=target/PAGE;selected.jumpIndex=target%PAGE;selected.scroll=null;generation++;shell(selected.title);browse();
+                selected.page=target/limit;selected.jumpIndex=target%limit;selected.scroll=null;generation++;shell(selected.title);browse();
             });
         });
     }
     private void seriesResume() {
-        final Screen s=screen; final Api api=app.api; final Library db=app.library;
-        TextView status=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();
-        String key="seriesResume-v2-"+(s.parent==null?"all":s.parent)+"-"+s.page;
+        final Screen s=screen;final int limit=pageSize(s); final Api api=app.api; final Library db=app.library;
+        List<View> controls=seriesControls(s,true);
+        TextView status=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();((LibraryGrid)grid).topControls(controls.toArray(new View[0]));
+        String key=(limit==PAGE?"seriesResume-v2-":"seriesResume-size-"+limit+"-")+(s.parent==null?"all":s.parent)+"-"+s.page;
         async(adapter,()-> { String stored=db.state(key); if(stored.isEmpty()) return new ArrayList<>(); List<JSONObject> values=new ArrayList<>(); for(JSONObject current:db.withCompanionItems(list(new JSONArray(stored)))) if(Json.canResume(current)) values.add(current); return values; },null);
-        async(adapter,()-> { JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"ParentId",s.parent,"IncludeItemTypes","Episode","Filters","IsResumable","SortBy","DatePlayed","SortOrder","Descending","StartIndex",s.page*PAGE,"Limit",PAGE+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items"); db.put(items,System.currentTimeMillis()); if(s.parent!=null) db.link(s.parent,items,System.currentTimeMillis());
+        async(adapter,()-> { JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"ParentId",s.parent,"IncludeItemTypes","Episode","Filters","IsResumable","SortBy","DatePlayed","SortOrder","Descending","StartIndex",s.page*limit,"Limit",limit+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items"); db.put(items,System.currentTimeMillis()); if(s.parent!=null) db.link(s.parent,items,System.currentTimeMillis());
             if(s.page==0&&app.api==api&&app.companion!=null&&app.companion.discover()) {
-                List<JSONObject> scoped=app.companion.mergeResume(list(items),PAGE+1,s.parent,"Episode");
+                List<JSONObject> scoped=app.companion.mergeResume(list(items),limit+1,s.parent,"Episode");
                 db.state(key,new JSONArray(scoped).toString()); return scoped;
             }
             db.state(key,items.toString()); return list(items); },status);
@@ -738,7 +821,7 @@ public final class MainActivity extends Activity {
         String type=item.optString("Type");
         if(screen!=null&&screen.kind.equals("seriesResume")&&"Episode".equals(type)) { play(item,Json.position(item)); return; }
         if(type.equals("Person")) show(new Screen("person",I18n.resource(R.string.person_title),null,item.optString("Id"),item),true);
-        else if(type.equals("Series")) show(new Screen("seasons",item.optString("Name"),null,item.optString("Id"),item),true);
+        else if(type.equals("Series")) show(new Screen("detail",item.optString("Name"),null,item.optString("Id"),item),true);
         else if(type.equals("BoxSet")) show(new Screen("browse",item.optString("Name"),"Movie,Series",item.optString("Id"),item),true);
         else if(type.equals("Season")) show(new Screen("episodes",item.optString("Name"),"Episode",item.optString("Id"),item),true);
         else if(type.equals("TvChannel")) play(item,0);
@@ -773,11 +856,11 @@ public final class MainActivity extends Activity {
         });
     }
     private void episodes() {
-        final Screen s=screen; TextView n=note(I18n.text("Folgen werden geladen …")); MediaAdapter adapter=cards(true); pager();
+        final Screen s=screen;final int limit=pageSize(s); TextView n=note(I18n.text("Folgen werden geladen …")); MediaAdapter adapter=cards(true); pager();
         final Api api=app.api; final Library db=app.library;
-        async(adapter,()->db.browse("Episode",s.parent,null,s.page*PAGE,PAGE+1),null);
+        async(adapter,()->db.browse("Episode",s.parent,null,s.page*limit,limit+1),null);
         async(adapter,()-> { String series=s.item.optString("SeriesId",s.item.optString("ParentId"));
-            JSONArray a=Json.array(api.get("/Shows/"+series+"/Episodes","UserId",api.account.user,"SeasonId",s.parent,"StartIndex",s.page*PAGE,"Limit",PAGE+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items");
+            JSONArray a=Json.array(api.get("/Shows/"+series+"/Episodes","UserId",api.account.user,"SeasonId",s.parent,"StartIndex",s.page*limit,"Limit",limit+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items");
             db.put(a,System.currentTimeMillis()); return list(a); },n);
     }
     private void detail(JSONObject original) {
@@ -797,7 +880,7 @@ public final class MainActivity extends Activity {
         TextView videoInfo=Ui.text(this,"",12,Ui.MUTED); content.addView(videoInfo); Ui.space(content,8);
         TextView genres=Ui.text(this,"",12,Ui.MUTED); genres.setSingleLine(true); genres.setEllipsize(android.text.TextUtils.TruncateAt.END); content.addView(genres); Ui.space(content,8);
         TextView plays=Ui.text(this,"",12,Ui.MUTED); plays.setMaxLines(2); content.addView(plays); Ui.space(content,8);
-        RatingsRow ratings=new RatingsRow(this); content.addView(ratings); Ui.space(content,12);
+        RatingsRow ratings=RatingsRow.details(this); content.addView(ratings); Ui.space(content,12);
         Ui.space(detail,16);
         LinearLayout playActions=Ui.row(this); detail.addView(playActions,new LinearLayout.LayoutParams(-1,-2));
         final AudioTracks.Choice[] selectedAudio={null};
@@ -811,7 +894,7 @@ public final class MainActivity extends Activity {
         final String[] statsRequest={""},statsText={""};
         redraw[0]=()-> {
             JSONObject j=item[0]; screen.item=j; java.util.List<JSONObject> actors=Cast.actors(j); castAdapter.set(actors); castList.setVisibility(actors.isEmpty()?View.GONE:View.VISIBLE); castHeading.setVisibility(actors.isEmpty()?View.GONE:View.VISIBLE); ratings.load(app,j); boolean series="Series".equals(j.optString("Type")),episode="Episode".equals(j.optString("Type"));
-            eyebrow.setText(series?I18n.text("SERIE"):episode?j.optString("SeriesName",I18n.text("FOLGE")).toUpperCase(java.util.Locale.GERMAN):I18n.text("FILM")); title.setText(j.optString("Name"));
+            Ui.textIfChanged(eyebrow,series?I18n.text("SERIE"):episode?j.optString("SeriesName",I18n.text("FOLGE")).toUpperCase(java.util.Locale.GERMAN):I18n.text("FILM")); Ui.textIfChanged(title,j.optString("Name"));
             titleLogo.setContentDescription(Json.label(j));
             if(Artwork.logo(j)!=null) app.images.logo(titleLogo,j);
             else if(seriesLogo[0]!=null&&seriesLogo[0].optString("Id").equals(j.optString("SeriesId"))) app.images.logo(titleLogo,seriesLogo[0]);
@@ -830,27 +913,28 @@ public final class MainActivity extends Activity {
             }
             java.util.List<String> facts=new ArrayList<>(); if(episode) facts.add(I18n.text("Staffel ")+j.optInt("ParentIndexNumber")+I18n.text(" · Folge ")+j.optInt("IndexNumber"));
             if(j.optInt("ProductionYear")>0) facts.add(""+j.optInt("ProductionYear")); if(j.optLong("RunTimeTicks")>0) facts.add(j.optLong("RunTimeTicks")/600000000+" min"); if(!Json.str(j,"OfficialRating").isEmpty()) facts.add(Json.str(j,"OfficialRating"));
-            String videoText=VideoDetails.describe(j,java.util.Locale.forLanguageTag(I18n.language())); videoInfo.setText(videoText); videoInfo.setVisibility(videoText.isEmpty()?View.GONE:View.VISIBLE);
-            meta.setText(String.join("  ·  ",facts)); String genreText=Json.genres(j); genres.setText(genreText); genres.setVisibility(genreText.isEmpty()?View.GONE:View.VISIBLE);
+            String videoText=VideoDetails.describe(j,java.util.Locale.forLanguageTag(I18n.language())); Ui.textIfChanged(videoInfo,videoText); videoInfo.setVisibility(videoText.isEmpty()?View.GONE:View.VISIBLE);
+            Ui.textIfChanged(meta,String.join("  ·  ",facts)); String genreText=Json.genres(j); Ui.textIfChanged(genres,genreText); genres.setVisibility(genreText.isEmpty()?View.GONE:View.VISIBLE);
             JSONObject userData=Json.object(j,"UserData");
             boolean countAvailable=userData.has("PlayCount")&&!userData.isNull("PlayCount")&&userData.optLong("PlayCount",-1)>=0;
             plays.setVisibility(series||episode||"Movie".equals(j.optString("Type"))?View.VISIBLE:View.GONE);
-            plays.setText(I18n.text("Wiedergaben (Jellyfin): ")+(countAvailable?Long.toString(userData.optLong("PlayCount")):"—")+I18n.text(" · inkl. abgebrochener"));
+            String playText=I18n.text("Wiedergaben (Jellyfin): ")+(countAvailable?Long.toString(userData.optLong("PlayCount")):"—")+I18n.text(" · inkl. abgebrochener");
             Tracearr stats=app.tracearr;
             if(stats!=null&&stats.enabled()&&(series||episode||"Movie".equals(j.optString("Type")))) {
-                plays.setText(statsRequest[0].equals(j.optString("Id"))&&!statsText[0].isEmpty()?statsText[0]:I18n.text("Tracearr · Statistiken werden geladen …"));
+                playText=statsRequest[0].equals(j.optString("Id"))&&!statsText[0].isEmpty()?statsText[0]:I18n.text("Tracearr · Statistiken werden geladen …");
                 if(!statsRequest[0].equals(j.optString("Id"))) {
                     String id=j.optString("Id"); statsRequest[0]=id; final int statsGeneration=generation;
                     app.io.execute(()-> {
                         String text;
                         try { JSONObject summary=stats.summary(j); text=I18n.quantity(R.plurals.completed_plays,summary.optInt("count"),summary.optInt("count")); }
                         catch(Exception e) { text=I18n.text("Tracearr · Statistik nicht verfügbar"); }
-                        final String result=text; runOnUiThread(()-> { if(generation==statsGeneration&&app.tracearr==stats&&statsRequest[0].equals(id)) { statsText[0]=result; plays.setText(result); } });
+                        final String result=text; runOnUiThread(()-> { if(generation==statsGeneration&&app.tracearr==stats&&statsRequest[0].equals(id)) { statsText[0]=result; Ui.textIfChanged(plays,result); } });
                     });
                 }
             }
+            Ui.textIfChanged(plays,playText);
             if(detailBackdrop!=null) app.images.backdrop(detailBackdrop,j);
-            overview.setText(j.optString("Overview",I18n.text("Keine Beschreibung vorhanden"))); image.ratio(Artwork.ratio(j,false)); image.crop(Artwork.crop(j,false)); image.getLayoutParams().width=Ui.dp(this,Artwork.ratio(j,false)>1?224:126); app.images.show(image,j);
+            Ui.textIfChanged(overview,j.optString("Overview",I18n.text("Keine Beschreibung vorhanden"))); image.ratio(Artwork.ratio(j,false)); image.crop(Artwork.crop(j,false)); image.getLayoutParams().width=Ui.dp(this,Artwork.ratio(j,false)>1?224:126); app.images.show(image,j);
             int focusPlay=-1; for(int i=0;i<playActions.getChildCount();i++) if(playActions.getChildAt(i).hasFocus()) focusPlay=i;
             playActions.removeAllViews();
             if(series) Ui.addButton(playActions,detailAction(I18n.text("Staffeln ansehen"),R.drawable.detail_seasons,false,true,()->show(new Screen("seasons",j.optString("Name"),null,j.optString("Id"),j),true)));
@@ -915,21 +999,27 @@ public final class MainActivity extends Activity {
                 }); page.post(()->page.scrollTo(0,scroll)); break; }
         }
     }
-    @SuppressWarnings("unchecked")
     private Button detailAction(String label,int icon,boolean active,boolean primary,Runnable click) {
-        Button button=primary?Ui.primary(this,label,click):Ui.button(this,label,click);
-        android.graphics.drawable.Drawable symbol=getDrawable(icon).mutate();symbol.setTint(active?Accent.color:Color.WHITE);
-        int size=Ui.dp(this,14);symbol.setBounds(0,0,size,size);button.setCompoundDrawablesRelative(symbol,null,null,null);button.setCompoundDrawablePadding(Ui.dp(this,7));
-        java.util.function.BiConsumer<View,Integer> baseStyle=(java.util.function.BiConsumer<View,Integer>)button.getTag(R.id.accent_style);
+        Button button=Ui.button(this,label,click);button.setStateListAnimator(null);button.setElevation(0);
+        android.graphics.drawable.Drawable symbol=getDrawable(icon).mutate();
+        int size=Ui.dp(this,14);symbol.setBounds(0,0,size,size);button.setCompoundDrawablesRelative(symbol,null,null,null);button.setCompoundDrawablePadding(Ui.dp(this,5));
+        android.graphics.drawable.GradientDrawable shape=(android.graphics.drawable.GradientDrawable)button.getBackground();shape.setCornerRadius(Ui.dp(this,10));
         Accent.bind(button,(view,color)-> {
-            if(primary) {
-                android.graphics.drawable.GradientDrawable shape=(android.graphics.drawable.GradientDrawable)view.getBackground();
-                shape.setColor(view.isFocused()?0xfff5f5f7:color);shape.setStroke(view.isFocused()?Ui.dp(this,2):0,0xff151517);
-                int foreground=view.isFocused()||Color.luminance(color)>.35?0xff111113:Color.WHITE;
-                button.setTextColor(foreground);symbol.setTint(foreground);
-            } else { if(baseStyle!=null) baseStyle.accept(view,color);symbol.setTint(active?color:Color.WHITE); }
+            boolean focused=view.isFocused();
+            int fill=primary?(focused?0xfff5f5f7:0x28000000|(color&0xffffff)):
+                focused?0x38000000|(color&0xffffff):active?0x20000000|(color&0xffffff):0x12ffffff;
+            shape.setColor(fill);shape.setStroke(focused?Ui.dp(this,2):primary?Ui.dp(this,1):0,color);
+            int foreground=primary&&focused?0xff111113:active&&!focused?color:0xffeeeeF2;
+            button.setTextColor(foreground);symbol.setTint(foreground);
         });
-        if(primary) button.setOnFocusChangeListener((view,focused)-> { Accent.apply(view);Motion.focus(view,focused,false); });
+        button.setOnFocusChangeListener((view,focused)-> {Accent.apply(view);Motion.focus(view,focused,false);});
+        // Native compound drawables otherwise hug the far edge of wide weighted buttons.
+        // Center short icon/label groups; retain the full text area for wrapping labels.
+        button.addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or,ob)-> {
+            int minimum=Ui.dp(this,5),content=(int)Math.ceil(android.text.Layout.getDesiredWidth(button.getText(),button.getPaint()))+size+button.getCompoundDrawablePadding();
+            int inset=Math.max(minimum,(r-l-content)/2);
+            if(button.getPaddingLeft()!=inset||button.getPaddingRight()!=inset)button.setPadding(inset,button.getPaddingTop(),inset,button.getPaddingBottom());
+        });
         button.setSelected(active);return button;
     }
     private void person() {
@@ -1072,8 +1162,16 @@ public final class MainActivity extends Activity {
             intent.putExtra("returnEpisodeDetail",true); startActivityForResult(intent,EPISODE_PLAYER_REQUEST);
         } else startActivity(intent);
     }
+    private void programmeGuide() {
+        if(screen.guideState==null)screen.guideState=new LiveGuide.State();
+        liveGuide=new LiveGuide(this,app,screen.guideState,item->play(item,0),()->setDrawer(true),this::onBackPressed);
+        body.addView(liveGuide,new LinearLayout.LayoutParams(-1,0,1));liveGuide.resume();
+    }
     private void live() {
+        Button programme=Ui.button(this,I18n.resource(R.string.epg_title),()->show(new Screen("liveGuide",I18n.resource(R.string.epg_title),null,null,null),true));
+        SettingsRow.style(programme);Ui.addButton(heading,programme);
         TextView n=note(""); MediaAdapter adapter=cards(true);
+        ((LibraryGrid)grid).letterShortcut(programme);
         final Api api=app.api; final Library db=app.library;
         async(adapter,()->db.browse("TvChannel",null,null,0,500),null);
         async(adapter,()-> { JSONArray a=api.liveChannels(); db.replaceChannels(a); if(app.api==api) app.syncStatus=db.state("cacheStatus"); return list(a); },n);
@@ -1109,47 +1207,51 @@ public final class MainActivity extends Activity {
     }
     private void refreshOptions() { Deque<Screen> saved=new ArrayDeque<>(history); show(screen,false); history.addAll(saved); }
     private void settings() {
-        ScrollView scroll=new ScrollView(this); LinearLayout content=new SettingsColumn(this); scroll.addView(content); body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        Button homeEntry=Ui.button(this,I18n.text("Startseite"),()->show(new Screen("homeSettings",I18n.text("Startseite"),null,null,null),true)); content.addView(homeEntry); homeEntry.requestFocus(); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Genre-Reihen"),()->show(new Screen("genreSettings",I18n.text("Genre-Reihen"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Darstellung"),()->show(new Screen("appearanceSettings",I18n.text("Darstellung"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.resource(R.string.screensaver_title),()->show(new Screen("screensaverSettings",I18n.resource(R.string.screensaver_title),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Wiedergabe"),()->show(new Screen("playbackSettings",I18n.text("Wiedergabe"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Live TV"),()->show(new Screen("liveSettings",I18n.text("Live TV"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Bibliothek und Cache"),()->show(new Screen("cacheSettings",I18n.text("Bibliothek und Cache"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Android-TV-Hauptmenü"),()->show(new Screen("channelSettings",I18n.text("Android-TV-Hauptmenü"),null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,"API",()->show(new Screen("ratings","API",null,null,null),true))); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Konto und Sprache"),()->show(new Screen("accountSettings",I18n.text("Konto und Sprache"),null,null,null),true))); Ui.space(content,8);
+        settingsGrid=new SettingsGrid(this,()->setDrawer(true));body.addView(settingsGrid,new LinearLayout.LayoutParams(-1,0,1));
+        settingsCategory("homeSettings",I18n.text("Startseite"),R.drawable.settings_home);
+        settingsCategory("genreSettings",I18n.text("Genre-Reihen"),R.drawable.settings_genres);
+        settingsCategory("appearanceSettings",I18n.text("Darstellung"),R.drawable.settings_appearance);
+        settingsCategory("screensaverSettings",I18n.resource(R.string.screensaver_title),R.drawable.settings_screensaver);
+        settingsCategory("playbackSettings",I18n.text("Wiedergabe"),R.drawable.settings_playback);
+        settingsCategory("liveSettings",I18n.text("Live TV"),R.drawable.settings_live);
+        settingsCategory("cacheSettings",I18n.text("Bibliothek und Cache"),R.drawable.settings_cache);
+        settingsCategory("channelSettings",I18n.text("Android-TV-Hauptmenü"),R.drawable.settings_channels);
+        settingsCategory("ratings","API",R.drawable.settings_api);
+        settingsCategory("accountSettings",I18n.text("Konto und Sprache"),R.drawable.settings_account);
+        settingsCategory("diagnosticsSettings",I18n.resource(R.string.diagnostics_title),R.drawable.settings_diagnostics);
+        settingsCategory("updatesSettings",I18n.resource(R.string.updates_title),R.drawable.settings_updates);
+        settingsGrid.focusFirst();
     }
+    private void settingsCategory(String kind,String title,int icon) {settingsGrid.add(kind,title,icon,()->show(new Screen(kind,title,null,null,null),true));}
     private void settingsSection() {
-        ScrollView scroll=new ScrollView(this); LinearLayout content=new SettingsColumn(this); scroll.addView(content); body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout content=SettingsPage.content(this,body,screen.kind);
         switch(screen.kind) {
+            case "diagnosticsSettings":
+                content.addView(Ui.text(this,I18n.resource(R.string.diagnostics_title),16,Ui.MUTED));Ui.space(content,10);
+                content.addView(Ui.toggle(this,I18n.resource(R.string.diagnostics_record),app.diagnostics.enabled(),app.diagnostics::setEnabled));Ui.space(content,8);
+                content.addView(Ui.text(this,I18n.resource(R.string.diagnostics_hint),13,Ui.MUTED));Ui.space(content,8);
+                content.addView(Ui.button(this,I18n.resource(R.string.diagnostics_show),()-> {
+                    String report;try {report=app.diagnostics.snapshot().toString(2);}catch(JSONException e) {report="{}";}
+                    LowfinDialog.builder(this).setTitle(I18n.resource(R.string.diagnostics_title)).setMessage(report).setPositiveButton(I18n.text("OK"),null).show();
+                }));Ui.space(content,8);
+                content.addView(Ui.button(this,I18n.resource(R.string.diagnostics_clear),()-> {app.diagnostics.clear();toast(I18n.resource(R.string.diagnostics_cleared));}));
+                break;
             case "playbackSettings":
-        content.addView(Ui.text(this,I18n.text("Wiedergabe"),16,Ui.MUTED)); Ui.space(content,10);
-        content.addView(Ui.button(this,I18n.text("Auflösung: ")+app.settings.getInt("height",720)+"p",()->choice(I18n.text("Maximale Auflösung"),new String[]{I18n.text("720p · HD, empfohlen"),"1080p · Full HD","2160p · 4K UHD"},i->{ app.settings.edit().putInt("height",new int[]{720,1080,2160}[i]).apply(); refreshOptions(); })));
-        Ui.space(content,8); content.addView(Ui.button(this,"Bitrate: "+app.settings.getInt("bitrate",4000000)/1000000+" Mbit/s",()->choice(I18n.text("Maximale Bitrate"),new String[]{"2 Mbit/s","4 Mbit/s","6 Mbit/s","8 Mbit/s","16 Mbit/s","25 Mbit/s","40 Mbit/s","60 Mbit/s"},i->{ app.settings.edit().putInt("bitrate",new int[]{2000000,4000000,6000000,8000000,16000000,25000000,40000000,60000000}[i]).apply(); refreshOptions(); })));
-        Ui.space(content,8); toggle(content,I18n.text("Audio auf Stereo (2.0) heruntermischen"),"stereo",true);
-        Ui.space(content,8); toggle(content,I18n.text("Server-Transcoding bei Bedarf zulassen"),"serverFallback",false);
-        Ui.space(content,8); int videoBudget=app.settings.getInt("videoCacheMb",500);
-        Button videoSize=Ui.button(this,I18n.text("Videocache: ")+(videoBudget>0?videoBudget:app.settings.getInt("videoCacheLastMb",500))+" MB",this::videoCacheChoice); videoSize.setEnabled(videoBudget>0);
-        content.addView(Ui.toggle(this,I18n.text("Videocache auf dem Gerätespeicher"),videoBudget>0,on->{ int current=app.settings.getInt("videoCacheMb",500); android.content.SharedPreferences.Editor edit=app.settings.edit(); if(!on&&current>0) edit.putInt("videoCacheLastMb",current); edit.putInt("videoCacheMb",on?Math.max(16,app.settings.getInt("videoCacheLastMb",500)):0).apply(); videoSize.setEnabled(on); })); Ui.space(content,8); content.addView(videoSize);
-        Ui.space(content,8); toggle(content,I18n.text("Nächste Folge automatisch"),"nextEpisode",true);
-        Ui.space(content,8); toggle(content,I18n.text("Intro bei der ersten Folge jeder Staffel behalten"),"keepSeasonPremiereIntro",false);
-                new Options(this,app,content,this::refreshOptions,true).playback();
+                new Options(this,app,content,this::refreshOptions,true).playback(this::videoCacheChoice);
                 final CompanionApi companion=app.companion; final int companionGeneration=generation;
                 if(companion!=null) app.io.execute(()-> { try { JSONObject general=companion.global(); if(general==null) return;
                     runOnUiThread(()->{ if(generation!=companionGeneration||app.companion!=companion||isFinishing()) return; Ui.space(content,16); content.addView(Ui.text(this,I18n.resource(R.string.companion_global_hint),13,Ui.MUTED)); Ui.space(content,8); content.addView(Ui.button(this,I18n.resource(R.string.companion_long_videos),()->CompanionUi.global(this,app,general,this::refreshOptions))); });
                 } catch(Exception ignored) { } });
                 break;
             case "channelSettings":
-        Ui.space(content,20); content.addView(Ui.text(this,I18n.text("Android-TV-Hauptmenü"),16,Ui.MUTED)); Ui.space(content,10);
+        content.addView(Ui.title(this,I18n.resource(R.string.settings_group_publishing),16));
         content.addView(Ui.toggle(this,I18n.resource(R.string.settings_tv_channels),app.settings.getBoolean("homeChannels",true),enabled-> {
             app.settings.edit().putBoolean("homeChannels",enabled).apply();
             if(enabled) { app.channels.schedule(); app.channels.refresh(null); } else app.channels.cancelAndClear();
         })); Ui.space(content,8); content.addView(Ui.text(this,app.channels.status(),13,Ui.MUTED));
-        Ui.space(content,8); content.addView(Ui.button(this,I18n.text("TV-Filmzeile · Bibliotheken wählen"),()->chooseChannelLibraries("Movie")));
+        content.addView(Ui.title(this,I18n.resource(R.string.settings_group_libraries),16));content.addView(Ui.button(this,I18n.text("TV-Filmzeile · Bibliotheken wählen"),()->chooseChannelLibraries("Movie")));
         Ui.space(content,8); content.addView(Ui.button(this,I18n.text("TV-Serienzeile · Bibliotheken wählen"),()->chooseChannelLibraries("Series")));
-        for(String[] channel:new String[][]{{"resume",I18n.text("Fortsetzen")},{"next",I18n.text("Als Nächstes")},{"movies",I18n.text("Filme")},{"series",I18n.text("Serien")}}) {
+        content.addView(Ui.title(this,I18n.resource(R.string.settings_group_rows),16));for(String[] channel:new String[][]{{"resume",I18n.text("Fortsetzen")},{"next",I18n.text("Als Nächstes")},{"movies",I18n.text("Filme")},{"series",I18n.text("Serien")}}) {
             Ui.space(content,8); content.addView(Ui.toggle(this,I18n.resource(R.string.settings_tv_channel)+" · "+channel[1],app.channels.enabled(channel[0]),on->{ app.channels.setEnabled(channel[0],on); if(on) app.channels.requestVisible(this,channel[0]); }));
         }
         for(int i=0;i<HomeRecommendations.ROWS;i++) {
@@ -1159,7 +1261,7 @@ public final class MainActivity extends Activity {
         Ui.space(content,8); content.addView(Ui.text(this,I18n.resource(R.string.settings_tv_channel_hint),13,Ui.MUTED));
                 break;
             case "cacheSettings":
-        Ui.space(content,20); content.addView(Ui.text(this,I18n.text("Bibliothekscache · Konto und Server getrennt"),16,Ui.MUTED)); Ui.space(content,10);
+        content.addView(Ui.title(this,I18n.resource(R.string.settings_group_storage),16));
         TextView cacheStatus=Ui.text(this,app.syncStatus,14,Ui.MUTED); cacheStatusView=cacheStatus; content.addView(cacheStatus); Ui.space(content,10);
         final Library db=app.library; final int g=generation;
         app.cacheIo.execute(()-> { try { String saved=db.state("cacheStatus"); runOnUiThread(()-> { if(g==generation&&!saved.isEmpty()) cacheStatus.setText(saved); }); } catch(Exception ignored) {} });
@@ -1167,9 +1269,9 @@ public final class MainActivity extends Activity {
         content.addView(Ui.button(this,I18n.text("Vorladen stoppen"),()-> { stopService(new Intent(this,SyncService.class)); toast(I18n.text("Cache wird gestoppt")); })); Ui.space(content,8);
         int budget=app.settings.getInt("cacheMb",1024);
         content.addView(Ui.button(this,I18n.text("Cover-Speicher: ")+(budget==0?I18n.text("gesamter freier Speicher"):budget+" MB"),()->choice(I18n.text("Speicherbudget · 64 MB bleiben frei"),new String[]{"256 MB","512 MB","1024 MB","2048 MB","4096 MB",I18n.text("Ohne feste Grenze")},i->{ app.settings.edit().putInt("cacheMb",new int[]{256,512,1024,2048,4096,0}[i]).apply(); refreshOptions(); })));
-        Ui.space(content,8); content.addView(Ui.button(this,I18n.text("Covercache löschen"),()-> { final Images images=app.images; app.io.execute(()-> { images.clear(); db.resetPrecacheCompletion(); runOnUiThread(()->toast(I18n.text("Covercache gelöscht"))); }); }));
-        Ui.space(content,8);content.addView(Ui.button(this,I18n.resource(R.string.precache_clear_all),this::confirmClearPrecache));
-                new Options(this,app,content,this::refreshOptions,true).cache(); break;
+        new Options(this,app,content,this::refreshOptions,true).cache();content.addView(Ui.title(this,I18n.resource(R.string.settings_group_cleanup),16));
+        content.addView(Ui.button(this,I18n.text("Covercache löschen"),()-> { final Images images=app.images; app.io.execute(()-> { images.clear(); db.resetPrecacheCompletion(); runOnUiThread(()->toast(I18n.text("Covercache gelöscht"))); }); }));
+        content.addView(Ui.button(this,I18n.resource(R.string.precache_clear_all),this::confirmClearPrecache));break;
             case "liveSettings":
         toggle(content,I18n.text("Live TV beim Öffnen des Clients starten"),"liveOnLaunch",false);
         content.addView(Ui.button(this,I18n.text("Aufnahmen"),()->show(new Screen("recordings",I18n.text("Aufnahmen"),null,null,null),true)));
@@ -1229,7 +1331,7 @@ public final class MainActivity extends Activity {
         } catch(Exception e) { runOnUiThread(()-> { if(g==generation) toast(I18n.text("Tracearr nicht erreichbar · Adresse, API-Token und API-v2-Unterstützung prüfen")); }); } });
     }
     private void ratingSettings() {
-        ScrollView scroll=new ScrollView(this); LinearLayout content=new SettingsColumn(this); scroll.addView(content); body.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        LinearLayout content=SettingsPage.content(this,body,"ratings");
         boolean server=app.companion!=null&&app.companion.serverProviders();
         final CompanionApi discovery=app.companion; final int settingsGeneration=generation;
         if(discovery!=null) app.io.execute(()-> { discovery.refreshDiscovery(); if(server!=discovery.serverProviders()) runOnUiThread(()-> { if(generation==settingsGeneration&&app.companion==discovery&&screen!=null&&screen.kind.equals("ratings")) refreshOptions(); }); });
@@ -1322,6 +1424,7 @@ public final class MainActivity extends Activity {
     }
     @Override public void onRequestPermissionsResult(int request,String[] permissions,int[] grants) {
         super.onRequestPermissionsResult(request,permissions,grants);
+        if(request==UpdateSettings.NOTIFICATIONS) {app.updater.notifyRelease();if(updateSettings!=null)updateSettings.refresh();}
         if(request==KEY_STORAGE_REQUEST&&checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)==android.content.pm.PackageManager.PERMISSION_GRANTED) checkKeyFile(true,null);
     }
     private void restartRatings() { if(app.ratings!=null) app.ratings.close(); app.ratings=new Ratings(this,app.library,app.api); }
@@ -1370,7 +1473,8 @@ public final class MainActivity extends Activity {
     }
     private void startCache() { if(app.account!=null) { startForegroundService(new Intent(this,SyncService.class)); toast(I18n.text("Bibliothek wird im Hintergrund vorgeladen")); } }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
-    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); if(app.account!=null&&hasHomeLink(intent)) handleHomeLink(intent); }
+    @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent);if(app.account!=null&&AppUpdater.OPEN.equals(intent.getAction()))openUpdates();else if(app.account!=null&&hasHomeLink(intent)) handleHomeLink(intent); }
+    private void openUpdates() {setIntent(new Intent(this,MainActivity.class));show(new Screen("updatesSettings",I18n.resource(R.string.updates_title),null,null,null),true);}
     private boolean hasHomeLink(Intent intent) { return intent!=null&&(intent.hasExtra(HomeChannels.EXTRA_ITEM)||(intent.getData()!=null&&"lowfin".equals(intent.getData().getScheme()))); }
     private void handleHomeLink(Intent intent) {
         TvPlaybackLink playback=TvPlaybackLink.parse(intent,app.account);
@@ -1400,7 +1504,7 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if(drawerOpen) { setDrawer(false); return; }
         if(!history.isEmpty()) { Screen prev=history.pop(); if(isSettingsPage(prev.kind)) { Deque<Screen> remaining=new ArrayDeque<>(history); show(prev,false); history.addAll(remaining); return; } screen=prev; generation++; shell(prev.kind.equals("detail")?"Details":prev.title); switch(prev.kind) {
-            case "person": person(); break; case "seriesResume": seriesResume(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "home": home(); break;
+            case "person": person(); break; case "seriesResume": seriesResume(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "liveGuide": programmeGuide(); break; case "home": home(); break;
             case "recommendations": recommendationItems(); break; case "settings":settings();break; case "ratings":ratingSettings();break; case "recordings":recordings();break; default: renderCurrent();
         } Motion.enter(contentStage,false); } else if(app.account!=null&&screen!=null&&!screen.kind.equals("home")) {
             show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false);

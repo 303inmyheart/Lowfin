@@ -131,9 +131,24 @@ final class Library extends SQLiteOpenHelper {
         } finally { db.endTransaction(); }
         return !batch.isEmpty();
     }
-    synchronized void put(JSONArray items,long stamp) { if(cacheRetired) return;
+    synchronized void put(JSONArray items,long stamp) { put(items,stamp,null); }
+    /** Keep list metadata and its library membership in one commit, before UI delivery. */
+    synchronized void put(JSONArray items,long stamp,String library) { if(cacheRetired) return;
         SQLiteDatabase db=getWritableDatabase(); db.beginTransaction();
-        try { for(int i=0;i<items.length();i++) { JSONObject j=items.optJSONObject(i); if(j!=null) put(db,j,stamp); } db.setTransactionSuccessful(); }
+        try {
+            // Bound retained old JSON while avoiding one cursor/window per item.
+            for(int start=0;start<items.length();start+=64) {
+                int end=Math.min(start+64,items.length());Set<String> ids=new LinkedHashSet<>();
+                for(int i=start;i<end;i++) {JSONObject item=items.optJSONObject(i);if(item!=null&&!item.optString("Id").isEmpty())ids.add(item.optString("Id"));}
+                Map<String,String> previous=new HashMap<>();
+                if(!ids.isEmpty())try(Cursor rows=db.rawQuery("SELECT id,json FROM items WHERE id IN ("+String.join(",",Collections.nCopies(ids.size(),"?"))+")",ids.toArray(new String[0]))) {while(rows.moveToNext())previous.put(rows.getString(0),rows.getString(1));}
+                Set<String> touched=new LinkedHashSet<>();
+                for(int i=start;i<end;i++) {JSONObject item=items.optJSONObject(i);if(item==null||item.optString("Id").isEmpty())continue;String id=item.optString("Id");previous.put(id,putData(db,item,stamp,previous.get(id),touched));}
+                if(!touched.isEmpty()){Object[] values=new Object[touched.size()+1];values[0]=stamp;int index=1;for(String id:touched)values[index++]=id;db.execSQL("UPDATE items SET stamp=? WHERE id IN ("+String.join(",",Collections.nCopies(touched.size(),"?"))+")",values);}
+            }
+            if(library!=null) link(db,library,items,stamp);
+            db.setTransactionSuccessful();
+        }
         finally { db.endTransaction(); }
     }
     synchronized void put(JSONObject item) { if(cacheRetired) return;
@@ -144,18 +159,25 @@ final class Library extends SQLiteOpenHelper {
     private void put(SQLiteDatabase db,JSONObject j,long stamp) {
         if(cacheRetired) return;
         if(j.optString("Id").isEmpty()) return;
+        String previous=null;try(Cursor row=db.rawQuery("SELECT json FROM items WHERE id=?",new String[]{j.optString("Id")})) {if(row.moveToFirst())previous=row.getString(0);}
+        putData(db,j,stamp,previous);
+    }
+    private String putData(SQLiteDatabase db,JSONObject j,long stamp,String previous) {
+        return putData(db,j,stamp,previous,null);
+    }
+    private String putData(SQLiteDatabase db,JSONObject j,long stamp,String previous,Set<String> touched) {
         boolean genresChanged=true;
         // Short list DTOs must not discard detail metadata already cached.
-        try(Cursor old=db.rawQuery("SELECT json FROM items WHERE id=?",new String[]{j.optString("Id")})) {
-            if(old.moveToFirst()) {
-                JSONObject merged=new JSONObject(old.getString(0));
+        try {
+            if(previous!=null) {
+                JSONObject merged=new JSONObject(previous);
                 boolean changed=merged.has("LowfinCompanion");
                 genresChanged=j.has("Genres")&&!MediaDiff.jsonEquals(Json.array(j,"Genres"),Json.array(merged,"Genres"));
                 Iterator<String> keys=j.keys();
                 while(keys.hasNext()) { String key=keys.next();if(key.equals("LowfinCompanion")) continue;Object value=j.get(key);if(!merged.has(key)||!MediaDiff.jsonEquals(merged.opt(key),value)) {changed=true;merged.put(key,value);} }
                 if(!changed) {
                     // Keep freshness/resume ordering without rewriting the JSON blob and every index.
-                    ContentValues freshness=new ContentValues();freshness.put("stamp",stamp);db.update("items",freshness,"id=?",new String[]{j.optString("Id")});return;
+                    if(touched!=null)touched.add(j.optString("Id"));else{ContentValues freshness=new ContentValues();freshness.put("stamp",stamp);db.update("items",freshness,"id=?",new String[]{j.optString("Id")});}return previous;
                 }
                 j=merged;
             }
@@ -166,8 +188,9 @@ final class Library extends SQLiteOpenHelper {
         v.put("series",j.optString("SeriesId")); v.put("name",j.optString("SortName",j.optString("Name")));
         v.put("season",j.optInt("ParentIndexNumber",j.optInt("IndexNumber"))); v.put("episode",j.optInt("IndexNumber"));
         v.put("position",u.optLong("PlaybackPositionTicks")); v.put("played",u.optBoolean("Played")?1:0);
-        v.put("favorite",u.optBoolean("IsFavorite")?1:0); v.put("json",j.toString()); v.put("stamp",stamp);
+        String json=j.toString();v.put("favorite",u.optBoolean("IsFavorite")?1:0); v.put("json",json); v.put("stamp",stamp);
         db.insertWithOnConflict("items",null,v,SQLiteDatabase.CONFLICT_REPLACE); if(genresChanged) indexGenres(db,j);
+        return json;
     }
     List<JSONObject> query(String where,String[] args,String order,int limit,int offset) {
         return query(where,args,order,limit,offset,companionAvailable);
@@ -225,9 +248,12 @@ final class Library extends SQLiteOpenHelper {
     }
     synchronized void link(String library,JSONArray items,long stamp) { if(cacheRetired) return;
         SQLiteDatabase db=getWritableDatabase(); db.beginTransaction(); try {
-            for(int i=0;i<items.length();i++) { JSONObject j=items.optJSONObject(i); if(j==null||j.optString("Id").isEmpty()) continue; ContentValues v=new ContentValues(); v.put("library",library); v.put("item",j.optString("Id")); v.put("stamp",stamp); db.insertWithOnConflict("members",null,v,SQLiteDatabase.CONFLICT_REPLACE); }
+            link(db,library,items,stamp);
             db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
+    }
+    private void link(SQLiteDatabase db,String library,JSONArray items,long stamp) {
+        for(int i=0;i<items.length();i++) { JSONObject j=items.optJSONObject(i); if(j==null||j.optString("Id").isEmpty()) continue; ContentValues v=new ContentValues(); v.put("library",library); v.put("item",j.optString("Id")); v.put("stamp",stamp); db.insertWithOnConflict("members",null,v,SQLiteDatabase.CONFLICT_REPLACE); }
     }
     synchronized void completeLinks(String library,long stamp) { if(cacheRetired) return; getWritableDatabase().delete("members","library=? AND stamp<?",new String[]{library,""+stamp}); }
     List<JSONObject> genres() {

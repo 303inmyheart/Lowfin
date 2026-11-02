@@ -272,6 +272,7 @@ public final class PlayerActivity extends Activity {
             @Override public void onDroppedVideoFrames(EventTime time,int count,long elapsed) {
                 if(g==generation&&!released) {
                     android.util.Log.w("LowfinPlayer","Dropped video frames="+count+" intervalMs="+elapsed);
+                    app.diagnostics.record(Diagnostics.Event.VIDEO_DROPPED,count,elapsed,0,0);
                     if(denoiseActive&&denoiseOverloaded(count,elapsed)) handler.post(()-> {
                         if(g==generation&&!released&&denoiseOverloaded(count,elapsed)) fallbackDenoise("frame-drop-rate dropped="+count+" intervalMs="+elapsed);
                     });
@@ -283,7 +284,7 @@ public final class PlayerActivity extends Activity {
                 if(g==generation&&!released) denoiseReadySince=playWhenReady&&player.getPlaybackState()==Player.STATE_READY?SystemClock.elapsedRealtime():0;
                 if(g==generation&&!released&&started) { report("/Progress",position()); lastReport=SystemClock.elapsedRealtime(); }
             }
-            @Override public void onRenderedFirstFrame() { if(g==generation&&!released&&!firstFrameLogged) { firstFrameLogged=true; android.util.Log.i("LowfinPlayer","First video frame after "+(SystemClock.elapsedRealtime()-loadBegan)+" ms"); } }
+            @Override public void onRenderedFirstFrame() { if(g==generation&&!released&&!firstFrameLogged) { firstFrameLogged=true;app.diagnostics.record(Diagnostics.Event.FIRST_FRAME,SystemClock.elapsedRealtime()-loadBegan,0,0,0); android.util.Log.i("LowfinPlayer","First video frame after "+(SystemClock.elapsedRealtime()-loadBegan)+" ms"); } }
             @Override public void onTracksChanged(Tracks tracks) {
                 if(g!=generation||released||initialAudioApplied||audio<0||!method.equals("DirectPlay")) return;
                 initialAudioApplied=true;
@@ -291,6 +292,7 @@ public final class PlayerActivity extends Activity {
             }
             @Override public void onPlaybackStateChanged(int state) {
                 if(g!=generation||released) return;
+                app.diagnostics.record(Diagnostics.Event.PLAYER_STATE,state,position(),Math.max(0,player.getBufferedPosition()-position()),0);
                 if(state==Player.STATE_BUFFERING||state==Player.STATE_READY)
                     android.util.Log.i("LowfinPlayer","Playback state="+state+" positionMs="+position()+" bufferedAheadMs="+Math.max(0,player.getBufferedPosition()-position()));
                 if(state!=Player.STATE_READY) denoiseReadySince=0;
@@ -315,6 +317,7 @@ public final class PlayerActivity extends Activity {
                 bufferBar.setVisibility(View.GONE);
                 if(g!=generation||released) return;
                 PlaybackDiagnostics.record(app,error,player,live,method);
+                app.diagnostics.record(Diagnostics.Event.PLAYER_ERROR,error.errorCode,position(),Math.max(0,player.getBufferedPosition()-position()),0);
                 if(denoiseActive&&(error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED||error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)) { fallbackDenoise("video-processing-error code="+error.errorCode);return; }
                 if(live&&liveCandidate+1<liveCandidates.size()) { retryLiveTransport(); return; }
                 if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true,revealControlsOnStart); }

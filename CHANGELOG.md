@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.4
+
+- Publish version 1.4 (internal build 109) from a manually triggered GitHub Actions release build, with the existing signing identity, public diagnostics default off, APK checksum and updater metadata. Add a seven-screen README showcase. Avoid unchanged library-card title, subtitle and accessibility-description writes.
+
+- Restore initial home spacing below the banner so the second shelf heading stays outside the viewport while the first media card remains fully visible in HD/4K. Avoid redundant shelf text writes and layout-parameter submissions when dimensions are unchanged. Prepare local device screenshots and a showcase gallery for later publication.
+
+- Integrate detail ratings as transparent metadata groups: muted provider labels, larger values and fine separators replace individual chips, while all providers remain in one horizontal row. Spread reserved banner rating slots across the exact description width without stretching text/icons or shifting slots as scores load.
+
+- Remove the redundant home-page heading and its spacer. Use compact provider ratings in media details to retain a single row, preserving provider labels, icons, values and display preferences.
+
+- Integrate detail actions with quieter translucent accent surfaces, centered icon/label groups and a clear high-contrast Play/Resume focus. Unify ratings across details, the home banner and feature rows with subtle borderless surfaces, keeping provider icons, values and reserved-row geometry.
+- Preserve the last committed media identity when a scrolling library layout temporarily focuses the RecyclerView itself; keep the selected column instead of accepting Android’s geometric fallback. Add numeric bounded grid-key/target/focus diagnostics.
+
+- Keep a logical library-grid span anchor through rapid/offscreen navigation, pending adapter positions and shortened final rows. Fence pending targets by stable media IDs, preserve existing footer/header return paths and prevent confirmation from activating an unavailable old card. Retire delayed entry-focus actions after deliberate navigation.
+- Restyle series controls as compact native tabs with an accent underline and the letter shortcut as a quiet vector/text control. Keep the library title and both series tabs in the started-episode view; provide explicit header directions and restore all required focus flags when enabling the controls.
+
+- Reduce repeated EPG presence requests by checking remaining channels together, with bounded probes, cancellation and explicit handling of incomplete responses. Batch unchanged library freshness updates within the existing transaction, preserving rich metadata, ordering and rollback. Parse guide programme dates once before sorting and reuse them during focus/current-programme coloring.
+
+- Replace bulky Previous/Next page buttons throughout media lists, libraries and programme dialogs with centered compact accent chevrons, a quiet page number and accessible button names. Keep valid-direction visibility and remote/grid return focus.
+- Add native seekbars for TV guide channels per page (10–50, default 25) and library/episode entries per page (50–150, default 60). Single presses move one unit; sustained input is rate-limited and accelerates in stages, resetting on release, focus loss or direction change. Save commits; Cancel preserves the existing setting.
+- Recycle TV guide rows instead of inflating the whole chosen page. Keep temporal focus through offscreen/rapid navigation, and prepare channel timelines off the UI thread.
+- Hide channels without current/upcoming guide data in the programme guide by default, with an opt-out in Live TV settings. Keep the ordinary tuner list complete and retain channels with temporary gaps in the selected window. Fill filtered pages, preserve lookahead/cursors and treat failed/truncated presence queries explicitly.
+- Capture library page size per screen for consistent server/cache offsets, letter jumps, detail returns and size-scoped started-episode snapshots. Retain the saved media focus until refreshed server data has actually committed, while respecting subsequent user navigation.
+
+- Add a TV guide button inside the existing Live TV channel screen. Open a native two-hour channel/programme grid with proportional time slots, seven-day date selection, current-time marker, descriptions and channel playback. Keep deterministic time-aligned D-pad navigation, bounded channel/programme requests, missing-data/retry handling, lifecycle cancellation and English/German text.
+
+- Redesign settings submenus with category context on the left and compact, left-aligned native controls on the right. Group playback by video, audio, subtitles, episode skipping, player controls and buffers; separate cache cleanup, background work and launcher settings. Preserve values, native switches, provider artwork, focus pulse and nested scroll/focus restoration.
+- Add Appearance → Sidebar layout with separate staged editors for menu entries and libraries. Menu order is stored per account/device; library order reads and writes Jellyfin's native per-user OrderedViews and follows server ordering in other clients. Keep hidden entries, unrelated fresh user configuration and GUID formats intact; detect stale orders/library changes and offer reload. Moving/canceling does not write to the server.
+- Refresh library views on normal foreground/sidebar visits at most once a minute, avoid unchanged cache/launcher writes, and fence older responses after a saved order. Preserve the deferred direct-playback launch path. Restore sidebar focus by stable navigation/library IDs rather than translated or duplicate labels.
+- Redesign the settings overview as a three-column category grid with twelve matching accent-colored vector icons. Preserve native submenus, first-open Home focus and exact category return focus. Bound D-pad navigation to rows/columns; open the sidebar only at the left edge and return to the same tile. Scale tiles/icons in HD and 4K, expose accessible grid coordinates, and retain existing animation/focus-pulse preferences.
+- Wait for the first attached media card when an initial nonempty library result precedes its layout, rather than prematurely focusing the page controls. Preserve intentional navigation to the sidebar/pager and fence stale callbacks by screen generation.
+- Add Settings → App updates with optional daily GitHub checks and notifications, manual checks, readable release notes, and separately initiated APK download/installation. Scheduled checks never download an APK or start installation. Verify checksum, package, Android compatibility, signer and a strictly newer internal version before installation; retain the Android confirmation fallback.
+- Keep the manual update-check button focused while checking and on request failure; ignore repeated presses through the existing updater request guard. Use the public AndroidX TV notification extender for compatibility with older TVs.
+- Prepare a local `update.json` sidecar for public release packaging so repeated display names still compare internal build numbers. No upload or GitHub workflow is started by preparing these files.
+- Batch existing metadata reads in bounded groups of 64 during list writes, retaining per-item merge order for repeated IDs within/across batches, genre indexing and the atomic metadata/membership transaction.
+- Retain pending home-row focus until vertical motion has settled, and recover an absent horizontal target only when scrolling is idle. This avoids losing the selection when replaced animations or row layouts detach the requested card.
+- Commit refreshed library metadata and membership in one transaction instead of two, retaining persistence-before-display and existing cache/account guards. Record the persistence stage separately in optional diagnostics.
+- Avoid redundant detail title, metadata, overview and play-count text writes during state refreshes; compute the selected statistics text once instead of briefly assigning the Jellyfin fallback before Tracearr text. Keep action rebuilding and focus/state handling unchanged.
+- Open series cards from libraries, favorites and other lists on the series detail page first; seasons remain available through View seasons. Preserve direct playback actions and Back navigation.
+- Exclude series-library tabs from automatic/rapid grid focus recovery alongside the letter shortcut. A deliberate Up from the first media row reaches the tabs; Down returns to the originating media column.
+- Add optional, bounded in-memory diagnostics through Android's private ADB provider dump: load/queue/UI timings, HTTP durations/status codes, UI frame distributions, player events and executor/memory snapshots. Include English/German settings, clear/disable controls and no network listener or credential/media-title capture.
+- Enable diagnostics by default in local builds and disable it by default in public builds using `lowfinPublicRelease=true`; retain explicit user preferences. Add a local public-release build script and apply the public default to manual CI builds.
+- Move Favorites and Watch later above the libraries in the sidebar, preserving translations, focus restoration and consistent navigation spacing.
+
 ## 1.3
 
 - Verify English coverage for all 473 English/German resources, conditional UI labels and translating settings helpers. English remains the default; add regressions for focus-pulse and Watch later/favorites labels. All 500 Android unit tests and release lint pass for the locally built release.

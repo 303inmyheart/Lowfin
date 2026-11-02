@@ -102,6 +102,50 @@ public class LibraryTest {
         db.link("my-library",Json.arr(items.optJSONObject(0)),200); db.completeLinks("my-library",200);
         assertEquals(1,db.browse("Movie,Series","my-library",null,0,60).size());
     }
+    @Test public void combinedMetadataAndMembershipMatchTheExistingSeparatedOperations() throws Exception {
+        Library separate=new Library(RuntimeEnvironment.getApplication(),UUID.randomUUID().toString());
+        try {
+            JSONObject rich=Json.obj("Id","nested","Type","Movie","ParentId","folder","Name","Old","Overview","Keep full detail","Genres",Json.arr("Drama"),"MediaStreams",Json.arr(Json.obj("Type","Audio","Index",2)));
+            db.put(new JSONObject(rich.toString()));separate.put(new JSONObject(rich.toString()));
+            JSONArray update=Json.arr(Json.obj("Id","nested","Name","Updated","UserData",Json.obj("Played",true,"IsFavorite",true)),Json.obj("Id","show","Type","Series","Name","Series","Genres",Json.arr("Horror")),JSONObject.NULL,"ignored",new JSONObject());
+            db.put(new JSONArray(update.toString()),100,"my-library");separate.put(new JSONArray(update.toString()),100);separate.link("my-library",update,100);
+            assertEquals(2,db.count());assertEquals(separate.item("nested").toString(),db.item("nested").toString());assertEquals("Keep full detail",db.item("nested").getString("Overview"));assertTrue(Json.played(db.item("nested")));
+            assertEquals(2,db.browse("Movie,Series","my-library",null,0,60).size());assertEquals(0,db.browse("Movie,Series","other-library",null,0,60).size());
+            assertEquals(separate.genres().toString(),db.genres().toString());db.completeLinks("my-library",101);assertEquals(0,db.browse("Movie,Series","my-library",null,0,60).size());
+            db.clearAndRetirePrecache();db.put(update,200,"my-library");assertEquals(0,db.count());assertTrue(db.browse("Movie,Series","my-library",null,0,60).isEmpty());
+        } finally {separate.close();}
+    }
+    @Test public void batchedOldMetadataLookupPreservesRepeatedIdsAcrossBatchBoundaries() throws Exception {
+        Library single=new Library(RuntimeEnvironment.getApplication(),UUID.randomUUID().toString());
+        try {
+            JSONObject rich=Json.obj("Id","repeat","Type","Movie","Name","Before","Overview","Preserve detail","Genres",Json.arr("Drama"));db.put(new JSONObject(rich.toString()));single.put(new JSONObject(rich.toString()));
+            JSONArray batch=new JSONArray();
+            for(int i=0;i<140;i++) {
+                JSONObject item=i%31==0?Json.obj("Id","repeat","Name","Revision "+i,"UserData",Json.obj("Played",i%2==0,"PlaybackPositionTicks",i*10000000L)):Json.obj("Id","item-"+i,"Type","Movie","Name","Film "+i,"Genres",Json.arr("Horror"));
+                batch.put(item);single.put(new JSONObject(item.toString()));
+            }
+            db.put(batch,100,"library");assertEquals(single.count(),db.count());
+            for(JSONObject item:single.query(null,null,"id",200,0))assertEquals(item.toString(),db.item(item.getString("Id")).toString());
+            assertEquals("Preserve detail",db.item("repeat").getString("Overview"));assertEquals(124000,Json.position(db.item("repeat")));assertEquals(db.count(),db.browse("Movie","library",null,0,200).size());
+        } finally {single.close();}
+    }
+    @Test public void batchedFreshnessPreservesRichDataDuplicateOrderScopesAndEveryFinalTimestamp() throws Exception {
+        JSONArray original=new JSONArray();for(int i=0;i<150;i++)original.put(Json.obj("Id","fresh-"+i,"Type","Movie","Name","Original "+i,"Overview","Keep rich detail","Genres",Json.arr("Drama"),"UserData",Json.obj("Played",false,"IsFavorite",true,"PlaybackPositionTicks",10000000L)));db.put(original,10,"films");db.put(Json.arr(Json.obj("Id","untouched","Type","Movie","Name","Outside")),11);
+        JSONArray shortRows=new JSONArray();for(int i=0;i<150;i++){shortRows.put(Json.obj("Id","fresh-"+i,"Type","Movie","Name","Original "+i));if(i==62)shortRows.put(Json.obj("Id","fresh-0","Name","Changed across chunks"));if(i==63)shortRows.put(Json.obj("Id","fresh-0","Name","Changed across chunks"));}shortRows.put(Json.obj("Id","fresh-0","Name","Final title"));db.put(shortRows,1234,"films");assertEquals("Final title",db.item("fresh-0").optString("Name"));assertEquals(150,db.browse("Movie","films",null,0,200).size());assertEquals(150,db.genreItems("Drama",0,200).size());
+        for(int i=0;i<150;i++){JSONObject row=db.item("fresh-"+i);assertEquals("Keep rich detail",row.optString("Overview"));assertTrue(Json.object(row,"UserData").optBoolean("IsFavorite"));assertEquals(1000,Json.position(row));try(android.database.Cursor c=db.getReadableDatabase().rawQuery("SELECT stamp FROM items WHERE id=?",new String[]{"fresh-"+i})){assertTrue(c.moveToFirst());assertEquals(1234,c.getLong(0));}}
+        try(android.database.Cursor c=db.getReadableDatabase().rawQuery("SELECT stamp FROM items WHERE id='untouched'",null)){assertTrue(c.moveToFirst());assertEquals(11,c.getLong(0));}
+    }
+    @Test public void deferredFreshnessFailureRollsBackEarlierMetadataAndMembershipTogether() {
+        db.put(Json.arr(Json.obj("Id","change","Type","Movie","Name","Before"),Json.obj("Id","fail","Type","Movie","Name","Same")),10);db.getWritableDatabase().execSQL("CREATE TRIGGER reject_freshness BEFORE UPDATE OF stamp ON items WHEN NEW.id='fail' BEGIN SELECT RAISE(ABORT,'test freshness failure'); END");
+        assertThrows(android.database.sqlite.SQLiteException.class,()->db.put(Json.arr(Json.obj("Id","change","Name","After"),Json.obj("Id","fail","Name","Same")),20,"films"));assertEquals("Before",db.item("change").optString("Name"));assertTrue(db.browse("Movie","films",null,0,10).isEmpty());try(android.database.Cursor c=db.getReadableDatabase().rawQuery("SELECT stamp FROM items ORDER BY id",null)){while(c.moveToNext())assertEquals(10,c.getLong(0));}
+    }
+    @Test public void membershipFailureRollsBackMetadataAndEarlierMembershipsTogether() throws Exception {
+        db.put(Json.obj("Id","existing","Type","Movie","Name","Before","Genres",Json.arr("Drama")));
+        db.getWritableDatabase().execSQL("CREATE TRIGGER reject_bad_membership BEFORE INSERT ON members WHEN NEW.item='bad' BEGIN SELECT RAISE(ABORT,'test membership failure'); END");
+        JSONArray update=Json.arr(Json.obj("Id","existing","Type","Movie","Name","After","Genres",Json.arr("Horror")),Json.obj("Id","bad","Type","Movie","Name","Rejected"));
+        try {db.put(update,100,"library");fail("Expected membership failure");}catch(android.database.sqlite.SQLiteException expected) {}
+        assertEquals("Before",db.item("existing").getString("Name"));assertNull(db.item("bad"));assertEquals(1,db.genreItems("Drama",0,60).size());assertTrue(db.genreItems("Horror",0,60).isEmpty());assertTrue(db.browse("Movie","library",null,0,60).isEmpty());
+    }
     @Test public void randomFilmRespectsMovieTypeAndNestedLibraryMembership() {
         db.put(Json.obj("Id","film","Type","Movie","ParentId","folder")); db.put(Json.obj("Id","series","Type","Series","ParentId","folder"));
         db.link("library",Json.arr(db.item("film"),db.item("series")),100);

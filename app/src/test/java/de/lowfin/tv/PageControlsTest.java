@@ -16,6 +16,11 @@ public class PageControlsTest {
         assertEquals(View.VISIBLE,middle.getChildAt(0).getVisibility()); assertEquals(View.VISIBLE,middle.getChildAt(2).getVisibility());
         middle.update(false); assertEquals(View.VISIBLE,middle.getChildAt(0).getVisibility()); assertEquals(View.GONE,middle.getChildAt(2).getVisibility());
     }
+    @Test public void compactArrowsHaveAccessibleNamesAndInvokeTheCorrectDirection() {
+        java.util.List<Integer> moves=new java.util.ArrayList<>();android.app.Activity activity=Robolectric.buildActivity(android.app.Activity.class).setup().get();PageControls controls=new PageControls(activity,1,moves::add);controls.update(true);activity.setContentView(controls);
+        android.widget.Button previous=controls.findViewById(R.id.page_previous),next=controls.findViewById(R.id.page_next);assertEquals("",previous.getText().toString());assertEquals("",next.getText().toString());assertFalse(previous.getContentDescription().toString().isEmpty());assertFalse(next.getContentDescription().toString().isEmpty());assertNotEquals(previous.getContentDescription(),next.getContentDescription());previous.performClick();next.performClick();assertEquals(java.util.Arrays.asList(-1,1),moves);
+        assertEquals(Ui.dp(activity,36),previous.getLayoutParams().width);assertEquals(Ui.dp(activity,32),previous.getLayoutParams().height);assertEquals(android.view.Gravity.CENTER,controls.getGravity());
+    }
     @Test public void RemovingFocusedNextRestoresPreviousFocus() {
         android.app.Activity activity=Robolectric.buildActivity(android.app.Activity.class).setup().get();
         PageControls controls=new PageControls(activity,1,move->{}); activity.setContentView(controls); controls.update(true);

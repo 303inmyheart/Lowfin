@@ -31,6 +31,20 @@ public class RatingsRowTest {
         View first=row.getChildAt(0);row.show(app,Json.obj("imdb",10,"tomatoes",100,"tmdb",8.1,"mdblist",100));assertEquals(compact,height(900));assertSame(first,row.getChildAt(0));row.clear();assertEquals(compact,height(900));
         for(int i=0;i<row.getChildCount();i++)assertFalse(row.getChildAt(i).isFocusable());
     }
+    @Test public void spreadBannerUsesBothTextEdgesWithoutMovingSlotsWhenScoresArrive(){
+        row=new RatingsRow(app,true,true).spread();row.reserve(app);height(Ui.dp(app,696));int[] positions=new int[row.getChildCount()*2];
+        for(int i=0;i<row.getChildCount();i++){positions[2*i]=row.getChildAt(i).getLeft();positions[2*i+1]=row.getChildAt(i).getRight();}
+        assertEquals(0,positions[0]);assertEquals(row.getWidth(),positions[positions.length-1]);
+        row.show(app,Json.obj("imdb",7.8,"tomatoes",91,"mdblist",87));height(Ui.dp(app,696));
+        for(int i=0;i<row.getChildCount();i++){View cell=row.getChildAt(i);assertEquals(positions[2*i],cell.getLeft());assertEquals(positions[2*i+1],cell.getRight());assertEquals(1f,cell.getScaleX(),0);}
+        row.clear();height(Ui.dp(app,696));assertEquals(positions[positions.length-1],row.getChildAt(row.getChildCount()-1).getRight());
+        for(String id:Ratings.IDS)app.settings.edit().putBoolean("rating-show-"+id,id.equals("imdb")||id.equals("mdblist")).commit();row.reserve(app);height(Ui.dp(app,696));assertEquals(2,row.getChildCount());assertEquals(0,row.getChildAt(0).getLeft());assertEquals(row.getWidth(),row.getChildAt(1).getRight());
+    }
+    @Test public void detailMetadataRetainsFullTextAccessibleNamesAndViewsWithoutChipBackgrounds(){
+        row=RatingsRow.details(app);row.show(app,Json.obj("imdb",7.8,"mdblist",87));height(Ui.dp(app,640));TextView first=(TextView)row.getChildAt(0);assertNull(first.getBackground());assertEquals("IMDb\n7,8/10",first.getText().toString());assertEquals("IMDb 7,8/10",first.getContentDescription());assertTrue(first.getText() instanceof android.text.Spanned);assertFalse(first.isFocusable());
+        java.util.concurrent.atomic.AtomicInteger writes=new java.util.concurrent.atomic.AtomicInteger();first.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){writes.incrementAndGet();}public void afterTextChanged(android.text.Editable text){}});
+        row.show(app,Json.obj("imdb",7.8,"mdblist",87));assertSame(first,row.getChildAt(0));assertEquals(0,writes.get());row.show(app,Json.obj("imdb",7.9,"mdblist",87));assertEquals(1,writes.get());assertTrue(first.getText().toString().contains("7,9"));row.show(app,Json.obj());assertEquals(View.GONE,row.getVisibility());
+    }
     @Test public void hiddenBannerCanRejectLateResultsWithoutDiscardingSharedCachedScores() throws Exception {
         Library db=new Library(app,"ratings-cancel-"+java.util.UUID.randomUUID());Ratings repository=new Ratings(app.settings,db,new Api(new Account("http://127.0.0.1:1","user","token","User","device")),provider->"","http://127.0.0.1:1/","http://127.0.0.1:1/","http://127.0.0.1:1/");app.ratings=repository;
         java.util.concurrent.ThreadPoolExecutor worker=org.robolectric.util.ReflectionHelpers.getField(repository,"worker");java.util.concurrent.CountDownLatch occupied=new java.util.concurrent.CountDownLatch(2),release=new java.util.concurrent.CountDownLatch(1);

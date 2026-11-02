@@ -16,13 +16,24 @@ final class PageControls extends LinearLayout {
     private RecyclerView grid;
     private int returnPosition=-1;
     PageControls(Context context,int index,IntConsumer move) {
-        super(context); this.index=index; setOrientation(HORIZONTAL); setGravity(android.view.Gravity.CENTER_VERTICAL);
+        super(context); this.index=index; setOrientation(HORIZONTAL); setGravity(android.view.Gravity.CENTER);setClipChildren(false);setClipToPadding(false);
         int inset=Ui.dp(context,4); setPadding(inset,inset,inset,inset);
-        previous=Ui.button(context,I18n.text("← Vorherige Seite"),()->move.accept(-1));
-        next=Ui.button(context,I18n.text("Nächste Seite →"),()->move.accept(1));
-        Ui.fixedFocus(previous); Ui.fixedFocus(next);
-        Ui.addButton(this,previous); page=Ui.text(context,I18n.text("Seite ")+(index+1)+"  ",13,Ui.MUTED); addView(page); Ui.addButton(this,next);
+        previous=arrow(context,false,()->move.accept(-1));next=arrow(context,true,()->move.accept(1));
+        addView(previous,new LinearLayout.LayoutParams(Ui.dp(context,36),Ui.dp(context,32)));
+        page=Ui.text(context,I18n.text("Seite ")+(index+1),12,Ui.MUTED);page.setGravity(android.view.Gravity.CENTER);page.setMinWidth(Ui.dp(context,66));page.setPadding(Ui.dp(context,10),0,Ui.dp(context,10),0);addView(page,new LinearLayout.LayoutParams(-2,Ui.dp(context,32)));
+        addView(next,new LinearLayout.LayoutParams(Ui.dp(context,36),Ui.dp(context,32)));
         update(false);
+    }
+    private Button arrow(Context context,boolean forward,Runnable action) {
+        android.graphics.drawable.Drawable icon=context.getDrawable(forward?R.drawable.page_forward:R.drawable.page_back).mutate();
+        Button button=new Button(context) {
+            @Override protected void onDraw(android.graphics.Canvas canvas) {
+                super.onDraw(canvas);int side=Ui.dp(getContext(),18),left=(getWidth()-side)/2,top=(getHeight()-side)/2;icon.setBounds(left,top,left+side,top+side);icon.draw(canvas);
+            }
+        };
+        button.setId(forward?R.id.page_next:R.id.page_previous);button.setText("");button.setContentDescription(I18n.resource(forward?R.string.page_next:R.string.page_previous));button.setPadding(0,0,0,0);button.setMinWidth(0);button.setMinimumWidth(0);button.setMinHeight(0);button.setMinimumHeight(0);button.setOnClickListener(view->action.run());Ui.fixedFocus(button);
+        Accent.bind(button,(view,color)->{android.graphics.drawable.GradientDrawable shape=(android.graphics.drawable.GradientDrawable)view.getBackground();shape.setCornerRadius(Ui.dp(context,16));shape.setColor(view.isFocused()?0x22000000|(color&0xffffff):android.graphics.Color.TRANSPARENT);shape.setStroke(view.isFocused()?Ui.dp(context,2):0,color);icon.setTint(color);view.invalidate();});
+        View.OnFocusChangeListener original=button.getOnFocusChangeListener();button.setOnFocusChangeListener((view,focused)->{if(original!=null)original.onFocusChange(view,focused);Accent.apply(view);});return button;
     }
     void attachGrid(RecyclerView grid) { this.grid=grid; }
     boolean navigate(View focused,KeyEvent event) {

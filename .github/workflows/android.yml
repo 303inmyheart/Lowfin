@@ -41,14 +41,17 @@ jobs:
             chmod 600 "$key_dir/debug.keystore"
             echo 'LOWFIN_REQUIRE_EXISTING_SIGNER=true' >> "$GITHUB_ENV"
           else
-            echo '::warning::Signing secret missing; this build will use a new debug certificate and cannot update the supplied APK.'
+            echo '::error::LOWFIN_SIGNING_KEYSTORE is required to preserve update compatibility.'
+            exit 1
           fi
           printf 'ANDROID_USER_HOME=%s\n' "$key_dir" >> "$GITHUB_ENV"
       - name: Run tests, lint and release build
-        run: ./gradlew --no-daemon testDebugUnitTest lintDebug lintRelease assembleRelease
+        run: ./gradlew --no-daemon -PlowfinPublicRelease=true testDebugUnitTest lintDebug lintRelease assembleRelease
       - name: Verify and package APK
         id: package
-        run: python3 tools/ci_artifacts.py
+        run: |
+          python3 tools/make-update-metadata.py
+          python3 tools/ci_artifacts.py
       - name: Upload APK, checksum and build metadata
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:

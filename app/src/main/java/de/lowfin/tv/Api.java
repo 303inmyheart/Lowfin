@@ -9,6 +9,7 @@ final class Api {
     static final MediaType JSON=MediaType.get("application/json; charset=utf-8");
     final Account account;
     final OkHttpClient http;
+    Diagnostics diagnostics;
     Api(Account a) { this(a,new OkHttpClient.Builder().connectTimeout(15,TimeUnit.SECONDS).readTimeout(180,TimeUnit.SECONDS).callTimeout(200,TimeUnit.SECONDS).followSslRedirects(false).build()); }
     Api(Account a,OkHttpClient transport) { account=a; http=transport; }
     static class Failure extends IOException {
@@ -29,11 +30,13 @@ final class Api {
         RequestBody data=body==null?RequestBody.create("",JSON):RequestBody.create(body.toString(),JSON);
         Request.Builder r=request(url(path,pairs));
         if(method.equals("GET")) r.get(); else r.method(method,data);
+        final Diagnostics observer=diagnostics;final long began=observer!=null&&observer.enabled()?android.os.SystemClock.elapsedRealtime():-1;int status=0;
         try(Response response=http.newCall(r.build()).execute()) {
+            status=response.code();
             if(!response.isSuccessful()) throw new Failure(response.code());
             String text=response.body()==null?"":response.body().string();
             return text.isEmpty()?new JSONObject():new JSONObject(text);
-        }
+        } finally {if(began>=0)observer.record(method.equals("GET")?Diagnostics.Event.HTTP_READ:Diagnostics.Event.HTTP_WRITE,android.os.SystemClock.elapsedRealtime()-began,status,0,0);}
     }
     JSONObject get(String path,Object... pairs) throws Exception { return call("GET",path,null,pairs); }
     JSONArray getArray(String path,Object... pairs) throws Exception {

@@ -37,6 +37,27 @@ public class LibraryGridTest {
             key(activity.get(),1800,KeyEvent.KEYCODE_DPAD_UP,2);assertTrue("Focus: "+activity.get().getWindow().getDecorView().findFocus(),top.hasFocus());assertFalse(jump.hasFocus());
         }
     }
+    @Test public void fastSeriesNavigationCannotEscapeToTabsButDeliberateUpAndReturnStillWork() {
+        try(org.robolectric.android.controller.ActivityController<Activity> activity=Robolectric.buildActivity(Activity.class).setup()) {
+            LinearLayout host=new LinearLayout(activity.get());host.setOrientation(LinearLayout.VERTICAL);
+            Button jump=new Button(activity.get());jump.setText("Jump to letter");host.addView(jump,new LinearLayout.LayoutParams(-1,60));
+            LinearLayout tabs=new LinearLayout(activity.get());Button all=new Button(activity.get()),resume=new Button(activity.get());all.setText("All series");resume.setText("Started episodes");tabs.addView(all,new LinearLayout.LayoutParams(0,60,1));tabs.addView(resume,new LinearLayout.LayoutParams(0,60,1));host.addView(tabs);
+            LibraryGrid grid=new LibraryGrid(activity.get());grid.setLayoutManager(new GridLayoutManager(activity.get(),3));grid.setItemAnimator(null);grid.letterShortcut(jump);grid.topControls(all,resume);
+            grid.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+                public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent,int type) {TextView card=new TextView(parent.getContext());card.setFocusable(true);card.setFocusableInTouchMode(true);card.setLayoutParams(new RecyclerView.LayoutParams(-1,100));return new RecyclerView.ViewHolder(card){};}
+                public void onBindViewHolder(RecyclerView.ViewHolder holder,int position) {((TextView)holder.itemView).setText("Series "+position);}
+                public int getItemCount() {return 30;}
+            });host.addView(grid,new LinearLayout.LayoutParams(-1,0,1));activity.get().setContentView(host);
+            View decor=activity.get().getWindow().getDecorView();decor.measure(View.MeasureSpec.makeMeasureSpec(900,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(600,View.MeasureSpec.EXACTLY));decor.layout(0,0,900,600);Shadows.shadowOf(Looper.getMainLooper()).idle();
+            View top=grid.findViewHolderForAdapterPosition(1).itemView;grid.findViewHolderForAdapterPosition(4).itemView.requestFocus();
+            assertFalse(all.isFocusable());assertFalse(resume.isFocusable());assertFalse(jump.isFocusable());
+            key(activity.get(),1000,KeyEvent.KEYCODE_DPAD_UP,0);assertTrue(top.hasFocus());
+            for(int i=1;i<=8;i++) {key(activity.get(),1000+40*i,KeyEvent.KEYCODE_DPAD_UP,i);assertTrue(top.hasFocus());assertFalse(all.hasFocus());assertFalse(resume.hasFocus());}
+            key(activity.get(),1700,KeyEvent.KEYCODE_DPAD_UP,0);assertTrue(all.hasFocus()||resume.hasFocus());
+            key(activity.get(),1800,KeyEvent.KEYCODE_DPAD_DOWN,0);assertTrue(top.hasFocus());assertFalse(all.isFocusable());assertFalse(resume.isFocusable());
+            assertTrue(grid.focusSearch(top,View.FOCUS_DOWN)==null||grid.findContainingItemView(grid.focusSearch(top,View.FOCUS_DOWN))!=null);
+        }
+    }
     private void key(Activity activity,long time,int key,int repeat) {
         View before=activity.getWindow().getDecorView().findFocus();
         activity.dispatchKeyEvent(new KeyEvent(time,time,KeyEvent.ACTION_DOWN,key,repeat));

@@ -7,10 +7,11 @@ import java.util.concurrent.*;
 @androidx.annotation.OptIn(markerClass=androidx.media3.common.util.UnstableApi.class)
 public final class LowfinApp extends Application {
     final ExecutorService io=Executors.newFixedThreadPool(4);
-    final ExecutorService cacheIo=Executors.newSingleThreadExecutor();
+    // Single workers remain serialized; expose their queues to the optional diagnostic snapshot.
+    final ExecutorService cacheIo=Executors.newFixedThreadPool(1);
     final ExecutorService navigationIo=Executors.newFixedThreadPool(2);
     final ExecutorService homeIo=Executors.newFixedThreadPool(2);
-    final ExecutorService reports=Executors.newSingleThreadExecutor();
+    final ExecutorService reports=Executors.newFixedThreadPool(1);
     Account account; Api api; Library library; Images images;
     HomeChannels channels;
     Accent accent;
@@ -22,6 +23,8 @@ public final class LowfinApp extends Application {
     RatingKeyImport keyImport;
     VideoCache videoCache;
     SharedPreferences settings;
+    Diagnostics diagnostics;
+    AppUpdater updater;
     volatile String syncStatus=I18n.text("Cache noch nicht erstellt");
     volatile String syncSummary="";
     volatile boolean syncing=false,playing=false,clearingCache=false;
@@ -32,23 +35,24 @@ public final class LowfinApp extends Application {
     boolean foreground() { return !resumedActivities.isEmpty(); }
     private void trackCacheLifecycle() {
         registerActivityLifecycleCallbacks(new ActivityLifecycleCallbacks() {
-            public void onActivityResumed(android.app.Activity a) { resumedActivities.add(a); lifecycleHandler.removeCallbacks(pauseCache); if(cacheChanges!=null&&!clearingCache) cacheChanges.resume(); }
-            public void onActivityPaused(android.app.Activity a) { resumedActivities.remove(a); lifecycleHandler.postDelayed(pauseCache,250); }
+            public void onActivityResumed(android.app.Activity a) { resumedActivities.add(a);if(diagnostics!=null)diagnostics.resumed(a); lifecycleHandler.removeCallbacks(pauseCache); if(cacheChanges!=null&&!clearingCache) cacheChanges.resume(); }
+            public void onActivityPaused(android.app.Activity a) { resumedActivities.remove(a);if(diagnostics!=null)diagnostics.paused(a); lifecycleHandler.postDelayed(pauseCache,250); }
             public void onActivityCreated(android.app.Activity a,android.os.Bundle b) {}
             public void onActivityStarted(android.app.Activity a) {}
             public void onActivityStopped(android.app.Activity a) {}
             public void onActivitySaveInstanceState(android.app.Activity a,android.os.Bundle b) {}
-            public void onActivityDestroyed(android.app.Activity a) { resumedActivities.remove(a); }
+            public void onActivityDestroyed(android.app.Activity a) { resumedActivities.remove(a);if(diagnostics!=null)diagnostics.paused(a); }
         });
     }
-    @Override public void onCreate() { super.onCreate(); trackCacheLifecycle(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0); PlaybackPolicy.migrateSkipSettings(settings); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
+    @Override public void onCreate() { super.onCreate(); trackCacheLifecycle(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0);diagnostics=new Diagnostics(this);updater=new AppUpdater(this);updater.schedule(); PlaybackPolicy.migrateSkipSettings(settings); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
     synchronized void setAccount(Account a) {
         if(cacheChanges!=null) { cacheChanges.close(); cacheChanges=null; }
         if(images!=null) images.close();
         if(ratings!=null) ratings.close();
         account=a;
         tracearr=a==null?null:createTracearr(a);
-        if(a!=null) { api=new Api(a); library=new Library(this,a.scope()); companion=new CompanionApi(this,api,library); images=new Images(this,api,a.scope()); ratings=new Ratings(this,library,api); cacheChanges=new CacheChanges(this,companion,images); }
+        if(diagnostics!=null)diagnostics.clear();
+        if(a!=null) { api=new Api(a);api.diagnostics=diagnostics; library=new Library(this,a.scope()); companion=new CompanionApi(this,api,library); images=new Images(this,api,a.scope()); ratings=new Ratings(this,library,api); cacheChanges=new CacheChanges(this,companion,images); }
         else { api=null; library=null; images=null; ratings=null; companion=null; }
         if(cacheChanges!=null&&!resumedActivities.isEmpty()) cacheChanges.resume();
         if(a!=null&&channels!=null) channels.schedule();

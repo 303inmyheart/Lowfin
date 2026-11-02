@@ -62,7 +62,7 @@ final class CacheChanges implements AutoCloseable {
             if(cursor.isEmpty()) { JSONObject head=read(companion,this,null,0); if(!current()||app.syncing) return; library.subscribeCacheChanges(head); android.util.Log.i("LowfinCache","Existing metadata retained; subscribed to plugin changes (history gap)"); app.syncStatus=library.state("cacheStatus"); retry=1; return; }
             JSONObject response=read(companion,this,cursor,library.artworkPending(1).isEmpty()?20:0);
             if(!current()||app.syncing) return;
-            if(response.optBoolean("reset")) { library.subscribeCacheChanges(response); android.util.Log.i("LowfinCache","Plugin journal reset; existing metadata retained (history gap)"); app.syncStatus=library.state("cacheStatus"); retry=1; return; }
+            if(response.optBoolean("reset")) { library.subscribeCacheChanges(response);app.diagnostics.record(Diagnostics.Event.CACHE_RESET,0,0,0,0); android.util.Log.i("LowfinCache","Plugin journal reset; existing metadata retained (history gap)"); app.syncStatus=library.state("cacheStatus"); retry=1; return; }
             if(images!=null) images.coverTags.invalidate(Json.array(response,"changes"));
             try { library.applyCacheChanges(response); } finally { if(images!=null) images.coverTags.changesApplied(); }
             if(current()&&!cursor.equals(response.optString("cursor"))) notices.changed(Json.array(response,"changes").length());
@@ -78,6 +78,7 @@ final class CacheChanges implements AutoCloseable {
             if(artworkWork&&library.artworkCount()==0&&!"true".equals(library.state("cacheNeedsReview"))) { library.finishPrecacheArtwork(); library.state("cacheStatus",I18n.resource(R.string.cache_artwork_ready)); app.syncStatus=library.state("cacheStatus"); }
             if(Json.array(response,"changes").length()>0) {
                 android.util.Log.i("LowfinCache","Applied "+Json.array(response,"changes").length()+" changed items");
+                app.diagnostics.record(Diagnostics.Event.CACHE_CHANGES,Json.array(response,"changes").length(),0,0,0);
                 JSONArray changes=Json.array(response,"changes"); for(int i=0;i<changes.length();i++) { JSONObject change=changes.optJSONObject(i); if(change!=null) change.put("item",library.withCompanion(change.getJSONObject("item"))); }
                 java.util.function.Consumer<JSONObject> listener=app.cacheListener; if(current()&&listener!=null) listener.accept(response);
             }

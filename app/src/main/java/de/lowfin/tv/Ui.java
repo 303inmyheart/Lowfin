@@ -117,12 +117,12 @@ final class Ui {
             if(body==null||body.findFocus()==null) return null;
             SettingsPosition saved=new SettingsPosition();
             View child=body.findFocus();
+            for(View ancestor=child;ancestor!=body&&ancestor.getParent() instanceof View;ancestor=(View)ancestor.getParent())if(ancestor instanceof ScrollView) {saved.scrollY=ancestor.getScrollY();break;}
             while(child!=body) {
                 if(!(child.getParent() instanceof ViewGroup)) return null;
                 ViewGroup parent=(ViewGroup)child.getParent();
                 saved.path.add(0,parent.indexOfChild(child)); child=parent;
             }
-            if(body.getChildCount()>0&&body.getChildAt(0) instanceof ScrollView) saved.scrollY=body.getChildAt(0).getScrollY();
             return saved;
         }
         void restore(ViewGroup body) {
@@ -134,7 +134,7 @@ final class Ui {
                     target=((ViewGroup)target).getChildAt(index);
                 }
                 target.requestFocus();
-                if(body.getChildCount()>0&&body.getChildAt(0) instanceof ScrollView) ((ScrollView)body.getChildAt(0)).scrollTo(0,scrollY);
+                for(View ancestor=target;ancestor!=body&&ancestor.getParent() instanceof View;ancestor=(View)ancestor.getParent())if(ancestor instanceof ScrollView) {((ScrollView)ancestor).scrollTo(0,scrollY);break;}
             });
         }
     }

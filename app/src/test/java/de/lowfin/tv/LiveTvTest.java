@@ -33,4 +33,21 @@ public class LiveTvTest {
         java.util.List<JSONObject> page=LiveTv.scheduleItems(items,"a",anchor);assertEquals(12,page.size());assertEquals("Programme 11",page.get(11).optString("Name"));assertNull(LiveTv.select(Json.arr(page.get(1)),"a",anchor));
         items=Json.arr(Json.obj("ChannelId","b","StartDate",anchor.minusSeconds(30).toString(),"EndDate",anchor.plusSeconds(30).toString()),Json.obj("ChannelId","a","StartDate","invalid","EndDate",anchor.plusSeconds(30).toString()),Json.obj("ChannelId","a","StartDate",anchor.toString(),"EndDate",anchor.toString()));assertTrue(LiveTv.scheduleItems(items,"a",anchor).isEmpty());
     }
+    @Test public void guideChannelsArePagedAndNeverLoadTheEntireChannelList() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"Items\":[]}"));new LiveTv(api).guideChannels(2,25);RecordedRequest r=server.takeRequest();assertEquals("50",r.getRequestUrl().queryParameter("StartIndex"));assertEquals("26",r.getRequestUrl().queryParameter("Limit"));assertEquals("false",r.getRequestUrl().queryParameter("AddCurrentProgram"));assertEquals("user",r.getRequestUrl().queryParameter("UserId"));assertThrows(IllegalArgumentException.class,()->new LiveTv(api).guideChannels(-1,25));
+    }
+    @Test public void guideQueriesOnlyVisibleChannelsAndOverlappingTimesWithNoImages() throws Exception {
+        server.enqueue(new MockResponse().setBody("{\"Items\":[]}"));long now=Instant.parse("2026-11-01T12:00:00Z").toEpochMilli();new LiveTv(api).guidePrograms(java.util.Arrays.asList(Json.obj("Id","a"),Json.obj("Id","b")),now);RecordedRequest r=server.takeRequest();assertEquals("a,b",r.getRequestUrl().queryParameter("ChannelIds"));assertEquals("2026-11-01T12:00:00Z",r.getRequestUrl().queryParameter("MinEndDate"));assertEquals("2026-11-01T14:00:00Z",r.getRequestUrl().queryParameter("MaxStartDate"));assertNull(r.getRequestUrl().queryParameter("MinStartDate"));assertEquals("257",r.getRequestUrl().queryParameter("Limit"));assertEquals("false",r.getRequestUrl().queryParameter("EnableImages"));assertEquals("user",r.getRequestUrl().queryParameter("UserId"));assertTrue(r.getHeader("Authorization").contains("token"));
+        assertEquals(0,new LiveTv(api).guidePrograms(java.util.Collections.emptyList(),now).length());assertEquals(1,server.getRequestCount());
+    }
+    @Test public void denseGuidePagesUseLookaheadWithoutSkippingProgramme257() throws Exception {
+        JSONArray first=new JSONArray();for(int i=0;i<257;i++)first.put(Json.obj("Id","p"+i));server.enqueue(new MockResponse().setBody(Json.obj("Items",first).toString()));server.enqueue(new MockResponse().setBody(Json.obj("Items",Json.arr(Json.obj("Id","p256"))).toString()));JSONArray result=new LiveTv(api).guidePrograms(java.util.Collections.singletonList(Json.obj("Id","a")),0);assertEquals(257,result.length());assertEquals("p256",result.getJSONObject(256).optString("Id"));server.takeRequest();assertEquals("256",server.takeRequest().getRequestUrl().queryParameter("StartIndex"));
+    }
+    @Test public void missingProgrammeEnvelopeIsAnErrorNotAnEmptyGuide() throws Exception {
+        server.enqueue(new MockResponse().setBody("{}"));assertThrows(JSONException.class,()->new LiveTv(api).guidePrograms(java.util.Collections.singletonList(Json.obj("Id","a")),0));
+    }
+    @Test public void chosenChannelPageSizeIsUsedForOffsetAndLookaheadWithinBounds() throws Exception {
+        for(int size:new int[]{10,25,50}){server.enqueue(new MockResponse().setBody("{\"Items\":[]}"));new LiveTv(api).guideChannels(3,size);RecordedRequest r=server.takeRequest();assertEquals(""+(3*size),r.getRequestUrl().queryParameter("StartIndex"));assertEquals(""+(size+1),r.getRequestUrl().queryParameter("Limit"));}
+        assertThrows(IllegalArgumentException.class,()->new LiveTv(api).guideChannels(0,9));assertThrows(IllegalArgumentException.class,()->new LiveTv(api).guideChannels(0,51));assertThrows(IllegalArgumentException.class,()->new LiveTv(api).guideChannels(Integer.MAX_VALUE,50));
+    }
 }
