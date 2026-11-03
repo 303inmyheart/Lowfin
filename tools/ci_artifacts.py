@@ -35,7 +35,7 @@ match = re.search(r'Signer #1 certificate SHA-256 digest: ([a-f0-9]+)', verified
 if not match:
     raise SystemExit('APK signing certificate not found')
 signer = match.group(1)
-expected = 'dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198'
+expected = (root / 'tools/signing-certificate.sha256').read_text().strip()
 compatible = signer == expected
 if os.environ.get('LOWFIN_REQUIRE_EXISTING_SIGNER') == 'true' and not compatible:
     raise SystemExit('APK certificate differs from the existing installation')

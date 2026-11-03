@@ -2,6 +2,8 @@
 
 ## 1.4
 
+- Anonymize repository/test documentation and source archives, retire internal diagnostics and the obsolete drawer screenshot, preserve the release APK/signature, and add publication privacy checks.
+
 - Publish version 1.4 (internal build 109) from a manually triggered GitHub Actions release build, with the existing signing identity, public diagnostics default off, APK checksum and updater metadata. Add a seven-screen README showcase. Avoid unchanged library-card title, subtitle and accessibility-description writes.
 
 - Restore initial home spacing below the banner so the second shelf heading stays outside the viewport while the first media card remains fully visible in HD/4K. Avoid redundant shelf text writes and layout-parameter submissions when dimensions are unchanged. Prepare local device screenshots and a showcase gallery for later publication.

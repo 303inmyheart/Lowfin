@@ -75,4 +75,3 @@ Follow-Now refreshes revise the catalogue. Changing filter/page size restarts pa
 zero; normal channel ordering is retained. Malformed/repeated channel pages and an
 oversized catalogue fail explicitly rather than creating an unbounded scan loop.
 Turning filtering off restores direct server channel pagination without EPG probes.
-

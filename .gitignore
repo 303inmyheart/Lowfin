@@ -21,3 +21,7 @@ __pycache__/
 
 # Independent private server-plugin repository (kept in this directory locally).
 /companion/
+
+# Private local diagnostic deliveries must never be staged.
+/dist/verification*.json
+/docs/diagnostics/

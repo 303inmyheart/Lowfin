@@ -15,11 +15,19 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    env:
+      LOWFIN_PRIVATE_TERMS: ${{ secrets.LOWFIN_PRIVATE_TERMS }}
+      LOWFIN_REQUIRE_PRIVACY_TERMS: 'true'
     steps:
       - name: Check out source
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Check publication privacy
+        env:
+          LOWFIN_PRIVATE_TERMS: ${{ secrets.LOWFIN_PRIVATE_TERMS }}
+          LOWFIN_REQUIRE_PRIVACY_TERMS: 'true'
+        run: python3 tools/check_privacy.py
       - name: Set up JDK 17
         uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
@@ -52,6 +60,7 @@ jobs:
         run: |
           python3 tools/make-update-metadata.py
           python3 tools/ci_artifacts.py
+          python3 tools/check_privacy.py ci-artifacts
       - name: Upload APK, checksum and build metadata
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -60,8 +69,12 @@ jobs:
           if-no-files-found: error
           compression-level: 0
           retention-days: 30
-      - name: Upload test and lint reports
+      - name: Check report privacy
+        id: report_privacy
         if: always()
+        run: python3 tools/check_privacy.py app/build/reports app/build/test-results
+      - name: Upload test and lint reports
+        if: always() && steps.report_privacy.outcome == 'success'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: Android-reports-${{ github.run_number }}

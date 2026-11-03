@@ -59,4 +59,3 @@ stream negotiation, server recording rules, Companion state and cache policy sta
 with the existing implementations.
 
 Primary API reference: [Jellyfin LiveTvController](https://github.com/jellyfin/jellyfin/blob/master/Jellyfin.Api/Controllers/LiveTvController.cs).
-

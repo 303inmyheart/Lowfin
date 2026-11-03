@@ -38,4 +38,3 @@ while leaving page controls visible; it fails on the original behavior. The fix
 waits for a child attachment and coalesces callbacks, preserving an existing card
 selection or intentional sidebar/pager navigation and rejecting old screen generations.
 An empty result retains its previous page-control fallback.
-
