@@ -463,4 +463,9 @@
     <string name="epg_hide_empty">Sender ohne Programmdaten ausblenden</string>
     <string name="epg_hide_empty_hint">Gilt nur für das TV-Programm. Sender mit aktuellen oder kommenden Sendungen bleiben sichtbar, auch bei Lücken im gewählten Zeitfenster. Die normale Senderliste bleibt vollständig.</string>
     <string name="epg_no_guide_channels">Keine Sender mit aktuellen oder kommenden Programmdaten. Du kannst diesen Filter in den Live-TV-Einstellungen ausschalten.</string>
+    <string name="dashboard_notices">Dashboard-Benachrichtigungen</string>
+    <string name="dashboard_notice_sound">Ton bei Dashboard-Nachrichten</string>
+    <string name="dashboard_notice_sound_hint">Ein kurzer, leiser Ton bei Nachrichten aus dem Jellyfin-Dashboard. Standardmäßig aus; berücksichtigt Medienlautstärke und Lautlosmodus. Der Wiedergabeton wird für 3 Sekunden abgesenkt.</string>
+    <string name="cache_storage_loading">Gespeicherten Cachebestand ermitteln …</string>
+    <string name="cache_storage_summary">Metadateneinträge: %1$d · %2$s\nCoverdateien: %3$d · %4$s\nBibliothekscache gesamt: %5$s</string>
 </resources>

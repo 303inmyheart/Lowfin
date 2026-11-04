@@ -463,4 +463,9 @@
     <string name="epg_hide_empty">Hide channels without guide data</string>
     <string name="epg_hide_empty_hint">Only affects the TV guide. Channels with current or upcoming programmes remain visible, including gaps in the selected time window. The regular channel list always stays complete.</string>
     <string name="epg_no_guide_channels">No channels with current or upcoming guide data. You can turn this filter off in Live TV settings.</string>
+    <string name="dashboard_notices">Dashboard notifications</string>
+    <string name="dashboard_notice_sound">Play a sound for dashboard messages</string>
+    <string name="dashboard_notice_sound_hint">A brief, quiet tone for messages from the Jellyfin dashboard. Off by default; respects media volume and silent mode. Playback audio is lowered for 3 seconds.</string>
+    <string name="cache_storage_loading">Reading stored cache totals …</string>
+    <string name="cache_storage_summary">Metadata entries: %1$d · %2$s\nArtwork files: %3$d · %4$s\nLibrary cache total: %5$s</string>
 </resources>

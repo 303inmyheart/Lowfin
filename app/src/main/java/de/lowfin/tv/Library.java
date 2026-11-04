@@ -426,5 +426,10 @@ final class Library extends SQLiteOpenHelper {
     }
     synchronized void artworkFinished(String id,boolean success) { if(cacheRetired) return; if(success) getWritableDatabase().delete("cache_artwork","item=?",new String[]{id}); else { ContentValues values=new ContentValues(); values.put("retry",System.currentTimeMillis()+6*60*60*1000L); getWritableDatabase().update("cache_artwork",values,"item=?",new String[]{id}); } }
     int count() { try(Cursor c=getReadableDatabase().rawQuery("SELECT COUNT(*) FROM items",null)) { c.moveToFirst(); return c.getInt(0); } }
+    long storageBytes() {
+        String path=getReadableDatabase().getPath();long bytes=0;
+        for(String suffix:new String[]{"","-wal","-shm"})bytes+=new java.io.File(path+suffix).length();
+        return bytes;
+    }
     boolean hasItems() { try(Cursor c=getReadableDatabase().rawQuery("SELECT 1 FROM items LIMIT 1",null)) {return c.moveToFirst();} }
 }

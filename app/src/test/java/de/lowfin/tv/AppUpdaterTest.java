@@ -41,6 +41,19 @@ public class AppUpdaterTest {
     private void await() throws Exception {long until=System.currentTimeMillis()+5000;while(updater.busy()&&System.currentTimeMillis()<until) {shadowOf(Looper.getMainLooper()).idle();Thread.sleep(10);}shadowOf(Looper.getMainLooper()).idle();assertFalse("Updater did not finish",updater.busy());}
     private void check(long code) throws Exception {server.enqueue(new MockResponse().setBody(release(code).toString()).setHeader("ETag","release-1"));updater.check(true,null);await();}
     private void downloadable(long code,String name,String certificate) throws Exception {check(code);PackageInfo info=archive(code,name,certificate);shadowOf(app.getPackageManager()).setPackageArchiveInfo(new File(updater.directory,"pending.part").getPath(),info);shadowOf(app.getPackageManager()).setPackageArchiveInfo(updater.apk.getPath(),info);server.enqueue(new MockResponse().setBody(new okio.Buffer().write(apk)));updater.download();await();}
+    @Test @Config(sdk=28) public void fireOsArchiveWithLegacySignaturesRemainsFullyVerified() throws Exception {
+        File file=File.createTempFile("fire-update-",".apk");Files.write(file.toPath(),apk);
+        try {
+            PackageInfo info=archive(FUTURE_CODE,"de.lowfin.tv","aabb");info.signingInfo=null;info.signatures=new Signature[]{new Signature("aabb")};
+            shadowOf(app.getPackageManager()).setPackageArchiveInfo(file.getPath(),info);
+            UpdateRelease candidate=new UpdateRelease("future","","https://github.com/303inmyheart/Lowfin/releases/download/future/Lowfin.apk",digest(),42,apk.length,FUTURE_CODE,"");
+            assertEquals(FUTURE_CODE,updater.verify(file,candidate));
+            info.signatures=new Signature[]{new Signature("ccdd")};shadowOf(app.getPackageManager()).setPackageArchiveInfo(file.getPath(),info);
+            try {updater.verify(file,candidate);fail("Wrong legacy signer accepted");}catch(SecurityException expected) {}
+            info.signatures=null;shadowOf(app.getPackageManager()).setPackageArchiveInfo(file.getPath(),info);
+            try {updater.verify(file,candidate);fail("Missing signer accepted");}catch(SecurityException expected) {}
+        } finally {file.delete();}
+    }
     @Test public void automaticCheckOnlyReadsMetadataAndNeverDownloadsOrInstalls() throws Exception {
         server.enqueue(new MockResponse().setBody(release(FUTURE_CODE).toString()));updater.check(false,null);await();assertEquals(AppUpdater.State.AVAILABLE,updater.state());assertFalse(updater.apk.exists());assertEquals(1,server.getRequestCount());assertTrue(app.getPackageManager().getPackageInstaller().getMySessions().isEmpty());assertEquals(FUTURE_CODE,updater.release().versionCode);
         assertNull(server.takeRequest().getHeader("Authorization"));updater.check(false,null);await();assertEquals(1,server.getRequestCount());

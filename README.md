@@ -6,7 +6,9 @@
 
 > **Optional server plugin: [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion).** Add per-media Smart Completion/Persistent Resume, incremental library-cache updates, cover tags and centrally managed provider access. Lowfin also works fully without the plugin.
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.4.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.**
+
+> **1.5 — FIRE OS FIX:** Fixes flashing/stale focus outlines, inconsistent Fire TV dialogs, switch rendering and legacy in-app update verification. Also includes smoother home navigation, single-line shelf ratings and Jellyfin dashboard playback controls/messages.
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -40,10 +42,10 @@ A native programme timeline with channel logos and programme details, opened fro
 
 ## Install
 
-The 1.4 signed release APK is built and verified by a manually triggered GitHub Actions workflow. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
+The 1.5 signed release APK is built and verified locally, with public diagnostics recording off by default. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.4-release.apk
+adb install -r Lowfin-1.5-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -125,7 +127,7 @@ On Linux, `bash tools/bootstrap.sh` installs project-local build tools under `.t
 
 The `release` APK uses R8/resource shrinking and the local Android debug signing configuration. An existing installation can only be updated using the same signing certificate. The supplied APK preserves the certificate used by earlier Lowfin builds.
 
-Automated tests use JUnit, Robolectric on Android 11, mock HTTP servers and a fake Android TV provider. The release includes [BUILD.json](https://github.com/303inmyheart/Lowfin/releases/download/1.4/BUILD.json) with its test count, APK checksum and certificate; historical CI logs were retired during privacy cleanup, and source identifiers refer to the sanitized history. Real device captures are shown above; synthetic UI renderings are produced under `app/build/qa/` during tests. Physical TV/live-server behavior is not validated by these simulated tests.
+Automated tests use JUnit, Robolectric on Android 9 and Android 11, mock HTTP servers and a fake Android TV provider. The release includes [BUILD.json](https://github.com/303inmyheart/Lowfin/releases/download/1.5/BUILD.json) with its test count, APK checksum and certificate; historical CI logs were retired during privacy cleanup, and source identifiers refer to the sanitized history. Real device captures are shown above; synthetic UI renderings are produced under `app/build/qa/` during tests. Physical TV/live-server behavior is not validated by these simulated tests.
 
 ## GitHub builds
 

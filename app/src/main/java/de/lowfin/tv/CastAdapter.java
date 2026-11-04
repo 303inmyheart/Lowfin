@@ -38,9 +38,9 @@ final class CastAdapter extends RecyclerView.Adapter<CastAdapter.Person> {
         card.setOnFocusChangeListener((view,focused)-> { ring.accept(avatar,Accent.color); name.setTextColor(focused?Accent.color:Ui.MUTED); });
         return new Person(card,image,name,role);
     }
-    @Override public void onBindViewHolder(Person holder,int index) { JSONObject person=people.get(index); holder.name.setText(person.optString("Name")); String role=person.optString("Role").trim(); if(role.equalsIgnoreCase("null")) role=""; holder.role.setText(role); holder.role.setVisibility(role.isEmpty()?View.GONE:View.VISIBLE); images.show(holder.image,person); holder.itemView.setContentDescription(person.optString("Name")+(role.isEmpty()?"":", "+role)); holder.itemView.setOnClickListener(v->open.accept(person));
+    @Override public void onBindViewHolder(Person holder,int index) { JSONObject person=people.get(index); Ui.textIfChanged(holder.name,person.optString("Name")); String role=person.optString("Role").trim(); if(role.equalsIgnoreCase("null")) role=""; Ui.textIfChanged(holder.role,role); holder.role.setVisibility(role.isEmpty()?View.GONE:View.VISIBLE); images.show(holder.image,person); String accessibility=person.optString("Name")+(role.isEmpty()?"":", "+role);if(!android.text.TextUtils.equals(holder.itemView.getContentDescription(),accessibility))holder.itemView.setContentDescription(accessibility); holder.itemView.setOnClickListener(v->open.accept(person));
         holder.itemView.setOnKeyListener((v,key,event)-> { if(key!=KeyEvent.KEYCODE_DPAD_LEFT&&key!=KeyEvent.KEYCODE_DPAD_RIGHT||!(v.getParent() instanceof CastList)) return false; if(event.getAction()==KeyEvent.ACTION_DOWN) ((CastList)v.getParent()).move(key==KeyEvent.KEYCODE_DPAD_RIGHT?1:-1); return true; });
     }
-    @Override public void onViewRecycled(Person holder) { holder.image.setTag(null); holder.image.setImageDrawable(null); holder.itemView.animate().cancel(); }
+    @Override public void onViewRecycled(Person holder) { holder.image.setTag(null); holder.image.setImageDrawable(null); Motion.reset(holder.itemView); }
     static final class Person extends RecyclerView.ViewHolder { final ImageView image; final TextView name,role; Person(View view,ImageView image,TextView name,TextView role) { super(view); this.image=image; this.name=name; this.role=role; } }
 }

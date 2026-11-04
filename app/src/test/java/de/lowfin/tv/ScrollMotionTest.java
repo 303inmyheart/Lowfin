@@ -21,7 +21,7 @@ public class ScrollMotionTest {
     @After public void close() { if(activity!=null) activity.pause().stop().destroy(); }
     private void setup(boolean enabled) {
         RuntimeEnvironment.getApplication().getSharedPreferences("settings",0).edit().putBoolean("animations",true).putBoolean("scrollAnimations",enabled).commit();
-        activity=Robolectric.buildActivity(Activity.class).setup();list=new RecyclerView(activity.get());list.setLayoutManager(new LinearLayoutManager(activity.get()));list.setItemAnimator(null);
+        activity=Robolectric.buildActivity(Activity.class).setup();list=new HomeAdapter.ShelfList(activity.get());list.setLayoutManager(new LinearLayoutManager(activity.get()));list.setItemAnimator(null);
         list.setAdapter(new RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             @Override public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent,int type) { TextView v=new TextView(parent.getContext());v.setLayoutParams(new RecyclerView.LayoutParams(-1,100));v.setFocusable(true);return new RecyclerView.ViewHolder(v){}; }
             @Override public void onBindViewHolder(RecyclerView.ViewHolder holder,int pos) { ((TextView)holder.itemView).setText("Item "+pos); }
@@ -41,5 +41,26 @@ public class ScrollMotionTest {
     }
     @Test public void RapidRetargetingCancelsStaleCompletionAndClampsAtEdges() {
         setup(true);AtomicInteger old=new AtomicInteger(),last=new AtomicInteger();ScrollMotion.position(list,30,true,old::incrementAndGet);ScrollMotion.position(list,-3,true,last::incrementAndGet);settle();assertEquals(0,old.get());assertEquals(1,last.get());assertEquals(0,((LinearLayoutManager)list.getLayoutManager()).findFirstVisibleItemPosition());
+    }
+    @Test public void ResizedViewportStartsOneAnimationAfterLayoutAndCancelsStaleTargets() {
+        setup(true);AtomicInteger stale=new AtomicInteger(),done=new AtomicInteger(),motions=new AtomicInteger();
+        list.addOnScrollListener(new RecyclerView.OnScrollListener(){@Override public void onScrollStateChanged(RecyclerView view,int state){if(state==RecyclerView.SCROLL_STATE_SETTLING){assertEquals(260,view.getHeight());motions.incrementAndGet();}}});
+        ScrollMotion.afterLayout(list,30,true,stale::incrementAndGet);
+        list.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1,260));ScrollMotion.afterLayout(list,6,true,done::incrementAndGet);
+        assertFalse(list.getLayoutManager().isSmoothScrolling());layout();list.getViewTreeObserver().dispatchOnPreDraw();settle();assertEquals(1,motions.get());
+        assertEquals(0,stale.get());assertEquals(1,done.get());assertEquals(6,((LinearLayoutManager)list.getLayoutManager()).findFirstVisibleItemPosition());
+    }
+    @Test public void EnteringAnotherShelfRestoresItsCardWithoutHorizontalSweep() {
+        setup(true);list.setLayoutManager(ScrollMotion.horizontal(activity.get()));layout();
+        ((LinearLayoutManager)list.getLayoutManager()).scrollToPositionWithOffset(30,0);layout();AtomicInteger animations=new AtomicInteger();
+        list.addOnScrollListener(new RecyclerView.OnScrollListener(){@Override public void onScrollStateChanged(RecyclerView view,int state){if(state==RecyclerView.SCROLL_STATE_SETTLING)animations.incrementAndGet();}});
+        ((HomeAdapter.ShelfList)list).enterCard(2);layout();settle();assertEquals(0,animations.get());
+        View focused=list.findFocus();assertNotNull(focused);assertEquals(2,list.getChildAdapterPosition(list.findContainingItemView(focused)));
+    }
+    @Test public void SnapDuringResizeCancelsOlderAnimationWithoutItsReverseCorrection() {
+        setup(true);AtomicInteger old=new AtomicInteger(),done=new AtomicInteger();ScrollMotion.position(list,30,true,old::incrementAndGet);
+        list.setLayoutParams(new android.widget.FrameLayout.LayoutParams(-1,260));ScrollMotion.snap(list,6,true,done::incrementAndGet);layout();settle();
+        assertEquals(0,old.get());assertEquals(1,done.get());assertFalse(list.getLayoutManager().isSmoothScrolling());assertEquals(6,((LinearLayoutManager)list.getLayoutManager()).findFirstVisibleItemPosition());
+        assertEquals(0,list.getLayoutManager().findViewByPosition(6).getTop());
     }
 }

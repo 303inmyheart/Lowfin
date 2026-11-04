@@ -58,6 +58,9 @@ final class Options {
         button(I18n.resource(R.string.dialog_transparency)+": "+app.settings.getInt("dialogTransparency",0)+" %",this::dialogTransparency);
         number("Posterspalten","gridColumns",8,new int[]{4,6,8,10},numbers(new int[]{4,6,8,10}));
         number("Zufallsanimation · Sekunden","slotSeconds",4,new int[]{2,4,6,8},numbers(new int[]{2,4,6,8}));
+        section(R.string.dashboard_notices);
+        toggle(I18n.resource(R.string.dashboard_notice_sound),"dashboardNoticeSound",false);
+        content.addView(Ui.text(activity,I18n.resource(R.string.dashboard_notice_sound_hint),12,Ui.MUTED));
         section(R.string.settings_group_theme);toggle("Zufällige Akzentfarbe beim Start","randomAccent",true); toggle("Akzentfarbe regelmäßig wechseln","rotateAccent",true);
         number("Akzentwechsel · aktive Minuten","accentMinutes",60,new int[]{15,30,60,120},numbers(new int[]{15,30,60,120}));
         button(I18n.text("Feste Akzentfarbe"),()-> { String[] names={I18n.text("Flieder"),I18n.text("Blaugrau"),I18n.text("Salbei"),I18n.text("Moos"),I18n.text("Sand"),I18n.text("Champagner"),I18n.text("Ton"),I18n.text("Rosé"),I18n.text("Lavendel"),I18n.text("Schiefer"),I18n.text("Eukalyptus"),I18n.text("Taupe")}; LowfinDialog.builder(activity).setTitle(I18n.text("Feste Akzentfarbe")).setItems(names,(d,w)-> { app.settings.edit().putInt("accentIndex",w).putBoolean("randomAccent",false).putBoolean("rotateAccent",false).apply(); app.accent.refresh(); reload.run(); }).show(); });

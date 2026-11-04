@@ -76,13 +76,28 @@ final class Api {
         }
     }
     String image(JSONObject item,int width) { return image(item,width,false); }
-    String image(JSONObject item,int width,boolean wide) {
-        String type=Artwork.type(item,wide);
-        if(!type.equals("Primary")) { String tag=type.equals("Backdrop")?Json.array(item,"BackdropImageTags").optString(0):Json.str(Json.object(item,"ImageTags"),type); return url("/Items/"+item.optString("Id")+"/Images/"+type,"MaxWidth",width,"Quality",78,"Tag",tag).toString(); }
-        JSONObject tags=Json.object(item,"ImageTags"); String id=item.optString("Id"); String tag=Json.str(tags,"Primary");
-        if(tag.isEmpty()) { if(!Json.str(item,"SeriesId").isEmpty()) id=Json.str(item,"SeriesId"); tag=Json.str(item,"SeriesPrimaryImageTag"); }
-        return url("/Items/"+id+"/Images/Primary","MaxWidth",width,"Quality",78,"Tag",tag.isEmpty()?null:tag).toString();
+    /** Immutable image identity lets the UI reuse known disk hashes before URL parsing. */
+    static final class ImageRef {
+        final String path,tag;final int width;
+        ImageRef(String path,String tag,int width) {this.path=path;this.tag=tag;this.width=width;}
+        @Override public boolean equals(Object other) {
+            if(this==other)return true;if(!(other instanceof ImageRef))return false;
+            ImageRef ref=(ImageRef)other;return width==ref.width&&path.equals(ref.path)&&java.util.Objects.equals(tag,ref.tag);
+        }
+        @Override public int hashCode() {return (path.hashCode()*31+width)*31+(tag==null?0:tag.hashCode());}
     }
+    static ImageRef imageRef(JSONObject item,int width,boolean wide) {
+        String type=Artwork.type(item,wide),id=item.optString("Id"),tag;
+        if(!type.equals("Primary"))tag=type.equals("Backdrop")?Json.array(item,"BackdropImageTags").optString(0):Json.str(Json.object(item,"ImageTags"),type);
+        else {
+            tag=Json.str(Json.object(item,"ImageTags"),"Primary");
+            if(tag.isEmpty()) {if(!Json.str(item,"SeriesId").isEmpty())id=Json.str(item,"SeriesId");tag=Json.str(item,"SeriesPrimaryImageTag");}
+            if(tag.isEmpty())tag=null;
+        }
+        return new ImageRef("/Items/"+id+"/Images/"+type,tag,width);
+    }
+    String image(JSONObject item,int width,boolean wide) {return image(imageRef(item,width,wide));}
+    String image(ImageRef image) {return url(image.path,"MaxWidth",image.width,"Quality",78,"Tag",image.tag).toString();}
     boolean hasImage(JSONObject item,boolean wide) { return !Artwork.type(item,wide).equals("Primary")||hasImage(item); }
     boolean hasImage(JSONObject item) { return !Json.str(Json.object(item,"ImageTags"),"Primary").isEmpty()||!Json.str(item,"SeriesPrimaryImageTag").isEmpty(); }
     void report(String endpoint,JSONObject body) throws Exception { post("/Sessions/Playing"+endpoint,body); }

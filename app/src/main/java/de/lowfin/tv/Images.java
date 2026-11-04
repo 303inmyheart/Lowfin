@@ -20,7 +20,7 @@ final class Images {
     final File directory;
     final Api api;
     final Context context;
-    private final LruCache<String,String> keyHashes=new LruCache<>(256);
+    private final LruCache<Api.ImageRef,String> keyHashes=new LruCache<>(256);
     private final Handler main=new Handler(Looper.getMainLooper());
     private final ExecutorService workers=pool();
     private final ScheduledExecutorService inventory=Executors.newSingleThreadScheduledExecutor();
@@ -61,10 +61,11 @@ final class Images {
     String key(JSONObject item) { return key(item,false,displayWidth(240)); }
     String key(JSONObject item,boolean wide) { return key(item,wide,displayWidth(240)); }
     private String key(JSONObject item,boolean wide,int width) {
-        String url=api.image(item,width,wide);String cached=keyHashes.get(url);if(cached!=null) return cached;
+        Api.ImageRef image=Api.imageRef(item,width,wide);String cached=keyHashes.get(image);if(cached!=null)return cached;
+        String url=api.image(image);
         try { byte[] hash=MessageDigest.getInstance("SHA-256").digest(url.getBytes(StandardCharsets.UTF_8));
             StringBuilder result=new StringBuilder(64);
-            for(byte value:hash) { result.append(HEX[(value&255)>>>4]); result.append(HEX[value&15]); } String value=result.toString();keyHashes.put(url,value);return value;
+            for(byte value:hash) { result.append(HEX[(value&255)>>>4]); result.append(HEX[value&15]); } String value=result.toString();keyHashes.put(image,value);return value;
         } catch(Exception e) { throw new IllegalStateException(e); }
     }
     private int displayWidth(int dp) { return Math.min(1440,Math.max(dp,Ui.dp(context,dp))); }
@@ -209,6 +210,7 @@ final class Images {
     // Background publisher must observe a completed clear, not its half-deleted directory.
     synchronized long cacheGeneration() { return epoch; }
     long bytes() { return diskBytes; }
+    synchronized long[] storageSnapshot() {return new long[]{diskFiles,diskBytes,scanned.getCount()==0?1:0};}
     synchronized void clear() { try { inventoryIndex.beginMutation(); } catch(IOException error) { Log.w("LowfinImages","Unable to mark inventory dirty"); return; } epoch++; memory.evictAll(); File[] files=directory.listFiles(); diskBytes=0; diskFiles=0; if(files!=null) for(File file:files) { if(!file.delete()&&file.isFile()&&file.getName().endsWith(".jpg")) { diskBytes+=file.length(); diskFiles++; } } queueInventorySave(); }
     synchronized void close() { closed=true;coverTags.close(); http.dispatcher().cancelAll(); downloads.shutdownNow(); workers.shutdownNow(); inventory.shutdown(); memory.evictAll(); keyHashes.evictAll(); scanned.countDown(); }
 }

@@ -26,6 +26,7 @@ final class OrderEditor {
         dialog.setOnShowListener(ignored->{dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view->save());dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(view->load());controls();});
         dialog.setOnDismissListener(ignored->{generation++;});
         dialog.setOnKeyListener((d,key,event)-> {
+            if(ServerNotice.key(activity,event))return true;
             if(key!=KeyEvent.KEYCODE_BACK)return false;
             if(event.getAction()==KeyEvent.ACTION_UP&&backConsumed) {backConsumed=false;return true;}
             if(event.getAction()==KeyEvent.ACTION_DOWN&&moving!=null&&!busy) {backConsumed=true;String selected=moving;Map<String,Item> values=new HashMap<>();for(Item item:items)values.put(item.id,item);items.clear();for(String id:beforeMove)items.add(values.get(id));moving=null;refresh(selected);return true;}

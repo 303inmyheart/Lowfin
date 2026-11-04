@@ -54,6 +54,10 @@ final class Motion {
         view.setAlpha(.4f);view.setScaleX(.94f);view.setScaleY(.94f);
         view.animate().alpha(1).scaleX(1).scaleY(1).setInterpolator(EASE_OUT).setDuration(350).start();
     }
+    /** A recycled holder must not keep a cancelled focus/reveal transform. */
+    static void reset(View view) {
+        view.animate().withEndAction(null).cancel();view.setScaleX(1);view.setScaleY(1);view.setAlpha(1);view.setTranslationX(0);view.setTranslationY(0);view.setPressed(false);Ui.redrawFocus(view);
+    }
     static void feedback(View view) {
         if(view==null||!enabled(view)||!view.isAttachedToWindow()) return;
         view.animate().withEndAction(null).cancel();

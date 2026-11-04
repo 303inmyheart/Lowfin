@@ -8,6 +8,10 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=30)
 public class MotionTest {
+    @Test public void recycledCardsDiscardInterruptedTransformsAndPressedState() {
+        View card=new View(RuntimeEnvironment.getApplication());card.setScaleX(1.04f);card.setScaleY(1.04f);card.setAlpha(.7f);card.setTranslationX(8);card.setTranslationY(12);card.setPressed(true);
+        Motion.reset(card);assertEquals(1,card.getScaleX(),0);assertEquals(1,card.getScaleY(),0);assertEquals(1,card.getAlpha(),0);assertEquals(0,card.getTranslationX(),0);assertEquals(0,card.getTranslationY(),0);assertFalse(card.isPressed());
+    }
     @Test public void eitherAnimationSwitchDisablesMotionAndRestoresNeutralGeometry() {
         android.content.Context c=RuntimeEnvironment.getApplication(); android.content.SharedPreferences p=c.getSharedPreferences("settings",0);
         View view=new View(c); p.edit().putBoolean("animations",true).putBoolean("smoothNavigation",false).apply(); assertFalse(Motion.enabled(view));

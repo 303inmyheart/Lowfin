@@ -6,14 +6,29 @@ import org.junit.*;
 import org.junit.runner.RunWith;
 import org.robolectric.*;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=30)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class RatingsRowTest {
     private LowfinApp app;private RatingsRow row;
     @Before public void setup() { app=(LowfinApp)RuntimeEnvironment.getApplication();app.settings.edit().clear().putBoolean("animations",false).commit();row=new RatingsRow(app); }
     private int height(int width) { row.measure(View.MeasureSpec.makeMeasureSpec(width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED));row.layout(0,0,width,row.getMeasuredHeight());return row.getMeasuredHeight(); }
+    @Test @Config(sdk=28,qualifiers="w960dp-h540dp-land-tvdpi") public void olderTvFeatureRatingsFitAllProvidersAndKeepStableGeometry() {singleLineFit();}
+    @Test public void featureRatingsRestoreOriginalSizeOnLargerDisplays() {singleLineFit();}
+    private void singleLineFit() {
+        row=new RatingsRow(app).singleLine();row.reserve(app);int width=Ui.dp(app,600),reservedHeight=height(width);int[] edges=new int[row.getChildCount()];
+        for(int i=0;i<row.getChildCount();i++)edges[i]=row.getChildAt(i).getRight();
+        row.show(app,Json.obj("imdb",10,"tomatoes",100,"tomatoesaudience",100,"metacritic",100,"tmdb",10,"trakt",100,"letterboxd",5,"mdblist",100));assertEquals(reservedHeight,height(width));assertEquals(8,row.getChildCount());
+        for(int i=0;i<row.getChildCount();i++) {
+            TextView cell=(TextView)row.getChildAt(i);assertEquals(0,cell.getTop());assertTrue(cell.getRight()<=width);assertEquals(edges[i],cell.getRight());assertEquals(1f,cell.getScaleX(),0);assertEquals(1f,cell.getScaleY(),0);assertNotNull(cell.getCompoundDrawables()[0]);
+            assertTrue(cell.getText().length()>0);assertEquals(0,cell.getLayout().getEllipsisCount(0));
+        }
+        float small=((TextView)row.getChildAt(0)).getTextSize();height(Ui.dp(app,1800));assertTrue(((TextView)row.getChildAt(0)).getTextSize()>small);assertEquals(12*app.getResources().getDisplayMetrics().scaledDensity,((TextView)row.getChildAt(0)).getTextSize(),.01f);
+        row.clear();assertEquals(reservedHeight,height(width));
+    }
     @Test public void repeatedEmptyFocusPreparationDoesNotRewritePlaceholderText() {
         row.reserve(app);java.util.concurrent.atomic.AtomicInteger writes=new java.util.concurrent.atomic.AtomicInteger();
         for(int i=0;i<row.getChildCount();i++) ((TextView)row.getChildAt(i)).addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){writes.incrementAndGet();}public void afterTextChanged(android.text.Editable value){}});

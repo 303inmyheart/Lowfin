@@ -48,6 +48,27 @@ public class ImagesTest {
         image.put("ImageTags",Json.obj("Primary","updated"));assertNotEquals(first,images.key(image));
         for(int i=0;i<400;i++) images.key(item("key-"+i));android.util.LruCache<?,?> hashes=org.robolectric.util.ReflectionHelpers.getField(images,"keyHashes");assertEquals(256,hashes.size());assertEquals(0,server.getRequestCount());assertEquals(0,images.directory.listFiles(f->f.getName().endsWith(".jpg")).length);
     }
+    @Test public void unchangedImageIdentityHitsTheMemoWithoutDependingOnPresentationMetadata() throws Exception {
+        JSONObject first=item("shared");String hash=images.key(first);android.util.LruCache<?,?> memo=org.robolectric.util.ReflectionHelpers.getField(images,"keyHashes");int misses=memo.missCount(),hits=memo.hitCount();
+        JSONObject refreshed=item("shared");refreshed.put("Name","Updated title");refreshed.put("UserData",Json.obj("Played",true));assertEquals(hash,images.key(refreshed));assertEquals(misses,memo.missCount());assertEquals(hits+1,memo.hitCount());
+        refreshed.put("ImageTags",Json.obj("Primary","replacement"));assertNotEquals(hash,images.key(refreshed));assertEquals(misses+1,memo.missCount());
+    }
+    @Test public void immutableImageReferencesPreserveCanonicalUrlsAndFallbackCacheFiles() throws Exception {
+        JSONObject episode=Json.obj("Id","episode","Type","Episode","SeriesId","series","SeriesPrimaryImageTag","series-tag");
+        JSONObject series=Json.obj("Id","series","Type","Series","ImageTags",Json.obj("Primary","series-tag"));
+        assertEquals(Api.imageRef(series,320,false),Api.imageRef(episode,320,false));assertEquals(images.key(series),images.key(episode));
+        assertEquals(api.url("/Items/series/Images/Primary","MaxWidth",320,"Quality",78,"Tag","series-tag").toString(),api.image(episode,320,false));
+        JSONObject film=Json.obj("Id","film","Type","Movie","ImageTags",Json.obj("Primary","p","Thumb","t","Logo","l"),"BackdropImageTags",Json.arr("b"));
+        assertEquals(api.url("/Items/film/Images/Thumb","MaxWidth",320,"Quality",78,"Tag","t").toString(),api.image(film,320,true));
+        assertEquals(api.url("/Items/film/Images/Logo","MaxWidth",320,"Quality",78,"Tag","l").toString(),api.image(Artwork.logo(film),320,false));
+        assertEquals(api.url("/Items/film/Images/Backdrop","MaxWidth",960,"Quality",78,"Tag","b").toString(),api.image(Artwork.backdrop(film),960,true));
+        Api.ImageRef frozen=Api.imageRef(film,320,false);film.put("ImageTags",Json.obj("Primary","new"));assertEquals("p",frozen.tag);assertNotEquals(frozen,Api.imageRef(film,320,false));
+        assertNotEquals(frozen,new Api.ImageRef(frozen.path,frozen.tag,240));assertEquals(frozen.hashCode(),new Api.ImageRef(frozen.path,frozen.tag,320).hashCode());
+    }
+    @Test public void missingPrimaryTagStillOmitsQueryWhileExplicitLogoRetainsEmptyTag() {
+        JSONObject empty=Json.obj("Id","empty","Type","Movie");assertNull(okhttp3.HttpUrl.get(api.image(empty,320,false)).queryParameter("Tag"));
+        empty=Json.obj("Id","empty","LowfinLogo",true);assertEquals("",okhttp3.HttpUrl.get(api.image(empty,320,false)).queryParameter("Tag"));
+    }
     @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void logosRequestDensityScaledPixelsFor4kUi() throws Exception {
         JSONObject film=Json.obj("Id","film","Type","Movie","ImageTags",Json.obj("Logo","tag")); ImageView view=new ImageView(context);
         images.logo(view,film); awaitImage(view);

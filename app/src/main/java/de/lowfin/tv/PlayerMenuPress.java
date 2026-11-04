@@ -6,6 +6,7 @@ import java.util.function.IntConsumer;
 /** Consume the entire press that reveals controls, including held repeats and release. */
 final class PlayerMenuPress {
     private int opening=KeyEvent.KEYCODE_UNKNOWN;
+    void cancel() {opening=KeyEvent.KEYCODE_UNKNOWN;}
     boolean activate(KeyEvent event,Runnable action) {
         if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) { opening=event.getKeyCode(); action.run(); }
         return true;

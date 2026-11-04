@@ -73,6 +73,7 @@ public class TvUiTest {
                 if(path.equals("/LiveTv/Programs")&&"513".equals(request.getRequestUrl().queryParameter("Limit"))){if(guideOffline)return new MockResponse().setResponseCode(503);JSONArray items=new JSONArray();java.time.Instant now=java.time.Instant.now();if(!guideEmpty)for(String id:request.getRequestUrl().queryParameter("ChannelIds").split(","))if(!guideAbsent.contains(id))items.put(Json.obj("ChannelId",id,"StartDate",now.plusSeconds(86400).toString(),"EndDate",now.plusSeconds(90000).toString()));return new MockResponse().setBody(Json.obj("Items",items).toString());}
                 if(path.equals("/LiveTv/Programs")&&"257".equals(request.getRequestUrl().queryParameter("Limit"))) {guideQueries.incrementAndGet();if(guideOffline)return new MockResponse().setResponseCode(503);JSONArray items=new JSONArray();java.time.Instant since=java.time.Instant.parse(request.getRequestUrl().queryParameter("MinEndDate"));if(!guideEmpty&&!guideWindowEmpty)for(String id:request.getRequestUrl().queryParameter("ChannelIds").split(","))for(int n=0;n<4;n++)items.put(Json.obj("ChannelId",id,"Name",(id.equals("channel")?"Programm ":"Zweiter Sender ")+n,"Overview","Ausführliche Beschreibung der Sendung "+n,"StartDate",since.plusSeconds(n*1800-600).toString(),"EndDate",since.plusSeconds((n+1)*1800-600).toString()));return new MockResponse().setBody(Json.obj("Items",items).toString());}
                 if(path.equals("/LiveTv/Programs")) {JSONArray programmes=new JSONArray();int offset=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("StartIndex"),"0")),limit=Integer.parseInt(java.util.Objects.requireNonNullElse(request.getRequestUrl().queryParameter("Limit"),"1"));java.time.Instant now=java.time.Instant.now();for(int n=offset;n<Math.min(15,offset+limit);n++)programmes.put(Json.obj("ChannelId","channel","Name",n==0?"Aktuelle Sendung":"Spätere Sendung "+n,"Overview","Programm-Beschreibung "+n,"StartDate",now.plusSeconds(n*1200-600).toString(),"EndDate",now.plusSeconds((n+1)*1200-600).toString()));return new MockResponse().setBody(Json.obj("Items",programmes).toString());}
+                if(path.equals("/Users/user/Items/s40")) return new MockResponse().setBody(Json.obj("Id","s40","Type","Season","SeriesId","show","SeriesName","Test series","Name","Staffel 40","Overview","Season forty overview","ImageTags",Json.obj("Primary","season-poster")).toString());
                 if(path.equals("/Shows/show/Seasons")) {
                     JSONArray seasons=new JSONArray(); for(int i=1;i<=45;i++) seasons.put(Json.obj("Id","s"+i,"ParentId","show","SeriesId","show","Type","Season","IndexNumber",i,"Name","Staffel "+i,"RecursiveItemCount",24,"ImageTags",Json.obj("Primary","season-poster"),"PrimaryImageAspectRatio",2.0/3));
                     return new MockResponse().setBody(Json.obj("Items",seasons,"TotalRecordCount",45).toString());
@@ -149,6 +150,44 @@ public class TvUiTest {
         await(()->{HomeAdapter.Shelf ready=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);return ready!=null&&ready.list.getChildCount()>0;});
         HomeAdapter.Shelf first=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);assertNotNull(first);View card=first.list.getChildAt(0);assertNotNull(card);android.graphics.Rect cardRect=new android.graphics.Rect();card.getDrawingRect(cardRect);recycler().offsetDescendantRectToMyCoords(card,cardRect);assertTrue("First card clipped: "+cardRect,cardRect.bottom<=recycler().getHeight()-recycler().getPaddingBottom());
         HomeAdapter.Shelf second=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(2);if(second!=null){android.graphics.Rect rect=new android.graphics.Rect();second.label.getDrawingRect(rect);recycler().offsetDescendantRectToMyCoords(second.label,rect);assertTrue("Second heading enters initial viewport: "+rect,rect.top>=recycler().getHeight()-recycler().getPaddingBottom());}
+    }
+    @Test public void oneDownFromBannerShowsOnlyCenteredResumeAndNextUp() throws Exception {centeredBannerPair(false);}
+    @Test @Config(qualifiers="w960dp-h540dp-land-xxxhdpi") public void oneDownFromBannerCentersThePairIn4k() throws Exception {viewportWidth=3840;viewportHeight=2160;centeredBannerPair(false);}
+    @Test public void animatedBannerPairKeepsRowsTogetherAndStillReachesRecommendations() throws Exception {centeredBannerPair(true);}
+    private void awaitHomeCard(HomeAdapter adapter,int row,int column) throws Exception {
+        await(()-> {HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(adapter.position(row));if(shelf==null||shelf.list==null||!shelf.itemView.isShown())return false;
+            View card=shelf.list.getLayoutManager().findViewByPosition(column);return card!=null&&card.hasFocus()&&!recycler().getLayoutManager().isSmoothScrolling()&&recycler().getScrollState()==RecyclerView.SCROLL_STATE_IDLE&&!shelf.list.getLayoutManager().isSmoothScrolling();});
+    }
+    private void centeredBannerPair(boolean animated) throws Exception {
+        recommendationFixture();app.settings.edit().putBoolean("discoveryBanner",true).putBoolean("animations",animated).putBoolean("scrollAnimations",animated).apply();
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->recycler()!=null&&!((HomeAdapter)recycler().getAdapter()).rows.get(0).isEmpty()&&!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty()&&!((HomeAdapter)recycler().getAdapter()).rows.get(2).isEmpty());
+        HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();adapter.requestRow(adapter.logical(0));await(()-> {HomeAdapter.Shelf h=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);return h!=null&&h.banner!=null&&h.banner.hasFocus();});
+        java.util.concurrent.atomic.AtomicBoolean earlyFocus=new java.util.concurrent.atomic.AtomicBoolean();
+        recycler().getViewTreeObserver().addOnGlobalFocusChangeListener((oldFocus,newFocus)->{
+            HomeAdapter.Shelf target=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(adapter.position(0));
+            if(target!=null&&target.list.hasFocus()&&Boolean.TRUE.equals(org.robolectric.util.ReflectionHelpers.getField(adapter,"scrollingShelf")))earlyFocus.set(true);
+        });
+        remote(KeyEvent.KEYCODE_DPAD_DOWN,1);
+        assertFalse("Viewport resize must not start an old-size smooth scroll",recycler().getLayoutManager().isSmoothScrolling());
+        awaitHomeCard(adapter,0,0);
+        if(animated)assertTrue("Continue watching should receive focus before scrolling ends",earlyFocus.get());
+        layout();RecyclerView rows=recycler();assertTrue(adapter.pairedViewport(0));
+        HomeAdapter.Shelf resume=(HomeAdapter.Shelf)rows.findViewHolderForAdapterPosition(adapter.position(0)),next=(HomeAdapter.Shelf)rows.findViewHolderForAdapterPosition(adapter.position(1));assertNotNull(resume);assertNotNull(next);assertFalse(rows.getDefaultFocusHighlightEnabled());assertFalse(resume.list.getDefaultFocusHighlightEnabled());
+        assertEquals(View.VISIBLE,resume.itemView.getVisibility());assertEquals(View.VISIBLE,next.itemView.getVisibility());
+        assertEquals(resume.itemView.getHeight()+next.itemView.getHeight(),rows.getHeight());
+        int[] origin=new int[2];rows.getLocationOnScreen(origin);int gapAbove=origin[1],gapBelow=viewportHeight-origin[1]-rows.getHeight();assertEquals("Pair must be centered on the screen",gapAbove,gapBelow,Ui.dp(app,1));
+        for(int i=0;i<rows.getChildCount();i++) {View child=rows.getChildAt(i);int logical=adapter.logical(rows.getChildAdapterPosition(child));if(logical>=2)assertNotEquals("Other home content leaks into the pair viewport",View.VISIBLE,child.getVisibility());}
+        int top=rows.getTop();remote(KeyEvent.KEYCODE_DPAD_DOWN,1);awaitHomeCard(adapter,1,0);assertEquals(top,rows.getTop(),1);
+        screenshot(viewportWidth==3840?"home-centered-pair-4k.png":"home-centered-pair-hd.png");
+        remote(KeyEvent.KEYCODE_DPAD_DOWN,1);assertFalse("Recommendation entry must align before drawing the resized viewport",recycler().getLayoutManager().isSmoothScrolling());awaitHomeCard(adapter,2,0);assertTrue(((HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(adapter.position(2))).itemView.isShown());
+        HomeAdapter.Shelf leaving=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(adapter.position(2));
+        remote(KeyEvent.KEYCODE_DPAD_UP,1);
+        if(animated)assertEquals("Departing feature shelf must stay visible during the transition",View.VISIBLE,leaving.itemView.getVisibility());
+        awaitHomeCard(adapter,1,0);assertTrue(adapter.pairedViewport(1));
+        HomeAdapter.Shelf retired=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(adapter.position(2));
+        if(retired!=null)assertEquals("Feature shelf must be hidden once the pair settles",View.INVISIBLE,retired.itemView.getVisibility());
+        remote(KeyEvent.KEYCODE_DPAD_UP,2);await(()-> {HomeAdapter.Shelf h=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);return h!=null&&h.banner!=null&&h.banner.hasFocus();});
     }
     @Test public void nextUpRefreshDoesNotWaitForSlowResumeOrBusyGeneralWorkers() throws Exception { independentHomeRefresh(0); }
     @Test public void resumeRefreshDoesNotWaitForSlowNextUpOrBusyGeneralWorkers() throws Exception { independentHomeRefresh(1); }
@@ -400,6 +439,10 @@ public class TvUiTest {
         ArtworkView cover=(ArtworkView)find(row,v->v instanceof ArtworkView); assertNotNull(cover); assertEquals(2.0/3,(double)cover.getMeasuredWidth()/cover.getMeasuredHeight(),.01); assertTrue(row.isFocusable()); row.requestFocus();
         await(()->cover.getDrawable()!=null); screenshot("seasons-40-hd.png"); row.performClick(); layout();
         assertNotNull(findText(activity.get().findViewById(android.R.id.content),"Staffel 40"));
+        await(()->findText(activity.get().findViewById(android.R.id.content),"Season forty overview")!=null);
+        SeasonHeader seasonHeader=(SeasonHeader)find(activity.get().findViewById(android.R.id.content),v->v instanceof SeasonHeader);assertNotNull(seasonHeader);
+        await(()->seasonHeader.cover.getDrawable()!=null);assertFalse(seasonHeader.isFocusable());assertEquals("Test series",seasonHeader.series.getText().toString());
+        assertEquals(2.0/3,(double)seasonHeader.cover.getMeasuredWidth()/seasonHeader.cover.getMeasuredHeight(),.02);
     }
     @Test public void holdingOkOnSeasonTogglesWatchedForSeasonAndCachedEpisodes() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis()); app.library.put(series);
@@ -1146,7 +1189,10 @@ public class TvUiTest {
         remote(KeyEvent.KEYCODE_DPAD_RIGHT,25); awaitShelf(12,40); remote(KeyEvent.KEYCODE_DPAD_RIGHT,5); awaitShelf(12,40);
         remote(KeyEvent.KEYCODE_DPAD_LEFT,40); awaitShelf(12,0); remote(KeyEvent.KEYCODE_DPAD_LEFT,1); layout(); assertTrue(findButton(activity.get().findViewById(android.R.id.content),"Start").isShown());
         remote(KeyEvent.KEYCODE_DPAD_RIGHT,1); shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(200)); layout(); awaitShelf(12,0);
-        activity.get().onBackPressed(); await(()-> { HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0); return shelf!=null&&shelf.list.hasFocus(); }); assertFalse(activity.get().isFinishing());
+        activity.get().onBackPressed(); try {await(()-> { HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0); return shelf!=null&&shelf.list.hasFocus(); });} catch(AssertionError error) {
+            HomeAdapter.Shelf target=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);
+            throw new AssertionError("homeRow="+org.robolectric.util.ReflectionHelpers.getField(activity.get(),"focusedHomeRow")+" history="+org.robolectric.util.ReflectionHelpers.getField(activity.get(),"history")+" latestDialog="+org.robolectric.shadows.ShadowDialog.getLatestDialog()+" pending="+org.robolectric.util.ReflectionHelpers.getField(adapter,"pendingRow")+" scrolling="+org.robolectric.util.ReflectionHelpers.getField(adapter,"scrollingShelf")+" layout="+recycler().isLayoutRequested()+" first="+((LinearLayoutManager)recycler().getLayoutManager()).findFirstVisibleItemPosition()+" last="+((LinearLayoutManager)recycler().getLayoutManager()).findLastVisibleItemPosition()+" target="+target+" childfocus="+activity.get().getCurrentFocus()+" pendingCard="+(target==null?"none":org.robolectric.util.ReflectionHelpers.getField(target.list,"pendingCard")),error);
+        } assertFalse(activity.get().isFinishing());
     }
     @Test public void changingAFocusedGenreDuringPendingHorizontalScrollClampsFocusToTheNewRow() throws Exception {
         HomeAdapter adapter=stressHome(); adapter.requestRow(7); layout(); awaitShelf(7,0);
@@ -1235,6 +1281,11 @@ public class TvUiTest {
         activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);findButton(root,"Einstellungen").performClick();layout();findButton(root,"Bibliothek und Cache").performClick();layout();
         Button preload=findButton(root,"Bibliothek und Cover vollständig vorladen");assertNotNull(preload);
         await(()->preload.getAlpha()==.4f);assertFalse(preload.isEnabled());
+        Button stop=findButton(root,"Vorladen stoppen");assertNotNull(stop);assertFalse(stop.isEnabled());assertEquals(.4f,stop.getAlpha(),0);
+        TextView inventory=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"cacheInventoryView");
+        await(()->!I18n.resource(R.string.cache_storage_loading).contentEquals(inventory.getText()));assertTrue(inventory.getText().toString().contains("Coverdateien:"));
+        app.syncing=true;java.lang.reflect.Method live=MainActivity.class.getDeclaredMethod("updatePreloadButton");live.setAccessible(true);live.invoke(activity.get());assertTrue(stop.isEnabled());app.syncing=false;live.invoke(activity.get());assertFalse(stop.isEnabled());
+
         app.library.resetPrecacheCompletion();java.lang.reflect.Method update=MainActivity.class.getDeclaredMethod("updatePreloadButton");update.setAccessible(true);update.invoke(activity.get());
         await(preload::isEnabled);assertEquals(1f,preload.getAlpha(),0);
     }

@@ -13,6 +13,9 @@ import java.util.*;
 @androidx.annotation.OptIn(markerClass = androidx.media3.common.util.UnstableApi.class)
 public final class MainActivity extends Activity {
     private LowfinApp app;
+    private RemotePlayback serverMessages;
+    private ServerNotice serverNotice;
+    private Api messageApi;
     private IdleScreensaver screensaver;
     private FrameLayout root;
     private LinearLayout body,drawer,heading;
@@ -41,11 +44,15 @@ public final class MainActivity extends Activity {
     private boolean liveAvailable,liveChecking;private Api liveApi;private long liveChecked;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private TextView cacheStatusView;
+    private TextView cacheInventoryView;
     private Button preloadButton;
+    private Button stopPreloadButton;
+    private boolean cacheInfoLoading;
     private Runnable detailStateRefresh,detailReload;
     private boolean detailNeedsReload;
     private final Runnable statusTick=new Runnable() { public void run() { updateStatus();handler.postDelayed(this,2000); } };
     private void updateStatus() {
+        if(importActive)startServerMessages();
         if(root!=null) root.setKeepScreenOn(app.settings.getBoolean("keepAwakeDuringPrecache",false)&&(app.syncing||app.cacheChanges!=null&&app.cacheChanges.artworkActive()));
         if(detailStateRefresh!=null) detailStateRefresh.run();
         if(status!=null&&status.isShown()) setStatusText(status,app.syncing?(screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.syncSummary):screen!=null&&screen.kind.equals("settings")?app.syncStatus:app.account==null?"":app.account.name+"  ·  HD");
@@ -79,9 +86,24 @@ public final class MainActivity extends Activity {
         }
     }
     private boolean savedNone(Bundle state) { return state==null; }
-    @Override protected void onResume() { super.onResume();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
-    @Override protected void onPause() { if(liveGuide!=null)liveGuide.pause();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
-    @Override protected void onDestroy() { if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    private void startServerMessages() {
+        if(deferredHome||app.playing) {stopServerMessages();return;}
+        if(app.api==messageApi)return;
+        stopServerMessages();if(app.api==null)return;
+        messageApi=app.api;serverNotice=new ServerNotice(this,handler);
+        serverMessages=new RemotePlayback(messageApi,handler,new RemotePlayback.Actions() {
+            @Override public void command(String command,long positionMs) {}
+            @Override public void message(String header,String text,long timeoutMs) {if(importActive&&serverNotice!=null)serverNotice.show(header,text,timeoutMs);}
+        },false);serverMessages.start();
+    }
+    private void stopServerMessages() {
+        if(serverMessages!=null) {serverMessages.close();serverMessages=null;}
+        if(serverNotice!=null) {serverNotice.close();serverNotice=null;}
+        messageApi=null;
+    }
+    @Override protected void onResume() { super.onResume();startServerMessages();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
+    @Override protected void onPause() { stopServerMessages();if(liveGuide!=null)liveGuide.pause();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
+    @Override protected void onDestroy() { stopServerMessages();if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private void checkSession() {
         final Api api=app.api;
         app.io.execute(()-> {
@@ -153,7 +175,7 @@ public final class MainActivity extends Activity {
         settingsGrid=null;
         if(updateSettings!=null) {updateSettings.pause();updateSettings=null;}
         if(startupOverlay!=null) {startupOverlay.dismiss();startupOverlay=null;}
-        pageControls=null;cacheStatusView=null;preloadButton=null;detailStateRefresh=null;detailReload=null;detailNeedsReload=false;
+        pageControls=null;cacheStatusView=null;cacheInventoryView=null;preloadButton=null;stopPreloadButton=null;detailStateRefresh=null;detailReload=null;detailNeedsReload=false;
         root=new FrameLayout(this); boolean artworkScreen=screen!=null&&(screen.kind.equals("detail")||screen.kind.equals("home"));
         if(artworkScreen) root.setBackgroundColor(Ui.BG); else Accent.background(root);
         if(!artworkScreen) root.setPadding(Ui.dp(this,20),Ui.dp(this,18),Ui.dp(this,20),Ui.dp(this,18));
@@ -225,6 +247,7 @@ public final class MainActivity extends Activity {
     @Override public boolean dispatchTouchEvent(MotionEvent event) { if(screensaver!=null&&screensaver.touch(event)) return true;return super.dispatchTouchEvent(event); }
     @Override public boolean dispatchGenericMotionEvent(MotionEvent event) { if(screensaver!=null&&screensaver.motion()) return true;return super.dispatchGenericMotionEvent(event); }
     @Override public boolean dispatchKeyEvent(KeyEvent event) {
+        if(ServerNotice.key(this,event))return true;
         if(screensaver!=null&&screensaver.key(event)) return true;
         long began=SystemClock.uptimeMillis();
         try { return dispatchRemoteEvent(event); }
@@ -508,7 +531,7 @@ public final class MainActivity extends Activity {
         final List<String> pinned=app.settings.getBoolean("genreRows",true)?HomeGenres.read(app.settings,app.account):new ArrayList<>();
         grid=new RecyclerView(this) {
             @Override public boolean requestChildRectangleOnScreen(View child,android.graphics.Rect rect,boolean immediate) { return false; }
-        }; grid.setLayoutManager(new LinearLayoutManager(this) {
+        }; grid.setDefaultFocusHighlightEnabled(false);grid.setLayoutManager(new LinearLayoutManager(this) {
             @Override public boolean onRequestChildFocus(RecyclerView parent,RecyclerView.State state,View child,View focused) { return true; }
             @Override public boolean requestChildRectangleOnScreen(RecyclerView parent,View child,android.graphics.Rect rect,boolean immediate,boolean keepFocusedChildVisible) { return false; }
         }); grid.setItemAnimator(null); grid.setItemViewCacheSize(1);
@@ -523,10 +546,13 @@ public final class MainActivity extends Activity {
         final boolean restored=adapter.restore(screen.homeState);
         adapter.bannerAllowed(()->importActive&&!drawerOpen&&screen!=null&&screen.kind.equals("home")&&app.api==app.images.api);
         grid.setAdapter(adapter);adapter.libraries(views); body.addView(grid,new LinearLayout.LayoutParams(-1,0,1));
+        final LinearLayout homeBody=body;
+        adapter.pairSizeChanged=()-> {if(body==homeBody&&grid!=null&&grid.getAdapter()==adapter)layoutHomeViewport();};
+        homeBody.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)-> {if(body==homeBody&&grid!=null&&grid.getAdapter()==adapter&&adapter.pairedViewport(focusedHomeRow))layoutHomeViewport();});
         homeDescription=Ui.column(this); homeDescription.setPadding(Ui.dp(this,5),Ui.dp(this,10),Ui.dp(this,14),0); homeDescription.setVisibility(View.GONE);
         homeFilmTitle=Ui.title(this,"",21); homeFilmTitle.setSingleLine(true); homeFilmTitle.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmTitle);
         homeFilmMeta=Ui.text(this,"",11,Ui.MUTED); homeFilmMeta.setSingleLine(true); homeFilmMeta.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmMeta); Ui.space(homeDescription,6);
-        homeRatings=new RatingsRow(this); homeRatings.reserve(app); homeDescription.addView(homeRatings); Ui.space(homeDescription,6);
+        homeRatings=new RatingsRow(this).singleLine(); homeRatings.reserve(app); homeDescription.addView(homeRatings); Ui.space(homeDescription,6);
         homeFilmOverview=Ui.text(this,"",14,0xffdddddf); homeFilmOverview.setMaxLines(3); homeFilmOverview.setEllipsize(android.text.TextUtils.TruncateAt.END); homeDescription.addView(homeFilmOverview,new LinearLayout.LayoutParams(-1,0,1));
         homeFilmOverview.addOnLayoutChangeListener((view,left,top,right,bottom,oldLeft,oldTop,oldRight,oldBottom)-> {
             int lines=Math.max(1,Math.min(5,(bottom-top-homeFilmOverview.getPaddingTop()-homeFilmOverview.getPaddingBottom())/Math.max(1,homeFilmOverview.getLineHeight())));
@@ -630,14 +656,22 @@ public final class MainActivity extends Activity {
         if(focusedHomeRow==row) return;
         boolean genre=((HomeAdapter)grid.getAdapter()).feature(row)&&app.settings.getBoolean("singleShelf",true); boolean changed=((HomeAdapter)grid.getAdapter()).feature(focusedHomeRow)!=genre; focusedHomeRow=row;
         ((HomeAdapter)grid.getAdapter()).setFocusedShelf(row);
-        LinearLayout.LayoutParams size=(LinearLayout.LayoutParams)grid.getLayoutParams();
-        int height=genre?Ui.dp(this,244):0; float weight=genre?0:1;
-        // Reusing the same shelf viewport must not trigger another layout during scrolling.
-        if(size.height!=height||size.weight!=weight) { size.height=height; size.weight=weight; grid.setLayoutParams(size); }
+        layoutHomeViewport();
         homeDescription.setVisibility(genre?View.VISIBLE:View.GONE);
-        grid.setClipToPadding(false);
         if(genre) { Motion.enterFromBottom(homeDescription); if(!ScrollMotion.enabled(grid)) ((LinearLayoutManager)grid.getLayoutManager()).scrollToPositionWithOffset(((HomeAdapter)grid.getAdapter()).position(row),0); }
         else if(changed&&detailBackdrop!=null) { focusedHomeId=""; detailBackdrop.setTag(null); detailBackdrop.setImageDrawable(null); }
+    }
+    private void layoutHomeViewport() {
+        if(grid==null||!(grid.getAdapter() instanceof HomeAdapter)||screen==null||!screen.kind.equals("home"))return;
+        HomeAdapter adapter=(HomeAdapter)grid.getAdapter();boolean pair=adapter.pairedViewport(focusedHomeRow),feature=adapter.feature(focusedHomeRow)&&app.settings.getBoolean("singleShelf",true);
+        int height=pair?Math.min(adapter.pairHeight(),body.getHeight()>0?body.getHeight():adapter.pairHeight()):feature?Ui.dp(this,244):0;
+        float weight=pair||feature?0:1;LinearLayout.LayoutParams size=(LinearLayout.LayoutParams)grid.getLayoutParams();
+        if(size.height!=height||size.weight!=weight) {size.height=height;size.weight=weight;grid.setLayoutParams(size);}
+        int gravity=Gravity.START|(pair?Gravity.CENTER_VERTICAL:Gravity.TOP);
+        if(body.getGravity()!=gravity)body.setGravity(gravity);
+        View content=(View)body.getParent();int top=Ui.dp(this,pair?20:22),bottom=Ui.dp(this,pair?20:18);
+        if(content.getPaddingTop()!=top||content.getPaddingBottom()!=bottom)content.setPadding(content.getPaddingLeft(),top,content.getPaddingRight(),bottom);
+        if(grid.getClipToPadding()!=pair)grid.setClipToPadding(pair);
     }
     private void homeFocus(JSONObject film,int row) {
         if(row<0||screen==null||!screen.kind.equals("home")) return;
@@ -856,12 +890,20 @@ public final class MainActivity extends Activity {
         });
     }
     private void episodes() {
-        final Screen s=screen;final int limit=pageSize(s); TextView n=note(I18n.text("Folgen werden geladen …")); MediaAdapter adapter=cards(true); pager();
+        final Screen s=screen;final int g=generation;final int limit=pageSize(s);
+        SeasonHeader header=new SeasonHeader(this);body.addView(header);Ui.space(body,10);header.bind(s.item,app.images);
+        TextView n=note(I18n.text("Folgen werden geladen …")); MediaAdapter adapter=cards(true); pager();
         final Api api=app.api; final Library db=app.library;
         async(adapter,()->db.browse("Episode",s.parent,null,s.page*limit,limit+1),null);
         async(adapter,()-> { String series=s.item.optString("SeriesId",s.item.optString("ParentId"));
             JSONArray a=Json.array(api.get("/Shows/"+series+"/Episodes","UserId",api.account.user,"SeasonId",s.parent,"StartIndex",s.page*limit,"Limit",limit+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items");
             db.put(a,System.currentTimeMillis()); return list(a); },n);
+        app.navigationIo.execute(()-> {
+            if(g!=generation||isFinishing())return;
+            try {JSONObject season=api.item(s.parent);db.put(season);
+                runOnUiThread(()-> {if(g==generation&&screen==s&&app.api==api&&!isFinishing())header.bind(season,app.images);});
+            } catch(Exception ignored) { /* The selected season's cached artwork and overview remain available. */ }
+        });
     }
     private void detail(JSONObject original) {
         ScrollView page=new ScrollView(this); page.setFillViewport(true); page.setVerticalScrollBarEnabled(false);
@@ -1117,6 +1159,7 @@ public final class MainActivity extends Activity {
         }).setNegativeButton(I18n.text("Abbrechen"),null).create();
         final boolean[] openingGesture={true};
         dialog.setOnKeyListener((d,key,event)-> {
+            if(ServerNotice.key(this,event))return true;
             if(key!=KeyEvent.KEYCODE_DPAD_CENTER&&key!=KeyEvent.KEYCODE_ENTER&&key!=KeyEvent.KEYCODE_NUMPAD_ENTER) return false;
             if(!openingGesture[0]) return false;
             if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) { openingGesture[0]=false; return false; }
@@ -1262,11 +1305,12 @@ public final class MainActivity extends Activity {
                 break;
             case "cacheSettings":
         content.addView(Ui.title(this,I18n.resource(R.string.settings_group_storage),16));
+        cacheInventoryView=Ui.text(this,I18n.resource(R.string.cache_storage_loading),14,Ui.MUTED);content.addView(cacheInventoryView);
         TextView cacheStatus=Ui.text(this,app.syncStatus,14,Ui.MUTED); cacheStatusView=cacheStatus; content.addView(cacheStatus); Ui.space(content,10);
         final Library db=app.library; final int g=generation;
         app.cacheIo.execute(()-> { try { String saved=db.state("cacheStatus"); runOnUiThread(()-> { if(g==generation&&!saved.isEmpty()) cacheStatus.setText(saved); }); } catch(Exception ignored) {} });
-        preloadButton=Ui.button(this,I18n.text("Bibliothek und Cover vollständig vorladen"),this::startCache); content.addView(preloadButton); preloadButton.setEnabled(false); updatePreloadButton(); Ui.space(content,8);
-        content.addView(Ui.button(this,I18n.text("Vorladen stoppen"),()-> { stopService(new Intent(this,SyncService.class)); toast(I18n.text("Cache wird gestoppt")); })); Ui.space(content,8);
+        preloadButton=Ui.button(this,I18n.text("Bibliothek und Cover vollständig vorladen"),this::startCache); content.addView(preloadButton); preloadButton.setEnabled(false); Ui.space(content,8);
+        stopPreloadButton=Ui.button(this,I18n.text("Vorladen stoppen"),()-> { stopService(new Intent(this,SyncService.class)); toast(I18n.text("Cache wird gestoppt")); });content.addView(stopPreloadButton);updatePreloadButton();Ui.space(content,8);
         int budget=app.settings.getInt("cacheMb",1024);
         content.addView(Ui.button(this,I18n.text("Cover-Speicher: ")+(budget==0?I18n.text("gesamter freier Speicher"):budget+" MB"),()->choice(I18n.text("Speicherbudget · 64 MB bleiben frei"),new String[]{"256 MB","512 MB","1024 MB","2048 MB","4096 MB",I18n.text("Ohne feste Grenze")},i->{ app.settings.edit().putInt("cacheMb",new int[]{256,512,1024,2048,4096,0}[i]).apply(); refreshOptions(); })));
         new Options(this,app,content,this::refreshOptions,true).cache();content.addView(Ui.title(this,I18n.resource(R.string.settings_group_cleanup),16));
@@ -1465,11 +1509,26 @@ public final class MainActivity extends Activity {
             }).show();
     }
     private void updatePreloadButton() {
-        final Button button=preloadButton;final Library db=app.library;final int g=generation;
-        if(button==null||db==null) return;
-        app.cacheIo.execute(()-> { boolean complete=db.precacheComplete();runOnUiThread(()-> {
-            if(g==generation&&preloadButton==button&&app.library==db) { button.setEnabled(!complete);button.setAlpha(complete?.4f:1f); }
-        }); });
+        final Button button=preloadButton;final Library db=app.library;final Images images=app.images;final int g=generation;
+        if(stopPreloadButton!=null) {stopPreloadButton.setEnabled(app.syncing);stopPreloadButton.setAlpha(app.syncing?1f:.4f);}
+        if(button==null||db==null||images==null||cacheInfoLoading) return;
+        cacheInfoLoading=true;
+        app.cacheIo.execute(()-> {
+            boolean complete=false;String summary=null;
+            try {
+                complete=db.precacheComplete();int count=db.count();long bytes=db.storageBytes();long[] artwork=images.storageSnapshot();
+                if(artwork[2]!=0) summary=String.format(Locale.forLanguageTag(I18n.language()),I18n.resource(R.string.cache_storage_summary),count,
+                    android.text.format.Formatter.formatFileSize(this,bytes),artwork[0],android.text.format.Formatter.formatFileSize(this,artwork[1]),android.text.format.Formatter.formatFileSize(this,bytes+artwork[1]));
+            } catch(Exception ignored) { /* Keep the previous snapshot during cache replacement. */ }
+            final boolean finished=complete;final String text=summary;
+            runOnUiThread(()-> {
+                cacheInfoLoading=false;
+                if(g==generation&&preloadButton==button&&app.library==db) {
+                    boolean enabled=!finished&&!app.syncing;button.setEnabled(enabled);button.setAlpha(enabled?1f:.4f);
+                    if(text!=null&&cacheInventoryView!=null)Ui.textIfChanged(cacheInventoryView,text);
+                }
+            });
+        });
     }
     private void startCache() { if(app.account!=null) { startForegroundService(new Intent(this,SyncService.class)); toast(I18n.text("Bibliothek wird im Hintergrund vorgeladen")); } }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }

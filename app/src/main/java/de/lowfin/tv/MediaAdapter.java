@@ -59,7 +59,7 @@ final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
         },()->actions.accept(item));
         images.show(holder.image,item,wide); holder.itemView.setOnClickListener(v->open.accept(item));
     }
-    @Override public void onViewRecycled(Card card) { ConfirmPress.cancel(card.itemView); card.image.badges("",0); card.image.setTag(null); card.image.setImageDrawable(null); card.itemView.animate().cancel(); }
+    @Override public void onViewRecycled(Card card) { ConfirmPress.cancel(card.itemView); card.image.badges("",0); card.image.setTag(null); card.image.setImageDrawable(null); Motion.reset(card.itemView); }
     static final class Card extends RecyclerView.ViewHolder {
         final ArtworkView image; final TextView title,subtitle;
         Card(View v,ArtworkView image,TextView title,TextView subtitle) { super(v); this.image=image; this.title=title; this.subtitle=subtitle; }

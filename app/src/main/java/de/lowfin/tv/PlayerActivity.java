@@ -25,6 +25,9 @@ public final class PlayerActivity extends Activity {
     private Library library;
     private CompanionApi companion;
     private CompanionApi.Session companionSession;
+    private RemotePlayback remotePlayback;
+    private ServerNotice serverNotice;
+    private PlaybackDuck<ExoPlayer> noticeDuck;
     private boolean explicitRestart,restoredPosition;
     private JSONObject item,source;
     private JSONArray segments=new JSONArray();
@@ -83,6 +86,25 @@ public final class PlayerActivity extends Activity {
         live="TvChannel".equals(item.optString("Type"));
         app.playing=true; getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON); Ui.immersive(this);
         layout(); load(requestedPosition,false);
+        noticeDuck=new PlaybackDuck<>(handler,()->player,p->p.getVolume(),(p,volume)->p.setVolume((float)volume));
+        serverNotice=new ServerNotice(this,handler,()-> {if(!released)noticeDuck.lower();});
+        remotePlayback=new RemotePlayback(api,handler,new RemotePlayback.Actions() {
+            @Override public void command(String command,long positionMs) {remoteCommand(command,positionMs);}
+            @Override public void message(String header,String text,long timeoutMs) {if(!released)serverNotice.show(header,text,timeoutMs);}
+        });remotePlayback.start();
+    }
+    private void remoteCommand(String command,long target) {
+        if(released)return;
+        if("Stop".equals(command)) { release();finish();return; }
+        if(player==null)return;
+        seekGesture.reset();
+        switch(command) {
+            case "Pause":player.pause();break;
+            case "Unpause":player.play();break;
+            case "PlayPause":if(player.getPlayWhenReady())player.pause();else player.play();break;
+            case "Seek":if(!live)seekTo(target);break;
+        }
+        showChrome(false);
     }
     private void layout() {
         FrameLayout root=new FrameLayout(this); root.setBackgroundColor(Color.BLACK);
@@ -361,7 +383,7 @@ public final class PlayerActivity extends Activity {
     }
     private JSONObject reportBody(long pos) {
         return Json.obj("ItemId",item.optString("Id"),"MediaSourceId",sourceId,"PlaySessionId",sessionId,"PositionTicks",pos*10000,
-            "IsPaused",player==null||!player.isPlaying(),"IsMuted",player!=null&&player.getVolume()==0,"CanSeek",!live,
+            "IsPaused",player==null||!player.getPlayWhenReady(),"IsMuted",player!=null&&player.getVolume()==0,"CanSeek",!live,
             "PlayMethod",method,"AudioStreamIndex",audio,"SubtitleStreamIndex",subtitle,"EventName","TimeUpdate","PlaybackStartTimeTicks",0);
     }
     private void report(String endpoint,long pos) {
@@ -507,6 +529,7 @@ public final class PlayerActivity extends Activity {
         return true;
     }
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
+        if(ServerNotice.key(this,e)) {menuPress.cancel();return true;}
         if(chrome!=null&&menuPress.handle(e,chrome.getVisibility()==View.VISIBLE,()-> { if(player!=null) player.pause(); },key-> {
             showChrome(true);
             if(!live&&(key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT)) chrome.timeline.requestFocus();
@@ -542,9 +565,15 @@ public final class PlayerActivity extends Activity {
     @Override protected void onSaveInstanceState(Bundle state) { state.putLong("position",position()); state.putInt("audioStreamIndex",audio); state.putString("mediaSourceId",sourceId); super.onSaveInstanceState(state); }
     @Override protected void onStop() { super.onStop(); release(); finish(); }
     private void release() {
-        if(released) return; released=true; if(bufferBar!=null) bufferBar.setVisibility(View.GONE); generation++; handler.removeCallbacksAndMessages(null); cleanupSession();
+        if(released) return; released=true; if(bufferBar!=null) bufferBar.setVisibility(View.GONE); generation++; handler.removeCallbacksAndMessages(null);
+        if(remotePlayback!=null) {remotePlayback.close();remotePlayback=null;}
+        if(serverNotice!=null)serverNotice.close();
+        if(noticeDuck!=null)noticeDuck.close();
+        // Cancel obsolete loads before queuing the final stop report and stream cleanup.
+        // Otherwise cancelAll can race with those freshly queued requests.
+        if(api!=null)api.http.dispatcher().cancelAll();network.shutdownNow();cleanupSession();
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
-        api.http.dispatcher().cancelAll(); network.shutdownNow(); app.playing=false; getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        app.playing=false; getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         app.reports.execute(()->app.channels.refresh(null));
     }
     @Override protected void onDestroy() { release(); super.onDestroy(); }

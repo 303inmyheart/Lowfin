@@ -14,7 +14,7 @@ final class LowfinDialog {
     static AlertDialog.Builder builder(Context context,int preferredWidth) {
         return new AlertDialog.Builder(context,R.style.LowfinDialogTheme) {
             @Override public AlertDialog create() {
-                AlertDialog dialog=super.create(); View decor=dialog.getWindow().getDecorView();
+                AlertDialog dialog=super.create();dialog.setOnKeyListener((d,key,event)->ServerNotice.key(context,event)); View decor=dialog.getWindow().getDecorView();
                 decor.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
                     public void onViewAttachedToWindow(View view) { style(dialog,preferredWidth); }
                     public void onViewDetachedFromWindow(View view) {}
@@ -59,8 +59,45 @@ final class LowfinDialog {
             for(int i=0;i<list.getChildCount();i++) textStyle(list.getChildAt(i));
             list.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)-> { for(int i=0;i<list.getChildCount();i++) textStyle(list.getChildAt(i)); });
         }
+        legacyContent(dialog,title,buttons);
         centerTexts(window.getDecorView());
         fitContent(dialog,width,preferredWidth>0);
+    }
+    private static void legacyContent(AlertDialog dialog,View title,java.util.List<Button> buttons) {
+        if(android.os.Build.VERSION.SDK_INT>28)return;
+        Context context=dialog.getContext();View decor=dialog.getWindow().getDecorView();
+        View content=decor.findViewById(android.R.id.content);
+        if(!(content instanceof ViewGroup))return;
+        View body=dialog.getListView(),previous=dialog.getCurrentFocus(),actions=buttons.isEmpty()?null:(View)buttons.get(0).getParent();
+        if(body==null) {
+            View custom=decor.findViewById(context.getResources().getIdentifier("custom","id","android"));
+            if(custom instanceof FrameLayout&&((FrameLayout)custom).getChildCount()==1)body=((FrameLayout)custom).getChildAt(0);
+            else {
+                View message=decor.findViewById(android.R.id.message);
+                if(message!=null&&message.getVisibility()==View.VISIBLE)body=message;
+            }
+        }
+        if(body==null)body=new FrameLayout(context);
+        if(body.getParent() instanceof ViewGroup)((ViewGroup)body.getParent()).removeView(body);
+        if(!(body instanceof ScrollView)&&!(body instanceof AbsListView)) {
+            ScrollView scroll=new ScrollView(context);scroll.setFillViewport(false);scroll.addView(body,new ScrollView.LayoutParams(-1,-2));body=scroll;
+        }
+        body.setDefaultFocusHighlightEnabled(false);
+        if(body instanceof ScrollView&&((ScrollView)body).getChildCount()==1) ((ScrollView)body).getChildAt(0).setLayoutParams(new FrameLayout.LayoutParams(-1,-2));
+        if(title!=null&&title.getParent() instanceof ViewGroup) ((ViewGroup)title.getParent()).removeView(title);
+        if(title instanceof TextView) {
+            TextView label=(TextView)title;label.setTextColor(Color.WHITE);label.setTextSize(18);label.setTypeface(android.graphics.Typeface.DEFAULT,android.graphics.Typeface.NORMAL);
+            label.setSingleLine(false);label.setMaxLines(Integer.MAX_VALUE);label.setEllipsize(null);label.setBackground(null);label.setPadding(0,0,0,0);label.setMinimumHeight(0);
+        }
+        if(actions!=null&&actions.getParent() instanceof ViewGroup) ((ViewGroup)actions.getParent()).removeView(actions);
+        ViewGroup host=(ViewGroup)content;host.removeAllViews();LegacyDialogPanel panel=new LegacyDialogPanel(context,title,body,actions);host.addView(panel,new ViewGroup.LayoutParams(-1,-2));
+        View scrollBody=body;
+        panel.post(()-> {
+            if(!dialog.isShowing())return;
+            if(previous!=null&&previous.isShown()&&previous.requestFocus())return;
+            if(panel.findFocus()!=null)return;
+            for(View choice:scrollBody.getFocusables(View.FOCUS_FORWARD))if(choice.isEnabled()&&choice.isShown()&&choice.requestFocus())break;
+        });
     }
     static void refit(AlertDialog dialog) {Context context=dialog.getContext();fitContent(dialog,Math.min(Ui.dp(context,480),context.getResources().getDisplayMetrics().widthPixels-Ui.dp(context,48)),false);}
     private static void fitContent(AlertDialog dialog,int cap,boolean fixedWidth) {
@@ -90,7 +127,7 @@ final class LowfinDialog {
         View content=decor.findViewById(android.R.id.content);
         if(content instanceof ViewGroup) {
             ViewGroup parent=(ViewGroup)content;
-            if(parent.getChildCount()==1&&!(parent.getChildAt(0) instanceof DialogViewport)) {
+            if(parent.getChildCount()==1&&!(parent.getChildAt(0) instanceof DialogViewport)&&!(parent.getChildAt(0) instanceof LegacyDialogPanel)) {
                 View child=parent.getChildAt(0);parent.removeView(child);DialogViewport viewport=new DialogViewport(context);viewport.addView(child,new FrameLayout.LayoutParams(-1,-2));parent.addView(viewport,new ViewGroup.LayoutParams(-1,-2));
             }
         }
@@ -114,7 +151,7 @@ final class LowfinDialog {
         dialog.getWindow().setBackgroundDrawable(panel);dialog.getWindow().setDimAmount(.66f*(1-value/100f));
     }
     private static void centerTexts(View view) {
-        if(view instanceof TextView&&!(view instanceof EditText)) { TextView text=(TextView)view;text.setGravity(Gravity.CENTER);text.setTextAlignment(View.TEXT_ALIGNMENT_CENTER); }
+        if(view instanceof TextView&&!(view instanceof EditText)&&!(view instanceof CompoundButton)) { TextView text=(TextView)view;text.setGravity(Gravity.CENTER);text.setTextAlignment(View.TEXT_ALIGNMENT_CENTER); }
         if(view instanceof ViewGroup&&!(view instanceof AbsListView)) { ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++) centerTexts(group.getChildAt(i)); }
     }
     private static void textStyle(View view) {

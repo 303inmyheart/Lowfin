@@ -39,7 +39,7 @@ final class DiscoveryBanner extends FrameLayout {
     private final ViewTreeObserver.OnScrollChangedListener scroll=this::syncVisibility;
     private final ViewTreeObserver.OnGlobalLayoutListener layout=this::syncVisibility;
     DiscoveryBanner(android.content.Context context) {
-        super(context);app=(LowfinApp)context.getApplicationContext();setFocusable(true);setFocusableInTouchMode(true);setClickable(true);setDescendantFocusability(FOCUS_BLOCK_DESCENDANTS);
+        super(context);setDefaultFocusHighlightEnabled(false);app=(LowfinApp)context.getApplicationContext();setFocusable(true);setFocusableInTouchMode(true);setClickable(true);setDescendantFocusability(FOCUS_BLOCK_DESCENDANTS);
         setClipChildren(true);setClipToOutline(true);setBackground(Ui.background(0xff101012,0));
         backdrop=new BannerImage(context);backdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(.65f);backdrop.setColorFilter(new ColorMatrixColorFilter(matrix));addView(backdrop,new LayoutParams(-1,-1));
         View shade=new View(context);shade.setBackground(SmoothGradient.linear(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,0xf0101012,0x80101012,0xc0101012));addView(shade,new LayoutParams(-1,-1));

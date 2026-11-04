@@ -107,12 +107,14 @@ final class AppUpdater implements AutoCloseable {
     }
     static String hash(File file) throws Exception {MessageDigest digest=MessageDigest.getInstance("SHA-256");byte[] block=new byte[32768];int count;try(InputStream input=new FileInputStream(file)) {while((count=input.read(block))!=-1)digest.update(block,0,count);}StringBuilder result=new StringBuilder(64);for(byte value:digest.digest())result.append(String.format(java.util.Locale.ROOT,"%02x",value&255));return result.toString();}
     @SuppressWarnings("deprecation")
-    static Signature[] signers(PackageInfo info) {return Build.VERSION.SDK_INT>=28?(info.signingInfo==null?null:info.signingInfo.getApkContentsSigners()):info.signatures;}
+    static Signature[] signers(PackageInfo info) {return Build.VERSION.SDK_INT>=28&&info.signingInfo!=null?info.signingInfo.getApkContentsSigners():info.signatures;}
     static boolean sameSigners(Signature[] installed,Signature[] archive) {if(installed==null||archive==null||installed.length==0||installed.length!=archive.length)return false;return new HashSet<>(Arrays.asList(installed)).equals(new HashSet<>(Arrays.asList(archive)));}
     @SuppressWarnings("deprecation")
     long verify(File file,UpdateRelease candidate) throws Exception {
         if(file.length()!=candidate.size||file.length()>UpdateRelease.MAX_APK||!hash(file).equals(candidate.sha256))throw new SecurityException("APK digest mismatch");
-        int flags=Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:PackageManager.GET_SIGNATURES;
+        // Some Fire OS builds expose SigningInfo for installed apps, but only legacy
+        // signatures for archives. Request both; compare the complete signer sets.
+        int flags=PackageManager.GET_SIGNATURES|(Build.VERSION.SDK_INT>=28?PackageManager.GET_SIGNING_CERTIFICATES:0);
         PackageInfo archive=app.getPackageManager().getPackageArchiveInfo(file.getPath(),flags),installed=app.getPackageManager().getPackageInfo(app.getPackageName(),flags);
         if(archive==null||!app.getPackageName().equals(archive.packageName)||archive.applicationInfo==null||archive.applicationInfo.minSdkVersion>Build.VERSION.SDK_INT||!sameSigners(signers(installed),signers(archive)))throw new SecurityException("APK package/signature mismatch");
         long code=Build.VERSION.SDK_INT>=28?archive.getLongVersionCode():archive.versionCode;

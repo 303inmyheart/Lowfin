@@ -23,13 +23,27 @@ final class ScrollMotion {
             }
         };
     }
-    static void position(RecyclerView view,int position,boolean alignStart,Runnable settled) { position(view,position,alignStart,settled,1); }
-    private static void position(RecyclerView view,int position,boolean alignStart,Runnable settled,int correction) {
+    static void position(RecyclerView view,int position,boolean alignStart,Runnable settled) { position(view,position,alignStart,settled,1,true); }
+    static void snap(RecyclerView view,int position,boolean alignStart,Runnable settled) { position(view,position,alignStart,settled,0,false); }
+    static void afterLayout(RecyclerView view,int target,boolean alignStart,Runnable settled) {
+        Object old=view.getTag(R.id.scroll_animation_token);int token=old instanceof Integer?(Integer)old+1:1;
+        view.setTag(R.id.scroll_animation_token,token);view.stopScroll();
+        view.getViewTreeObserver().addOnPreDrawListener(new android.view.ViewTreeObserver.OnPreDrawListener() {
+            @Override public boolean onPreDraw() {
+                if(!Integer.valueOf(token).equals(view.getTag(R.id.scroll_animation_token))) {remove();return true;}
+                if(view.isLayoutRequested())return true;
+                remove();position(view,target,alignStart,settled,0,true);return true;
+            }
+            private void remove() {if(view.getViewTreeObserver().isAlive())view.getViewTreeObserver().removeOnPreDrawListener(this);}
+        });
+        view.invalidate();
+    }
+    private static void position(RecyclerView view,int position,boolean alignStart,Runnable settled,int correction,boolean animate) {
         Object old=view.getTag(R.id.scroll_animation_token); int token=old instanceof Integer?(Integer)old+1:1; view.setTag(R.id.scroll_animation_token,token);
         view.stopScroll();
         if(!(view.getLayoutManager() instanceof LinearLayoutManager)||view.getAdapter()==null||view.getAdapter().getItemCount()==0) { settled.run(); return; }
         LinearLayoutManager layout=(LinearLayoutManager)view.getLayoutManager(); int target=Math.max(0,Math.min(view.getAdapter().getItemCount()-1,position));
-        if(!enabled(view)||!view.isLaidOut()) {
+        if(!animate||!enabled(view)||!view.isLaidOut()) {
             if(alignStart) layout.scrollToPositionWithOffset(target,0); else view.scrollToPosition(target);
             settled.run(); return;
         }
@@ -46,7 +60,7 @@ final class ScrollMotion {
                     private boolean done;
                     private void finish() { if(done) return; done=true; view.removeOnScrollListener(this); if(view.isAttachedToWindow()&&Integer.valueOf(token).equals(view.getTag(R.id.scroll_animation_token))) {
                         View child=layout.findViewByPosition(target);
-                        if(alignStart&&correction>0&&(child==null||layout.getDecoratedTop(child)!=view.getPaddingTop())) { position(view,target,true,settled,correction-1);return; }
+                        if(alignStart&&correction>0&&(child==null||layout.getDecoratedTop(child)!=view.getPaddingTop())) { position(view,target,true,settled,correction-1,animate);return; }
                         settled.run();
                     } }
                     @Override public void onScrollStateChanged(RecyclerView recycler,int state) { if(state==RecyclerView.SCROLL_STATE_IDLE) finish(); }

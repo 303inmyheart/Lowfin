@@ -18,7 +18,24 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private final List<Integer> order=new ArrayList<>();
     private int libraries=-1,banner=-1;
     private DiscoveryHistory discovery=new DiscoveryHistory();
-    private boolean initialBannerViewport=true;
+    private boolean initialBannerViewport=true,paired;
+    private int departingShelf=-1;
+    private final int[] pairHeights=new int[2];
+    private boolean pairLayoutPosted;
+    Runnable pairSizeChanged=()->{};
+    boolean pairedViewport(int row) {
+        return row>=0&&row<2&&banner>=0&&!initialBannerViewport&&!hidden(0)&&!hidden(1)&&Math.abs(position(0)-position(1))==1;
+    }
+    int pairHeight() {return pairHeights[0]>0&&pairHeights[1]>0?pairHeights[0]+pairHeights[1]:Ui.dp(owner.getContext(),440);}
+    private void pairMeasured(int row,int height) {
+        if(row<0||row>1||height<=0||pairHeights[row]==height)return;pairHeights[row]=height;
+        if(paired&&owner!=null&&!pairLayoutPosted) {pairLayoutPosted=true;owner.post(()-> {pairLayoutPosted=false;if(paired)pairSizeChanged.run();});}
+    }
+    private int shelfVisibility(int row) {
+        if(row>=0&&hidden(row))return View.GONE;
+        if(paired&&row>=2)return scrollingShelf&&row==departingShelf?View.VISIBLE:View.INVISIBLE;
+        return focusedShelf<0||row==focusedShelf||scrollingShelf?View.VISIBLE:View.INVISIBLE;
+    }
     private BooleanSupplier bannerAllowed=()->true;
     void bannerAllowed(BooleanSupplier allowed) {bannerAllowed=allowed;}
     boolean banner(int row) {return row>=0&&row==banner;}
@@ -80,7 +97,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private RecyclerView owner;
     private boolean entryPending=true;
     private boolean scrollingShelf;
-    private int pendingRow=-1,pendingColumn,lastColumn,focusedShelf=-1;
+    private int pendingRow=-1,pendingColumn,lastColumn,focusedShelf=-1,navigationRow=-1;
     private final Map<Integer,Integer> selectedColumns=new HashMap<>();
     private final Map<Integer,String> publishedLabels=new HashMap<>();
     private Runnable openMenu=()->{};
@@ -96,9 +113,18 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     @Override public void onAttachedToRecyclerView(RecyclerView recycler) {
         owner=recycler;
         recycler.addOnScrollListener(new RecyclerView.OnScrollListener() {
-            @Override public void onScrolled(RecyclerView view,int dx,int dy) { updateHeadings(); }
+            @Override public void onScrolled(RecyclerView view,int dx,int dy) {
+                updateHeadings();
+                if(paired&&pendingRow>=0) {
+                    Shelf target=(Shelf)view.findViewHolderForAdapterPosition(position(pendingRow));
+                    if(target!=null)focusPending(target);
+                }
+            }
         });
-        recycler.addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or,ob)->updateHeadings());
+        recycler.addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or,ob)-> {
+            updateHeadings();
+            if(pendingRow>=0)recycler.post(()-> {if(owner==recycler&&pendingRow>=0) {Shelf target=(Shelf)recycler.findViewHolderForAdapterPosition(position(pendingRow));if(target!=null)focusPending(target);}});
+        });
         recycler.addItemDecoration(new RecyclerView.ItemDecoration() {
             @Override public void getItemOffsets(android.graphics.Rect out,View view,RecyclerView parent,RecyclerView.State state) {
                 if(parent.getChildAdapterPosition(view)==getItemCount()-1) out.bottom=Ui.dp(parent.getContext(),244);
@@ -106,14 +132,16 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         });
     }
     void setFocusedShelf(int row) {
-        int previous=focusedShelf;
+        int previous=focusedShelf;boolean nextPair=pairedViewport(row);
+        departingShelf=nextPair&&owner!=null&&ScrollMotion.enabled(owner)?feature(previous)?previous:scrollingShelf?departingShelf:-1:-1;
+        paired=nextPair;
         focusedShelf=feature(row)&&I18n.preferences().getBoolean("singleShelf",true)?row:-1;
         if(owner!=null&&previous!=focusedShelf&&ScrollMotion.enabled(owner)) scrollingShelf=true;
         updateShelfVisibility();
         if(owner!=null&&previous!=focusedShelf&&!ScrollMotion.enabled(owner)) { View child=owner.getLayoutManager().findViewByPosition(position(focusedShelf));if(child!=null) Motion.enter(child,position(row)>position(previous)); }
     }
     private void updateShelfVisibility() {
-        if(owner!=null) for(int i=0;i<owner.getChildCount();i++) { View child=owner.getChildAt(i); int index=logical(owner.getChildAdapterPosition(child)); child.setVisibility(index>=0&&hidden(index)?View.GONE:focusedShelf<0||index==focusedShelf||scrollingShelf?View.VISIBLE:View.INVISIBLE); shelfHeading((Shelf)owner.getChildViewHolder(child),index); }
+        if(owner!=null) for(int i=0;i<owner.getChildCount();i++) { View child=owner.getChildAt(i); int index=logical(owner.getChildAdapterPosition(child)); child.setVisibility(shelfVisibility(index)); shelfHeading((Shelf)owner.getChildViewHolder(child),index); }
     }
     private final android.graphics.Rect headingBounds=new android.graphics.Rect();
     private void updateHeadings() {
@@ -136,23 +164,41 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         // Explicit navigation must win over a continue row which finishes loading later.
         if(row!=firstRow()) {entryPending=false;initialBannerViewport=false;}
         if(hidden(row)) { int target=nextRow(row,1); move.accept(target>=0?target:nextRow(row,-1)); return; }
-        pendingRow=row;
+        pendingRow=row;navigationRow=row;
+        for(int i=0;i<owner.getChildCount();i++) {
+            Shelf existing=(Shelf)owner.getChildViewHolder(owner.getChildAt(i));
+            if(existing.list!=null) {
+                boolean active=logical(existing.getBindingAdapterPosition())==row;
+                existing.list.setDescendantFocusability(active?ViewGroup.FOCUS_AFTER_DESCENDANTS:ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+                if(!active) {((ShelfList)existing.list).cancelEntry();existing.list.clearFocus();}
+            }
+        }
         pendingColumn=Math.min(selectedColumns.getOrDefault(row,lastColumn),Math.max(0,rows.get(row).size()));
         // Reveal the destination before requesting its card; a previous single shelf may hide it.
         List<JSONObject> items=rows.get(row); focused.accept(items.isEmpty()?null:items.get(Math.min(pendingColumn,items.size()-1)),row);
-        int viewport=initialBannerViewport&&banner>=0&&position(banner)==0&&row==firstRow()?position(banner):position(row);
-        ScrollMotion.position(owner,viewport,true,()-> { scrollingShelf=false; updateShelfVisibility(); if(owner!=null) { Shelf shelf=(Shelf)owner.findViewHolderForAdapterPosition(position(row)); if(shelf!=null) focusPending(shelf); } });
+        int viewport=paired?Math.min(position(0),position(1)):initialBannerViewport&&banner>=0&&position(banner)==0&&row==firstRow()?position(banner):position(row);
+        Runnable settled=()-> {scrollingShelf=false;departingShelf=-1;updateShelfVisibility();if(owner!=null) {Shelf shelf=(Shelf)owner.findViewHolderForAdapterPosition(position(row));if(shelf!=null)focusPending(shelf);}};
+        // Start only after the destination viewport has its final geometry.
+        // Keep focus pending until the single motion completes.
+        scrollingShelf=true;
+        if(owner.isLayoutRequested()&&ScrollMotion.enabled(owner))ScrollMotion.afterLayout(owner,viewport,true,settled);
+        else ScrollMotion.position(owner,viewport,true,settled);
         owner.post(()-> { Shelf shelf=(Shelf)owner.findViewHolderForAdapterPosition(position(row)); if(shelf!=null) focusPending(shelf); });
     }
     private void focusPending(Shelf shelf) {
-        if(pendingRow<0||logical(shelf.getBindingAdapterPosition())!=pendingRow||owner.hasPendingAdapterUpdates()) return;
+        if(pendingRow<0||logical(shelf.getBindingAdapterPosition())!=pendingRow||owner.hasPendingAdapterUpdates()||owner.isLayoutRequested()) return;
+        // The paired shelves keep fixed geometry during the movement, and the home
+        // layout manager suppresses focus-induced scrolling. Highlight an available
+        // target after layout without waiting for the animation to finish.
+        boolean earlyPair=paired&&scrollingShelf&&shelf.list!=null;
+        if(scrollingShelf&&!earlyPair)return;
         // Moving focus into a row still passing through the viewport can recycle that
         // very card before vertical motion finishes, losing the pending selection.
-        if(owner.getScrollState()!=RecyclerView.SCROLL_STATE_IDLE||owner.getLayoutManager().isSmoothScrolling()) return;
+        if(!earlyPair&&(owner.getScrollState()!=RecyclerView.SCROLL_STATE_IDLE||owner.getLayoutManager().isSmoothScrolling())) return;
         if(shelf.banner!=null) {pendingRow=-1;shelf.banner.requestFocus();return;}
         if(entryPending&&rows.get(pendingRow).isEmpty()) return;
         int column=pendingColumn; pendingRow=-1;
-        ((ShelfList)shelf.list).requestCard(column);
+        ((ShelfList)shelf.list).enterCard(column);
     }
     void metadata(org.json.JSONObject response) {
         Map<String,JSONObject> changed=new HashMap<>(); org.json.JSONArray values=Json.array(response,"changes");
@@ -253,16 +299,17 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         list.setNestedScrollingEnabled(false); list.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
         box.addView(list,new LinearLayout.LayoutParams(-1,Ui.dp(c,194)));
         box.setLayoutParams(new RecyclerView.LayoutParams(-1,-2)); Shelf shelf=new Shelf(box,label,empty,list);
-        ((ShelfList)list).afterLayout=()->focusPending(shelf); box.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)->shelfHeading(shelf,logical(shelf.getBindingAdapterPosition()))); return shelf;
+        ((ShelfList)list).afterLayout=()->focusPending(shelf); box.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)-> {int row=logical(shelf.getBindingAdapterPosition());shelfHeading(shelf,row);pairMeasured(row,b-t);}); return shelf;
     }
     @Override public void onBindViewHolder(Shelf shelf,int adapterPosition) {
-        int index=logical(adapterPosition);
+        int index=logical(adapterPosition);shelf.itemView.setVisibility(shelfVisibility(index));
         if(shelf.banner!=null) {
             shelf.banner.bind(discovery,item->{rows.set(index,new ArrayList<>(Collections.singletonList(item)));if(shelf.banner.hasFocus()) focused.accept(item,index);},item->play.accept(item,index),openMenu,()->focused.accept(discovery.current(),index),bannerAllowed);
             shelf.banner.post(()->focusPending(shelf));return;
         }
         if(shelf.key!=null) positions.put(shelf.key,shelf.list.getLayoutManager().onSaveInstanceState());
-        shelf.itemView.setVisibility(hidden(index)?View.GONE:focusedShelf<0||index==focusedShelf||scrollingShelf?View.VISIBLE:View.INVISIBLE);
+        shelf.itemView.setVisibility(shelfVisibility(index));
+        shelf.list.setDescendantFocusability(navigationRow<0||navigationRow==index?ViewGroup.FOCUS_AFTER_DESCENDANTS:ViewGroup.FOCUS_BLOCK_DESCENDANTS);
         shelf.key="home-row-"+index; Ui.textIfChanged(shelf.label,labels.get(index)); shelfHeading(shelf,index);
         ViewGroup.LayoutParams rowSize=shelf.itemView.getLayoutParams(); int rowHeight=hidden(index)?0:ViewGroup.LayoutParams.WRAP_CONTENT;if(rowSize.height!=rowHeight){rowSize.height=rowHeight;shelf.itemView.setLayoutParams(rowSize);}
         List<JSONObject> data=rows.get(index); shelf.empty.setVisibility(data.isEmpty()&&index<2?View.VISIBLE:View.GONE); Ui.textIfChanged(shelf.empty,I18n.text("Hier erscheinen deine ")+(index==0?I18n.text("angefangenen Filme und Folgen"):index==1?I18n.text("nächsten Folgen"):index>=2?labels.get(index)+I18n.text("-Filme"):I18n.text("neuen Filme und Serien")));
@@ -277,11 +324,13 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         int height=index<2||libraries(index)?180:204; for(JSONObject item:data) { double ratio=index<2||libraries(index)?16.0/9:Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
         ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); int pixels=Ui.dp(shelf.list.getContext(),height);if(dimensions.height!=pixels){dimensions.height=pixels;shelf.list.setLayoutParams(dimensions);}
         if(positions.containsKey(shelf.key)) shelf.list.getLayoutManager().onRestoreInstanceState(positions.get(shelf.key));
+        else ((LinearLayoutManager)shelf.list.getLayoutManager()).scrollToPositionWithOffset(0,0);
         shelf.list.post(()->focusPending(shelf));
     }
     @Override public void onViewAttachedToWindow(Shelf shelf) {
         int row=logical(shelf.getBindingAdapterPosition()); shelfHeading(shelf,row);
-        shelf.itemView.setVisibility(row>=0&&hidden(row)?View.GONE:focusedShelf<0||row==focusedShelf||scrollingShelf?View.VISIBLE:View.INVISIBLE);
+        if(shelf.list!=null)shelf.list.setDescendantFocusability(navigationRow<0||navigationRow==row?ViewGroup.FOCUS_AFTER_DESCENDANTS:ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        shelf.itemView.setVisibility(shelfVisibility(row));
         if(shelf.banner!=null) shelf.banner.post(()->focusPending(shelf));else shelf.list.post(()->focusPending(shelf));
     }
     @Override public void onViewRecycled(Shelf shelf) { if(shelf.banner!=null) return;if(shelf.key!=null) positions.put(shelf.key,shelf.list.getLayoutManager().onSaveInstanceState()); }
@@ -294,8 +343,20 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         Runnable afterLayout,openMenu;
         private int pendingCard=-1;
         private boolean recoveryPosted;
-        ShelfList(Context context) { super(context); }
-        @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) { super.onLayout(changed,left,top,right,bottom); focusCard(); if(afterLayout!=null) post(afterLayout); }
+        ShelfList(Context context) { super(context);setDefaultFocusHighlightEnabled(false); }
+        @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) { super.onLayout(changed,left,top,right,bottom); focusCard(); post(()-> {focusCard();if(afterLayout!=null)afterLayout.run();}); }
+        void cancelEntry() {pendingCard=-1;stopScroll();}
+        void enterCard(int position) {
+            pendingCard=position;
+            View ready=getLayoutManager()==null?null:getLayoutManager().findViewByPosition(position);
+            if(ready!=null&&!isLayoutRequested()&&!hasPendingAdapterUpdates()&&ready.getLeft()>=getPaddingLeft()&&ready.getRight()<=getWidth()-getPaddingRight()) {
+                stopScroll();if(ready.requestFocus()){pendingCard=-1;return;}
+            }
+            // A vertical shelf change restores its horizontal selection directly.
+            // Only deliberate Left/Right navigation should animate along this row.
+            ScrollMotion.snap(this,position,false,this::focusCard);
+            if(pendingCard>=0)post(this::focusCard);
+        }
         void requestCard(int position) {
             pendingCard=position; ScrollMotion.position(this,position,false,this::focusCard); focusCard(); if(pendingCard>=0) post(this::focusCard);
         }
@@ -305,7 +366,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             return card==null?0:Math.max(0,getChildAdapterPosition(card));
         }
         private void focusCard() {
-            if(pendingCard<0||hasPendingAdapterUpdates()||getLayoutManager()==null||getAdapter()==null||getAdapter().getItemCount()==0) return;
+            if(pendingCard<0||isLayoutRequested()||hasPendingAdapterUpdates()||getLayoutManager()==null||getAdapter()==null||getAdapter().getItemCount()==0) return;
             pendingCard=Math.min(pendingCard,getAdapter().getItemCount()-1);
             View next=getLayoutManager().findViewByPosition(pendingCard); if(next!=null&&next.requestFocus()) pendingCard=-1;
             // A row can restore its layout after an interrupted/replaced smooth scroll.
@@ -365,8 +426,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         }
         @Override public void onBindViewHolder(Card h,int index) {
             JSONObject j=data.get(index); h.cover.ratio(wide||j.optBoolean("Wide")?16.0/9:Artwork.ratio(j,true)); h.cover.crop(Artwork.crop(j,true)); boolean episode="Episode".equals(j.optString("Type"));
-            h.title.setText(episode?j.optString("SeriesName",j.optString("Name")):j.optString("Name"));
-            h.episode.setText(episode?Json.label(j):j.optString("ProductionYear","")+"  ·  "+j.optLong("RunTimeTicks")/600000000+" min");
+            Ui.textIfChanged(h.title,episode?j.optString("SeriesName",j.optString("Name")):j.optString("Name"));
+            Ui.textIfChanged(h.episode,episode?Json.label(j):j.optString("ProductionYear","")+"  ·  "+j.optLong("RunTimeTicks")/600000000+" min");
             long pos=Json.position(j),duration=j.optLong("RunTimeTicks")/10000;
             h.progress.setProgress(duration>0?(int)Math.min(1000,pos*1000/duration):0); h.progress.setVisibility("LowfinLibrary".equals(j.optString("Type"))?View.GONE:pos>0?View.VISIBLE:View.INVISIBLE);
             h.episode.setVisibility("LowfinLibrary".equals(j.optString("Type"))?View.GONE:View.VISIBLE);
@@ -384,9 +445,9 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             };
             if("More".equals(j.optString("Type"))||"LowfinLibrary".equals(j.optString("Type"))) { ConfirmPress.cancel(h.itemView); h.itemView.setOnKeyListener(navigation); h.itemView.setOnLongClickListener(null); }
             else ConfirmPress.bind(h.itemView,navigation,()-> { int position=h.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) actions.accept(data.get(position)); });
-            if("More".equals(j.optString("Type"))) { h.cover.badges("",0); h.cover.setTag(null); MoreArtwork arrow=new MoreArtwork(); h.cover.setImageDrawable(arrow); Accent.bind(h.cover,(view,color)-> { if(((android.widget.ImageView)view).getDrawable() instanceof MoreArtwork) ((MoreArtwork)((android.widget.ImageView)view).getDrawable()).color(color); }); h.episode.setText(I18n.text("Alle Titel")); } else { h.cover.setTag(R.id.accent_style,null); images.show(h.cover,j,wide||"Episode".equals(j.optString("Type"))); } h.itemView.setContentDescription((episode?j.optString("SeriesName")+" · ":"")+Json.label(j)); h.itemView.setOnClickListener(v-> { int position=h.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) open.accept(data.get(position)); });
+            if("More".equals(j.optString("Type"))) { h.cover.badges("",0); h.cover.setTag(null); MoreArtwork arrow=new MoreArtwork(); h.cover.setImageDrawable(arrow); Accent.bind(h.cover,(view,color)-> { if(((android.widget.ImageView)view).getDrawable() instanceof MoreArtwork) ((MoreArtwork)((android.widget.ImageView)view).getDrawable()).color(color); }); Ui.textIfChanged(h.episode,I18n.text("Alle Titel")); } else { h.cover.setTag(R.id.accent_style,null); images.show(h.cover,j,wide||"Episode".equals(j.optString("Type"))); } String accessibility=(episode?j.optString("SeriesName")+" · ":"")+Json.label(j);if(!android.text.TextUtils.equals(h.itemView.getContentDescription(),accessibility))h.itemView.setContentDescription(accessibility); h.itemView.setOnClickListener(v-> { int position=h.getBindingAdapterPosition(); if(position!=RecyclerView.NO_POSITION) open.accept(data.get(position)); });
         }
-        @Override public void onViewRecycled(Card h) { ConfirmPress.cancel(h.itemView); h.cover.badges("",0); h.cover.setTag(null); h.cover.setImageDrawable(null); h.itemView.animate().cancel(); }
+        @Override public void onViewRecycled(Card h) { ConfirmPress.cancel(h.itemView); h.cover.badges("",0); h.cover.setTag(null); h.cover.setImageDrawable(null); Motion.reset(h.itemView); }
     }
     static final class MoreArtwork extends android.graphics.drawable.Drawable {
         private final android.graphics.Paint paint=new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);

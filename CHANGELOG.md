@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.5 — FIRE OS FIX
+
+**FIRE OS FIX:** Fix stale/flashing focus outlines, inconsistent or clipped dialogs, switch rendering and in-app update signature checks on older Fire TV / Fire OS devices.
+
+- Reuse memoized artwork disk hashes from immutable image identities before building full URLs, preserving existing cache filenames, tag invalidation and fallback rules. Skip unchanged home/cast card text and accessibility-description writes during rebinding.
+
+- Redraw the window during short focus animations and optional border pulses on legacy TV renderers to clear stale focus pixels. Reset cancelled transforms, alpha and pressed state when recycling media/cast cards.
+
+- Keep the departing feature shelf visible while scrolling back to the paired Continue watching/Next up viewport, hiding it only after the transition settles.
+
+- Focus Continue watching during the paired-shelf scroll rather than waiting for deceleration to finish. Fit all feature-row rating providers into one line using proportional text, icon and spacing sizes when required by the available display width; retain stable cached-score slots.
+
+- Restore a home shelf’s horizontal selection directly during vertical navigation; retain animated scrolling for deliberate Left/Right input and reset unremembered recycled row offsets.
+
+- Use the same bounded Lowfin dialog frame for custom controls, selection lists and messages on older TV frameworks, removing manufacturer-specific panel decorations while preserving selection, input and action callbacks. Clear inherited action-button width constraints, weights and margins.
+
+- Begin home scroll animations after the destination viewport has been laid out when switching between banner, paired shelves and recommendation viewports, avoiding an old-size scroll followed by a reverse correction. Normalize custom-content dialog layout on older TV frameworks with bounded title/body/actions, retaining native controls and callbacks.
+
+- Center the adjacent Continue watching and Next up shelves as a two-row home viewport after leaving the discovery banner, preserving row/card navigation and saved custom ordering. Hide other home shelves in this viewport and derive its height from measured rows. Retire cached card focus shapes on older Android renderers and suppress redundant native focus highlights for custom cards/banner.
+
+- Keep complete dashboard message/header text without ellipses or protocol truncation, with a bounded automatically scrolling reading area (page advances when animations are off). Consume the full OK/Enter press, repeats and release to dismiss only the notice, including over native Lowfin dialogs.
+
+- Lower only the active player audio to 25% for three seconds when a dashboard notification cue starts, then restore its previous level. Keep mute/user volume changes, repeated messages, player replacement and shutdown safe. Scale notice display time with word/character count (4–60 seconds), treating an explicit server timeout as a minimum within that cap.
+
+- Play the optional dashboard notification cue from a bundled short audio sample through the TV media output, without audio-focus requests or volume changes. Allow time for asynchronous loading and output buffering instead of releasing a system tone immediately.
+
+- Keep native switch semantics with explicitly drawn, accent-aware indicators and unclipped focus outlines in Fire OS dialogs; retain start-aligned switch labels. Restore stored metadata/artwork counts and database/artwork/total sizes in Library and cache without rescanning covers; disable Stop preloading when no preload is running.
+
+- Display Jellyfin dashboard messages as a compact native Lowfin notice in the upper corner, both while browsing and during playback. Preserve D-pad focus and playback, bound long text/display times, replace older notices, and clean up on leaving the screen. Add a quiet optional notification tone, off by default, under Appearance → Dashboard notifications with English/German text.
+
+- Support Jellyfin dashboard pause, resume and stop through the authenticated playback-session WebSocket, with keep-alives, reconnects and lifecycle cleanup. Show season artwork and any season overview above the episode grid.
+- Retire old sidebar focus shapes and native button elevation animations on focus changes to avoid stale outline fragments on older Fire OS renderers.
+- Accept verified legacy archive signer information on Fire OS builds that omit modern SigningInfo, retaining exact signer, checksum, package and version validation.
+
 ## 1.4
 
 - Anonymize repository/test documentation and source archives, retire internal diagnostics and the obsolete drawer screenshot, preserve the release APK/signature, and add publication privacy checks.

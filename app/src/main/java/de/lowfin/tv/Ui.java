@@ -26,8 +26,17 @@ final class Ui {
             GradientDrawable shape=(GradientDrawable)view.getBackground();shape.setColor(fill);shape.setStroke(stroke==0?0:2,stroke);
         } else view.setBackground(background(fill,stroke));
     }
+    static void redrawFocus(View view) {
+        if(android.os.Build.VERSION.SDK_INT<=28)view.getRootView().invalidate();
+    }
     static void focus(View v) {
         v.setFocusable(true); v.setFocusableInTouchMode(true); v.setClickable(true); v.setBackground(background(PANEL,0));
+        if(android.os.Build.VERSION.SDK_INT<=28) {
+            v.setDefaultFocusHighlightEnabled(false);
+            // Transform/alpha damage on old TV HWUI can omit the former outline's
+            // pixels. Redraw the window during this short animation, not continuously.
+            v.animate().setUpdateListener(animation->redrawFocus(v));
+        }
         Accent.bind(v,(view,color)->focusBackground(view,view.isFocused()?0xff383838:PANEL,view.isFocused()?color:0));
         v.setOnFocusChangeListener((view,focused)-> {
             focusBackground(view,focused?0xff383838:PANEL,focused?Accent.color:0);
@@ -41,24 +50,39 @@ final class Ui {
         view.setOnFocusChangeListener((v,focused)-> { focusBackground(v,focused?0xff383838:PANEL,focused?Accent.color:0); v.animate().withEndAction(null).cancel(); v.setScaleX(1); v.setScaleY(1); v.setAlpha(1); });
     }
     static void cardFocus(View v) {
-        focus(v); v.setBackground(background(Color.TRANSPARENT,0));
-        Accent.bind(v,(view,color)->focusBackground(view,view.isFocused()?0xff242427:Color.TRANSPARENT,view.isFocused()?color:0));
+        focus(v);v.setDefaultFocusHighlightEnabled(false); v.setBackground(background(Color.TRANSPARENT,0));
+        Accent.bind(v,(view,color)->cardBackground(view,view.isFocused()?0xff242427:Color.TRANSPARENT,view.isFocused()?color:0));
         v.setOnFocusChangeListener((view,focused)-> {
-            focusBackground(view,focused?0xff242427:Color.TRANSPARENT,focused?Accent.color:0);
+            cardBackground(view,focused?0xff242427:Color.TRANSPARENT,focused?Accent.color:0);
             view.animate().withEndAction(null).cancel();
             if(view.getContext().getSharedPreferences("settings",0).getBoolean("animations",true)) view.animate().alpha(focused?1f:.92f).setDuration(110).start();
             else view.setAlpha(1f);
             Motion.focus(view,focused,true);
         });
     }
+    private static void cardBackground(View view,int fill,int stroke) {
+        if(android.os.Build.VERSION.SDK_INT<=28) {
+            view.setBackground(background(fill,stroke));
+            if(view.getParent() instanceof View)((View)view.getParent()).invalidate();
+            redrawFocus(view);
+        } else focusBackground(view,fill,stroke);
+    }
     static void navigation(Button button,boolean selected) {
         button.setTextSize(13); button.setTextColor(selected?Color.WHITE:MUTED);
+        button.setStateListAnimator(null);button.setElevation(0);
         button.setBackground(background(Color.TRANSPARENT,0));
-        Accent.bind(button,(view,color)->focusBackground(view,view.isFocused()?0xff38383c:Color.TRANSPARENT,view.isFocused()?color:0));
+        Accent.bind(button,(view,color)->navigationBackground(view,color));
         button.setOnFocusChangeListener((view,focused)-> {
-            focusBackground(view,focused?0xff38383c:Color.TRANSPARENT,focused?Accent.color:0);
+            navigationBackground(view,Accent.color);
             button.setTextColor(focused||selected?Color.WHITE:MUTED); view.animate().withEndAction(null).cancel(); view.setScaleX(1); view.setScaleY(1); view.setAlpha(1); view.setPressed(false);
         });
+    }
+    private static void navigationBackground(View view,int color) {
+        // Replacing the small shape also retires cached HWUI stroke paths on older
+        // Fire OS renderers. Redraw the transparent row's parent to erase old rings.
+        view.setBackground(background(view.isFocused()?0xff38383c:Color.TRANSPARENT,view.isFocused()?color:0));
+        if(view.getParent() instanceof View)((View)view.getParent()).invalidate();
+        redrawFocus(view);
     }
     static Button quiet(Context c,String label,Runnable action) {
         Button button=button(c,label,action); button.setBackground(background(Color.TRANSPARENT,0));

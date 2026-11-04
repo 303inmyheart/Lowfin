@@ -63,7 +63,7 @@ final class FocusBackground extends GradientDrawable implements Runnable {
     }
     @Override public void run() {
         if(!enabled()) {stop();return;}
-        pulse();scheduleSelf(this,SystemClock.uptimeMillis()+FRAME_MS);
+        pulse();View owner=host();if(owner!=null)Ui.redrawFocus(owner);scheduleSelf(this,SystemClock.uptimeMillis()+FRAME_MS);
     }
     @Override public boolean setVisible(boolean visible,boolean restart) {
         if(!visible) stop();
