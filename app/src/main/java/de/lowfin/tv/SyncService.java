@@ -21,7 +21,7 @@ public final class SyncService extends Service {
     }
     @Override public int onStartCommand(Intent intent,int flags,int startId) {
         startForeground(1,notification(I18n.text("Metadaten werden geladen")));
-        if(app.account==null||app.clearingCache) { stopSelf(); return START_NOT_STICKY; }
+        if(app.account==null||app.clearingCache||PrecacheSetup.pending(app.settings)) { stopSelf(); return START_NOT_STICKY; }
         if(!app.syncing) { app.syncSummary=I18n.text("Bibliothekscache wird geprüft …"); app.syncing=true; completion=new CountDownLatch(1);app.syncIdle=completion;worker.execute(this::sync); }
         return START_NOT_STICKY;
     }

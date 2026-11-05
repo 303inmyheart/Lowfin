@@ -49,6 +49,12 @@ final class Library extends SQLiteOpenHelper {
                 String id=row.optString("itemId"); JSONObject state=row.optJSONObject("state"); companionState(id,state);
                 JSONObject accepted=companionState(id);
                 if(!CompanionPolicy.active(state)&&accepted!=null&&accepted.optLong("revision")==state.optLong("revision")&&accepted.optLong("sequence",-1)==state.optLong("sequence",-1)) {
+                    // Most native resume states already match the fresh Jellyfin
+                    // shelf. Avoid decoding/re-encoding full detail blobs and
+                    // rewriting their freshness/indexes for an unchanged position.
+                    try(Cursor nativeState=db.rawQuery("SELECT position,played FROM items WHERE id=?",new String[]{id})) {
+                        if(!nativeState.moveToFirst()||nativeState.getLong(0)==state.optLong("resumeTicks")&&nativeState.getInt(1)==(state.optBoolean("played")?1:0)) continue;
+                    }
                     JSONObject metadata=item(id); if(metadata!=null) { JSONObject data=Json.object(metadata,"UserData"); data.put("PlaybackPositionTicks",state.optLong("resumeTicks")); data.put("Played",state.optBoolean("played")); metadata.put("UserData",data); put(db,metadata,System.currentTimeMillis()); }
                 }
             }

@@ -101,9 +101,24 @@ public final class MainActivity extends Activity {
         if(serverNotice!=null) {serverNotice.close();serverNotice=null;}
         messageApi=null;
     }
-    @Override protected void onResume() { super.onResume();startServerMessages();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run(); }
+    @Override protected void onResume() { super.onResume();startServerMessages();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run();offerPrecache(); }
     @Override protected void onPause() { stopServerMessages();if(liveGuide!=null)liveGuide.pause();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
-    @Override protected void onDestroy() { stopServerMessages();if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    @Override protected void onDestroy() { if(precacheChoice!=null)precacheChoice.dismiss();stopServerMessages();if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
+    private AlertDialog precacheChoice;
+    private void offerPrecache() {
+        if(app.account==null||!PrecacheSetup.pending(app.settings)||precacheChoice!=null)return;
+        handler.post(()-> {
+            if(!importActive||isFinishing()||isDestroyed()||app.account==null||!PrecacheSetup.pending(app.settings)||precacheChoice!=null)return;
+            precacheChoice=LowfinDialog.builder(this).setTitle(I18n.resource(R.string.precache_setup_title)).setMessage(I18n.resource(R.string.precache_setup_message))
+                .setPositiveButton(I18n.resource(R.string.precache_setup_enable),(dialog,which)->finishPrecacheChoice(true))
+                .setNegativeButton(I18n.resource(R.string.precache_setup_skip),(dialog,which)->finishPrecacheChoice(false)).setCancelable(false).create();
+            precacheChoice.setOnDismissListener(dialog->precacheChoice=null);precacheChoice.show();
+        });
+    }
+    private void finishPrecacheChoice(boolean enabled) {
+        PrecacheSetup.choose(app.settings,enabled);
+        if(enabled) {if(app.cacheChanges!=null)app.cacheChanges.resume();checkSession();}
+    }
     private void checkSession() {
         final Api api=app.api;
         app.io.execute(()-> {
@@ -113,7 +128,7 @@ public final class MainActivity extends Activity {
                 app.cacheIo.execute(()-> {
                     String last=db.state("lastSync"); long time=0; try { time=Long.parseLong(last); } catch(Exception ignored) {}
                     final boolean due=System.currentTimeMillis()-time>app.settings.getInt("cacheHours",24)*60*60*1000L;
-                    runOnUiThread(()-> { if(app.api==api&&!isFinishing()&&!app.syncing&&due&&app.settings.getBoolean("autoPrecache",true)&&(companion==null||!companion.incrementalCache())) handler.postDelayed(()-> { if(app.api==api&&!app.syncing&&!isFinishing()&&(app.companion==null||!app.companion.incrementalCache())) startCache(); },10000); });
+                    runOnUiThread(()-> { if(app.api==api&&!isFinishing()&&!app.syncing&&due&&PrecacheSetup.enabled(app.settings)&&(companion==null||!companion.incrementalCache())) handler.postDelayed(()-> { if(app.api==api&&!app.syncing&&!isFinishing()&&PrecacheSetup.enabled(app.settings)&&(app.companion==null||!app.companion.incrementalCache())) startCache(); },10000); });
                 });
             } catch(Api.Failure e) { if(e.status==401||e.status==403) runOnUiThread(()-> { if(app.api==api) { app.logout(); history.clear(); login(I18n.text("Bitte erneut anmelden")); } }); }
             catch(Exception e) { runOnUiThread(()-> { if(app.api==api) toast(I18n.text("Server nicht erreichbar. Gespeicherte Bibliothek bleibt verfügbar.")); }); }
@@ -150,7 +165,7 @@ public final class MainActivity extends Activity {
                     Account a=new Account(address,account.getString("Id"),response.getString("AccessToken"),account.optString("Name",username),Account.device(this));
                     runOnUiThread(()-> { if(g!=generation||isFinishing()) return;
                         try { a.save(this); app.setAccount(a); if(app.cacheChanges!=null) app.cacheChanges.resume(); app.settings.edit().putString("lastServer",address).apply(); password.setText("");
-                            views.clear(); viewsLoading=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); if(app.settings.getBoolean("autoPrecache",true)&&app.cacheChanges!=null) app.cacheChanges.resume(); if(hasHomeLink(getIntent())) handleHomeLink(getIntent());
+                            views.clear(); viewsLoading=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); if(PrecacheSetup.enabled(app.settings)&&app.cacheChanges!=null) app.cacheChanges.resume();offerPrecache(); if(hasHomeLink(getIntent())) handleHomeLink(getIntent());
                         } catch(Exception e) { hint.setText(I18n.text("Sitzung konnte nicht sicher gespeichert werden.")); }
                     });
                 } catch(Exception e) { runOnUiThread(()-> { if(g==generation) hint.setText(e instanceof Api.Failure?e.getMessage():I18n.text("Verbindung fehlgeschlagen. Adresse und Netzwerk prüfen.")); }); }
@@ -591,8 +606,41 @@ public final class MainActivity extends Activity {
             try { String stored=db.state("homeRecommendations"); if(!stored.isEmpty()) { List<JSONObject> cachedRecommendations=HomeRecommendations.select(new JSONArray(stored)); runOnUiThread(()-> { if(g==generation&&!fresh[2]) adapter.recommendations(cachedRecommendations); }); } } catch(Exception ignored) { }
         });
         final long[] lastRefresh={0},lastGenreRefresh={restored?SystemClock.elapsedRealtime():0},lastRecommendationRefresh={restored?SystemClock.elapsedRealtime():0};
+        // UI-thread state: fresh progress wins before recommendation/genre writes.
+        final int[] primaryPending={0};
+        final List<Runnable> pendingStores=new ArrayList<>();
+        final Runnable supplementary=()-> {
+            if(g!=generation||isFinishing()||app.api!=api) return;
+            if(lastRecommendationRefresh[0]==0||SystemClock.elapsedRealtime()-lastRecommendationRefresh[0]>120000) {
+                lastRecommendationRefresh[0]=SystemClock.elapsedRealtime();
+                app.io.execute(()-> { if(g!=generation) return; try {
+                    List<JSONObject> recommendations=HomeRecommendations.load(api);
+                    for(JSONObject bucket:recommendations) db.put(Json.array(bucket,"Items"),System.currentTimeMillis());
+                    db.state("homeRecommendations",new JSONArray(recommendations).toString());
+                    runOnUiThread(()-> { if(g==generation&&!isFinishing()) { fresh[2]=true; adapter.recommendations(recommendations); app.channels.publish(); } });
+                } catch(Exception ignored) { /* Account-scoped cached recommendations remain visible offline. */ } });
+            }
+            if(lastGenreRefresh[0]==0||SystemClock.elapsedRealtime()-lastGenreRefresh[0]>120000) {
+                lastGenreRefresh[0]=SystemClock.elapsedRealtime();
+                for(int i=0;i<pinned.size();i++) { final int row=HomeAdapter.GENRE_START+i; final String genre=pinned.get(i);
+                    app.io.execute(()-> { if(g!=generation) return; try {
+                        JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"IncludeItemTypes","Movie","Genres",genre,"SortBy","Random","Limit",18,"Fields","Overview,Genres,ProviderIds,ParentId,PrimaryImageAspectRatio"),"Items");
+                        db.put(items,System.currentTimeMillis()); db.state("homeGenre-"+genre,items.toString()); List<JSONObject> data=list(items);
+                        runOnUiThread(()-> { if(g==generation) { fresh[row]=true; adapter.update(row,data); } });
+                    } catch(Exception ignored) { /* Preserve the cached random selection. */ } });
+                }
+            }
+        };
+        final Runnable secondary=()-> {
+            if(g!=generation||isFinishing()||app.api!=api) {pendingStores.clear();return;}
+            for(Runnable store:pendingStores)app.cacheIo.execute(store);
+            pendingStores.clear();supplementary.run();
+        };
         homeReload=()-> {
-            if(SystemClock.elapsedRealtime()-lastRefresh[0]<1500&&lastRefresh[0]!=0) return; lastRefresh[0]=SystemClock.elapsedRealtime();
+            if(primaryPending[0]!=0||SystemClock.elapsedRealtime()-lastRefresh[0]<1500&&lastRefresh[0]!=0) return; lastRefresh[0]=SystemClock.elapsedRealtime();
+            primaryPending[0]=2;
+            // An unresponsive progress endpoint must not starve the rest of Home.
+            handler.postDelayed(secondary,5000);
             final CompanionApi resumeCompanion=app.companion;
             for(int i=0;i<2;i++) { final int row=i; final long queued=SystemClock.elapsedRealtime();
                 app.homeIo.execute(()-> {
@@ -613,35 +661,23 @@ public final class MainActivity extends Activity {
                         final List<JSONObject> data=loaded;
                         long reconciled=SystemClock.elapsedRealtime();
                         runOnUiThread(()-> { if(g==generation&&!isFinishing()&&app.api==api) { fresh[row]=true;adapter.update(row,data);app.diagnostics.record(row==0?Diagnostics.Event.HOME_RESUME:Diagnostics.Event.HOME_NEXT,started-queued,received-started,stored-received,reconciled-stored);android.util.Log.i("LowfinHome","Fresh shelf "+row+": "+data.size()+" items after "+(SystemClock.elapsedRealtime()-queued)+" ms (queue="+(started-queued)+", network="+(received-started)+", store="+(stored-received)+", companion="+(reconciled-stored)+")"); } });
-                        app.cacheIo.execute(()-> {
-                            if(app.api!=api||g!=generation) return;
-                            try {
-                                if(row==1) db.put(a,System.currentTimeMillis());
-                                db.state("home-"+row,new JSONArray(data).toString());
-                            } catch(Exception ignored) { /* A cache failure must not discard a fresh visible shelf. */ }
-                            finally { if(app.api==api) app.channels.publish(); }
+                        runOnUiThread(()-> {
+                            if(g!=generation||isFinishing()||app.api!=api)return;
+                            pendingStores.add(()-> {
+                                if(app.api!=api||g!=generation) return;
+                                try {
+                                    if(row==1) db.put(a,System.currentTimeMillis());
+                                    db.state("home-"+row,new JSONArray(data).toString());
+                                } catch(Exception ignored) { /* A cache failure must not discard a fresh visible shelf. */ }
+                                finally { if(app.api==api) app.channels.publish(); }
+                            });
                         });
                     } catch(Exception ignored) { /* Cached shelves remain usable offline. */ }
+                    finally { runOnUiThread(()-> {
+                        if(--primaryPending[0]!=0)return;
+                        handler.removeCallbacks(secondary);secondary.run();
+                    }); }
                 });
-            }
-            if(lastRecommendationRefresh[0]==0||SystemClock.elapsedRealtime()-lastRecommendationRefresh[0]>120000) {
-                lastRecommendationRefresh[0]=SystemClock.elapsedRealtime();
-                app.io.execute(()-> { if(g!=generation) return; try {
-                    List<JSONObject> recommendations=HomeRecommendations.load(api);
-                    for(JSONObject bucket:recommendations) db.put(Json.array(bucket,"Items"),System.currentTimeMillis());
-                    db.state("homeRecommendations",new JSONArray(recommendations).toString());
-                    runOnUiThread(()-> { if(g==generation&&!isFinishing()) { fresh[2]=true; adapter.recommendations(recommendations); app.channels.publish(); } });
-                } catch(Exception ignored) { /* Account-scoped cached recommendations remain visible offline. */ } });
-            }
-            if(lastGenreRefresh[0]==0||SystemClock.elapsedRealtime()-lastGenreRefresh[0]>120000) {
-                lastGenreRefresh[0]=SystemClock.elapsedRealtime();
-                for(int i=0;i<pinned.size();i++) { final int row=HomeAdapter.GENRE_START+i; final String genre=pinned.get(i);
-                    app.io.execute(()-> { if(g!=generation) return; try {
-                        JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"IncludeItemTypes","Movie","Genres",genre,"SortBy","Random","Limit",18,"Fields","Overview,Genres,ProviderIds,ParentId,PrimaryImageAspectRatio"),"Items");
-                        db.put(items,System.currentTimeMillis()); db.state("homeGenre-"+genre,items.toString()); List<JSONObject> data=list(items);
-                        runOnUiThread(()-> { if(g==generation) { fresh[row]=true; adapter.update(row,data); } });
-                    } catch(Exception ignored) { /* Preserve the cached random selection. */ } });
-                }
             }
         }; int initialRow=restored?screen.homeState.row:adapter.firstRow();if(restored) setHomeFocusMode(initialRow);adapter.requestRow(initialRow);homeReload.run();
         if(startupPending) {
@@ -1530,7 +1566,7 @@ public final class MainActivity extends Activity {
             });
         });
     }
-    private void startCache() { if(app.account!=null) { startForegroundService(new Intent(this,SyncService.class)); toast(I18n.text("Bibliothek wird im Hintergrund vorgeladen")); } }
+    private void startCache() { if(app.account!=null) { if(PrecacheSetup.pending(app.settings))PrecacheSetup.choose(app.settings,true);startForegroundService(new Intent(this,SyncService.class)); toast(I18n.text("Bibliothek wird im Hintergrund vorgeladen")); } }
     private void toast(String message) { Toast.makeText(this,message,Toast.LENGTH_LONG).show(); }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent);if(app.account!=null&&AppUpdater.OPEN.equals(intent.getAction()))openUpdates();else if(app.account!=null&&hasHomeLink(intent)) handleHomeLink(intent); }
     private void openUpdates() {setIntent(new Intent(this,MainActivity.class));show(new Screen("updatesSettings",I18n.resource(R.string.updates_title),null,null,null),true);}

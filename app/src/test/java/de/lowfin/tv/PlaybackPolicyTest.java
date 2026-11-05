@@ -46,6 +46,13 @@ public class PlaybackPolicyTest {
         assertEquals(600000000L,r.optLong("StartTimeTicks")); assertEquals(2,r.optInt("AudioStreamIndex"));
         assertEquals(4,r.optInt("SubtitleStreamIndex")); assertEquals("version",r.optString("MediaSourceId"));
     }
+    @Test public void fileRecoveryReencodesTheRejectedVideoInsteadOfCopyingItIntoHls() {
+        JSONObject recovery=PlaybackPolicy.request("user",720,4000000,false,true,60000,-1,-1,null);
+        assertTrue(recovery.has("AllowVideoStreamCopy"));assertFalse(recovery.optBoolean("AllowVideoStreamCopy"));
+        assertFalse(recovery.has("AllowAudioStreamCopy"));
+        assertFalse(PlaybackPolicy.request("user",720,4000000,false,false,0,-1,-1,null).has("AllowVideoStreamCopy"));
+        assertFalse(PlaybackPolicy.request("user",720,4000000,true,true,0,-1,-1,null).has("AllowVideoStreamCopy"));
+    }
     @Test public void hdProfileRestrictsExpensiveCodecsAndSurround() {
         JSONObject profile=PlaybackPolicy.profile(720,4000000);
         JSONObject direct=profile.optJSONArray("DirectPlayProfiles").optJSONObject(0);

@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.5.1
+
+- Show movie genres alongside the year in the player, centered beneath the proportionally scaled logo. Bound long metadata to three lines and retain the existing episode caption and Live TV layout.
+
+- Prioritize fresh Continue watching and Next up before recommendation/genre work and secondary home-cache writes; coalesce in-flight home refreshes and release deferred work even after a failed primary request. Keep the hourly launcher job idempotent with a bounded flex window instead of starting a duplicate refresh at app launch. Add numeric startup-overlay completion diagnostics.
+
+- Compare native progress columns before reconciling inactive Companion resume states; skip unchanged metadata JSON rewrites while retaining revision/sequence fences, visibility updates and genuine progress resets.
+
+- Disable video stream copy for explicit file-playback server recovery so a rejected decoder bitstream is actually re-encoded instead of merely remuxed into HLS. Preserve ordinary direct playback and Live TV negotiation.
+
+- Focus interactive custom-dialog content after its first layout so weighted letter grids do not initially select an invisible scroll container; preserve an already selected input/control.
+
+- Cache the discovery banner’s static information separately from its animated, color-filtered backdrop while visible; release both bounded graphics layers when inactive and avoid oversized textures.
+
+- Ask newly configured installations whether to enable library precaching after sign-in. Block automatic full and Companion-driven precaching until a choice is made; preserve existing installations and allow later changes in Library and cache settings.
+
 ## 1.5 — FIRE OS FIX
 
 **FIRE OS FIX:** Fix stale/flashing focus outlines, inconsistent or clipped dialogs, switch rendering and in-app update signature checks on older Fire TV / Fire OS devices.

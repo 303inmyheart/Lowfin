@@ -468,4 +468,8 @@
     <string name="dashboard_notice_sound_hint">Ein kurzer, leiser Ton bei Nachrichten aus dem Jellyfin-Dashboard. Standardmäßig aus; berücksichtigt Medienlautstärke und Lautlosmodus. Der Wiedergabeton wird für 3 Sekunden abgesenkt.</string>
     <string name="cache_storage_loading">Gespeicherten Cachebestand ermitteln …</string>
     <string name="cache_storage_summary">Metadateneinträge: %1$d · %2$s\nCoverdateien: %3$d · %4$s\nBibliothekscache gesamt: %5$s</string>
+    <string name="precache_setup_title">Bibliothek vorladen?</string>
+    <string name="precache_setup_message">Metadaten und Cover vorladen, damit du schneller durch deine Bibliothek blättern kannst. Das benötigt Speicherplatz und Netzwerkverkehr. Du kannst dies später unter Einstellungen → Bibliothek und Cache ändern.</string>
+    <string name="precache_setup_enable">Precache aktivieren</string>
+    <string name="precache_setup_skip">Jetzt nicht</string>
 </resources>

@@ -49,7 +49,12 @@ final class PlaybackPolicy {
             "StartTimeTicks",position*10000,"IsPlayback",true,"AutoOpenLiveStream",true,
             "EnableDirectPlay",!live&&!forceHls,"EnableDirectStream",!forceHls,"EnableTranscoding",true,
             "MaxAudioChannels",stereo?2:6,"SubtitleStreamIndex",subtitle);
-        try { if(audio>=0) r.put("AudioStreamIndex",audio); if(source!=null) r.put("MediaSourceId",source); } catch(JSONException e) { throw new IllegalArgumentException(e); }
+        try {
+            // A decoder recovery must replace the rejected video bitstream. HLS
+            // alone can still copy it, repeating the same hardware decoder error.
+            if(forceHls&&!live) r.put("AllowVideoStreamCopy",false);
+            if(audio>=0) r.put("AudioStreamIndex",audio); if(source!=null) r.put("MediaSourceId",source);
+        } catch(JSONException e) { throw new IllegalArgumentException(e); }
         return r;
     }
 }

@@ -6,7 +6,9 @@
 
 > **Optional server plugin: [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion).** Add per-media Smart Completion/Persistent Resume, incremental library-cache updates, cover tags and centrally managed provider access. Lowfin also works fully without the plugin.
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.1.**
+
+> **1.5.1:** Prioritized cold-start loading, more reliable decoder recovery, centered movie year/genres, and a first-run precache choice. Companion 0.7.1 retains up to 250,000 library changes.
 
 > **1.5 — FIRE OS FIX:** Fixes flashing/stale focus outlines, inconsistent Fire TV dialogs, switch rendering and legacy in-app update verification. Also includes smoother home navigation, single-line shelf ratings and Jellyfin dashboard playback controls/messages.
 
@@ -42,10 +44,10 @@ A native programme timeline with channel logos and programme details, opened fro
 
 ## Install
 
-The 1.5 signed release APK is built and verified locally, with public diagnostics recording off by default. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
+The 1.5.1 signed release APK is built and verified with GitHub Actions, with public diagnostics recording off by default. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.5-release.apk
+adb install -r Lowfin-1.5.1-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -57,7 +59,7 @@ Version 1.4 adds a TV programme guide, redesigned settings and sidebar ordering,
 - Optional native movie-discovery banner under Home settings: backdrop, logo/title, poster, synopsis, runtime, genres and compact rating badges from your selected sources; left/right browse, OK opens details. It is reorderable and off by default.
 - Optional animated startup logo without a status caption under Appearance (on by default), waiting for fresh Continue Watching and Next Up and visible artwork; remote dismissal and a 15-second network-failure fallback remain available.
 
-- Optional **Lowfin Companion 0.7.0** for Jellyfin 12.2+: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
+- Optional **Lowfin Companion 0.7.1** for Jellyfin 12.2+: explicitly selected completion/resume rules shared across devices using the same user, scoped episode lists and respected home-library exclusions. Without a selected rule, playback remains native. [Plugin installation](https://github.com/303inmyheart/Lowfin-Companion) · [API and compatibility notes](docs/lowfin-companion.md). Lowfin continues to work without the plugin.
 
 - Lightweight native UI, muted accent palette, optional small animations, compact 2:3 movie/show/season posters and 16:9 episode thumbnails.
 - Hold remote **OK/Enter** on home/library cards for Continue, Restart, watched/unwatched, Watch later, favorites and series details. **Watch later** is a persistent device-local list scoped to each account, separate from Jellyfin favorites.
@@ -127,13 +129,13 @@ On Linux, `bash tools/bootstrap.sh` installs project-local build tools under `.t
 
 The `release` APK uses R8/resource shrinking and the local Android debug signing configuration. An existing installation can only be updated using the same signing certificate. The supplied APK preserves the certificate used by earlier Lowfin builds.
 
-Automated tests use JUnit, Robolectric on Android 9 and Android 11, mock HTTP servers and a fake Android TV provider. The release includes [BUILD.json](https://github.com/303inmyheart/Lowfin/releases/download/1.5/BUILD.json) with its test count, APK checksum and certificate; historical CI logs were retired during privacy cleanup, and source identifiers refer to the sanitized history. Real device captures are shown above; synthetic UI renderings are produced under `app/build/qa/` during tests. Physical TV/live-server behavior is not validated by these simulated tests.
+Automated tests use JUnit, Robolectric on Android 9 and Android 11, mock HTTP servers and a fake Android TV provider. The release includes [BUILD.json](https://github.com/303inmyheart/Lowfin/releases/download/1.5.1/BUILD.json) with its test count, APK checksum and certificate; historical CI logs were retired during privacy cleanup, and source identifiers refer to the sanitized history. Real device captures are shown above; synthetic UI renderings are produced under `app/build/qa/` during tests. Physical TV/live-server behavior is not validated by these simulated tests.
 
 ## GitHub builds
 
 [Android build](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml) is manual-only (`workflow_dispatch`). Source pushes do not start a build or consume build minutes. When explicitly started, it checks tests and lint, builds a signed release APK and publishes `Lowfin-<version>-build-<run>` containing the APK, SHA256SUMS and BUILD.json. Test/lint reports and HD screenshots are uploaded separately. APK artifacts are retained for 30 days; reports for 14 days.
 
-The optional workflow uses the encrypted `LOWFIN_SIGNING_KEYSTORE` Actions secret for the existing Android debug signing key. The job checks that the APK retains the supplied release's certificate, so it can update an existing installation. The workflow fails if the signing secret is absent, rather than publishing an incompatible APK. Private keys are never committed or included in build artifacts. All actions are pinned to specific upstream commits; the workflow has read-only repository permissions.
+The release workflow uses the encrypted `LOWFIN_SIGNING_KEYSTORE` Actions secret for the existing Android debug signing key. The job checks that the APK retains the supplied release's certificate, so it can update an existing installation. The workflow fails if the signing secret is absent, rather than publishing an incompatible APK. Private keys are never committed or included in build artifacts. All actions are pinned to specific upstream commits; the workflow has read-only repository permissions.
 
 ## License and dependencies
 
@@ -170,3 +172,5 @@ Companion 0.5.0 adds a persistent event-driven tag index with a 24-hour reconcil
 [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion) has its own source repository, changelog, releases and Jellyfin update manifest. Clone it into the ignored local `companion/` directory if running the local server integration tools from this checkout. The client never requires the plugin.
 
 Lowfin defaults to **English**, independently of the Android system language. Switch between English and German under Settings → Account and language. UI text, settings, playback actions and import templates are localized; movie/show titles, genres, descriptions and remote server errors retain the language supplied by your Jellyfin server.
+
+New installations ask after sign-in whether to enable library precaching. Until a choice is made, automatic library preloading waits. Existing installations keep their preference; change it under Settings → Library and cache.

@@ -237,4 +237,16 @@ public class CompanionTest {
         assertTrue(client.mergeResume(Collections.emptyList(),18).isEmpty());
         assertTrue(library.resumable(null,null,18,0).isEmpty()); assertEquals(0,Json.position(library.item("movie"))); assertTrue(Json.played(library.item("movie")));
     }
+    @Test public void unchangedNativeProgressReconcilesCompanionVisibilityWithoutRewritingMetadata() throws Exception {
+        JSONObject item=movie();item.put("UserData",Json.obj("Played",false,"PlaybackPositionTicks",600000000L));library.put(Json.arr(item),42);
+        android.database.sqlite.SQLiteDatabase db=library.getWritableDatabase();
+        db.execSQL("CREATE TEMP TRIGGER reject_metadata_update BEFORE UPDATE ON items BEGIN SELECT RAISE(ABORT,'Unexpected metadata rewrite'); END");
+        db.execSQL("CREATE TEMP TRIGGER reject_metadata_insert BEFORE INSERT ON items BEGIN SELECT RAISE(ABORT,'Unexpected metadata rewrite'); END");
+        JSONObject incoming=state(3,2,600000000L,false);incoming.put("active",false);incoming.put("resumeVisible",false);
+        try {
+            library.mergeCompanionStates(Json.arr(Json.obj("itemId","movie","state",incoming)));
+            assertFalse(library.companionState("movie").optBoolean("resumeVisible"));assertEquals(3,library.companionState("movie").optLong("revision"));
+            try(android.database.Cursor row=db.rawQuery("SELECT stamp,position,played FROM items WHERE id='movie'",null)) {assertTrue(row.moveToFirst());assertEquals(42,row.getLong(0));assertEquals(600000000L,row.getLong(1));assertEquals(0,row.getInt(2));}
+        } finally {db.execSQL("DROP TRIGGER reject_metadata_update");db.execSQL("DROP TRIGGER reject_metadata_insert");}
+    }
 }

@@ -44,7 +44,7 @@ public final class LowfinApp extends Application {
             public void onActivityDestroyed(android.app.Activity a) { resumedActivities.remove(a);if(diagnostics!=null)diagnostics.paused(a); }
         });
     }
-    @Override public void onCreate() { super.onCreate(); trackCacheLifecycle(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0);diagnostics=new Diagnostics(this);updater=new AppUpdater(this);updater.schedule(); PlaybackPolicy.migrateSkipSettings(settings); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); setAccount(Account.load(this)); }
+    @Override public void onCreate() { super.onCreate(); trackCacheLifecycle(); I18n.init(this); syncStatus=I18n.text("Cache noch nicht erstellt"); accent=new Accent(this); settings=getSharedPreferences("settings",0);diagnostics=new Diagnostics(this);updater=new AppUpdater(this);updater.schedule(); PlaybackPolicy.migrateSkipSettings(settings); keyImport=new RatingKeyImport(this); channels=new HomeChannels(this); videoCache=new VideoCache(this); Account restored=Account.load(this);PrecacheSetup.prepare(settings,restored!=null);setAccount(restored); }
     synchronized void setAccount(Account a) {
         if(cacheChanges!=null) { cacheChanges.close(); cacheChanges=null; }
         if(images!=null) images.close();

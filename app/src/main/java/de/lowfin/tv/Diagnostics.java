@@ -14,7 +14,7 @@ final class Diagnostics {
     static final String SETTING="diagnostics";
     static final int CAPACITY=192;
     enum Event { SCREEN_BUILD, NAV_CACHE, NAV_SERVER, NAV_DISCARDED, NAV_ERROR, HTTP_READ, HTTP_WRITE, LIBRARY_STORE,
-        HOME_NEXT, HOME_RESUME, GRID_KEY, GRID_TARGET, GRID_FOCUS, PLAYER_STATE, FIRST_FRAME, VIDEO_DROPPED, PLAYER_ERROR, CACHE_CHANGES, CACHE_RESET }
+        HOME_NEXT, HOME_RESUME, GRID_KEY, GRID_TARGET, GRID_FOCUS, PLAYER_STATE, FIRST_FRAME, VIDEO_DROPPED, PLAYER_ERROR, CACHE_CHANGES, CACHE_RESET, STARTUP_READY }
     private static final long[] FRAME_LIMITS={8,16,24,33,50,100,250};
     private final LowfinApp app;
     private final Handler main=new Handler(Looper.getMainLooper());

@@ -32,14 +32,14 @@ final class PlayerChrome extends LinearLayout {
         identity.setBackground(SmoothGradient.linear(GradientDrawable.Orientation.TOP_BOTTOM,0xb009090b,0x0009090b));
         logo=new PlayerLogo(context,title); identity.addView(logo,new LayoutParams(Ui.dp(context,200),Ui.dp(context,64))); identity.addView(heading);
         caption=Ui.text(context,"",11,Ui.MUTED);
-        if(episode&&!live) {
+        if(!live) {
             // One shared frame keeps the caption under the actual contained logo for every aspect ratio.
             logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
             heading.setLayoutParams(new LayoutParams(Ui.dp(context,200),-2));
             title.setSingleLine(false);title.setMaxLines(2);title.setGravity(Gravity.CENTER);
             title.setLayoutParams(new LayoutParams(-1,-2));
             caption.setGravity(Gravity.CENTER);caption.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
-            caption.setMaxLines(2);caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            caption.setMaxLines(episode?2:3);caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
             identity.addView(caption,new LayoutParams(Ui.dp(context,200),-2));
         } else { caption.setSingleLine(true);identity.addView(caption); }
         LinearLayout times=Ui.row(context); current=Ui.text(context,"0:00",15,Color.WHITE); remaining=Ui.text(context,"",15,0xffd4d4da); remaining.setGravity(Gravity.END);

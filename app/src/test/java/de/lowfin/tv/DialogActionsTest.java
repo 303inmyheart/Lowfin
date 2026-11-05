@@ -14,6 +14,12 @@ import static org.junit.Assert.*;
 @Config(sdk=30,qualifiers="w960dp-h540dp-land-tvdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class DialogActionsTest {
+    @Test public void weightedLetterChoicesReceiveFocusAfterTheFirstLayoutInsteadOfTheScrollWrapper() {
+        Activity activity=Robolectric.buildActivity(Activity.class).setup().get();LinearLayout content=Ui.column(activity);GridLayout letters=new GridLayout(activity);letters.setColumnCount(7);content.addView(letters);
+        Button first=null;for(int i=0;i<27;i++){Button key=Ui.button(activity,i==0?"#":""+(char)('A'+i-1),()->{});GridLayout.LayoutParams size=new GridLayout.LayoutParams(GridLayout.spec(i/7),GridLayout.spec(i%7,1f));size.width=0;size.height=Ui.dp(activity,42);letters.addView(key,size);if(first==null)first=key;}
+        AlertDialog dialog=LowfinDialog.builder(activity).setTitle("Jump to letter").setView(content).setNegativeButton("Cancel",null).show();first.requestFocus();Shadows.shadowOf(Looper.getMainLooper()).idle();View decor=dialog.getWindow().getDecorView();
+        decor.measure(View.MeasureSpec.makeMeasureSpec(dialog.getWindow().getAttributes().width,View.MeasureSpec.EXACTLY),View.MeasureSpec.makeMeasureSpec(720,View.MeasureSpec.AT_MOST));decor.layout(0,0,decor.getMeasuredWidth(),decor.getMeasuredHeight());Shadows.shadowOf(Looper.getMainLooper()).idle();assertTrue("First letter should own focus",first.hasFocus());dialog.dismiss();activity.finish();
+    }
     @Test public void scrolledGenreRowsAlwaysUseTheSameSizeAndAlignment() {
         Activity activity=Robolectric.buildActivity(Activity.class).setup().get();String[] genres=new String[80];
         for(int i=0;i<genres.length;i++) genres[i]=i%2==0?"Horror":"Science Fiction";

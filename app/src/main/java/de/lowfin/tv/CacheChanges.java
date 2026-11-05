@@ -46,7 +46,7 @@ final class CacheChanges implements AutoCloseable {
         try {
             android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
             if(!current()) return;
-            if(!app.settings.getBoolean("autoPrecache",true)||app.syncing) { retry=10; return; }
+            if(!PrecacheSetup.enabled(app.settings)||app.syncing) { retry=10; return; }
             if(android.os.SystemClock.elapsedRealtime()<notBefore) { retry=3; return; }
             companion.discover();
             if(!companion.incrementalCache()) {

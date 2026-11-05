@@ -8,11 +8,13 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.1**.
+
+> **1.5.1:** Priorisierter Kaltstart, zuverlässigerer Decoder-Fallback, zentrierte Jahres-/Genreangaben im Player und eine Precache-Auswahl beim ersten Einrichten. Companion 0.7.1 hält bis zu 250.000 Bibliotheksänderungen vor.
 
 > **1.5 — FIRE OS FIX:** Behebt flackernde/zurückbleibende Fokusrahmen, uneinheitliche Fire-TV-Dialoge, Schalterdarstellung und die Prüfung von In-App-Updates auf älteren Geräten. Dazu kommen flüssigere Startseitenübergänge, einzeilige Bewertungen und Wiedergabesteuerung/Nachrichten aus dem Jellyfin-Dashboard.
 
-Optionales **Lowfin Companion 0.7.0** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
+Optionales **Lowfin Companion 0.7.1** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
 - Optionales natives Film-Entdeckungsbanner unter Startseite: Hintergrund, Logo/Titel, Poster, Beschreibung, Laufzeit, Genres und kompakte Bewertungen der gewählten Quellen. Links/rechts blättern, OK öffnet Details. Frei einsortierbar, standardmäßig aus.
 - Startanimation ausschließlich mit bestehendem Lowfin-Logo, ohne Statusschriftzug, unter Darstellung (standardmäßig an). Wartet auf frisches Weiterschauen und Next Up sowie sichtbare Bilder; per Fernbedienung überspringbar, bei Fehlern spätestens nach 15 Sekunden beendet.
@@ -54,10 +56,10 @@ Zusätzlich gibt es in Version 1.4 **Einstellungen → App-Updates**: optionale 
 - Detailaktionen erhalten dezente durchscheinende Akzentflächen, mittig gruppierte Symbole und Texte sowie einen klaren Fernbedienungsfokus. Bewertungen passen sich in Detailansicht, Banner und Startseitenreihen ohne kräftige Einzelrahmen ein; Anzeige- und Cache-Einstellungen bleiben erhalten.
 ## Installieren
 
-Die lokal gebaute und geprüfte Release-APK heißt `Lowfin-1.5-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die mit GitHub Actions gebaute und geprüfte Release-APK heißt `Lowfin-1.5.1-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.5-release.apk
+adb install -r Lowfin-1.5.1-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.
@@ -279,6 +281,8 @@ Companion 0.5.0 ergänzt einen persistenten Tag-Index mit Ereignisaktualisierung
 
 ## Veröffentlichung und Sprache
 
-Der Android-Workflow wird ausschließlich manuell gestartet. Quellcode-Pushes starten keinen Build. Lowfin 1.5 wird lokal gebaut und geprüft. Für optionale Workflow-Builds ist das bestehende Signing-Secret zwingend erforderlich. [Companion-Quellcode, README und Changelog](https://github.com/303inmyheart/Lowfin-Companion) liegen in einem eigenen Repository.
+Der Android-Workflow wird ausschließlich manuell gestartet. Quellcode-Pushes starten keinen Build. Lowfin 1.5.1 wird mit GitHub Actions gebaut und geprüft. Für Workflow-Builds ist das bestehende Signing-Secret zwingend erforderlich. [Companion-Quellcode, README und Changelog](https://github.com/303inmyheart/Lowfin-Companion) liegen in einem eigenen Repository.
 
 Die Standardsprache ist Englisch. Unter Einstellungen → Konto und Sprache kann zwischen Englisch und Deutsch gewechselt werden. Titel, Genres, Inhaltsbeschreibungen und Fehlermeldungen des Servers bleiben in der von Jellyfin gelieferten Sprache.
+
+Neue Installationen fragen nach der Anmeldung, ob die Bibliothek vorgeladen werden soll. Bis zur Auswahl wartet das automatische Vorladen. Bestehende Installationen behalten ihre Einstellung; sie lässt sich unter Einstellungen → Bibliothek und Cache ändern.

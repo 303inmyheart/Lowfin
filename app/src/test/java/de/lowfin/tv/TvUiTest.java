@@ -38,17 +38,22 @@ public class TvUiTest {
     private final java.util.Set<String> guideAbsent=java.util.concurrent.ConcurrentHashMap.newKeySet();
     private final java.util.concurrent.atomic.AtomicInteger guideQueries=new java.util.concurrent.atomic.AtomicInteger();
     private volatile String blockedHomePath="";
+    private volatile boolean blockedHomeFails;
+    private final java.util.concurrent.atomic.AtomicInteger resumeRequests=new java.util.concurrent.atomic.AtomicInteger(),recommendationRequests=new java.util.concurrent.atomic.AtomicInteger(),genreRequests=new java.util.concurrent.atomic.AtomicInteger();
     private final java.util.concurrent.CountDownLatch homeBlocked=new java.util.concurrent.CountDownLatch(1),homeRelease=new java.util.concurrent.CountDownLatch(1);
     private volatile JSONObject companionState;
     private volatile JSONObject userConfiguration=Json.obj("OrderedViews",Json.arr("films","shows"),"SubtitleMode","Default","RememberAudioSelections",true);
-    @Before public void setup() throws Exception { RuntimeEnvironment.getApplication().getSharedPreferences("settings",0).edit().putString("language","de").putBoolean("startupLogo",false).commit(); I18n.init(RuntimeEnvironment.getApplication());
+    @Before public void setup() throws Exception { RuntimeEnvironment.getApplication().getSharedPreferences("settings",0).edit().putString("language","de").putBoolean("startupLogo",false).putBoolean("precacheChoiceMade",true).commit(); I18n.init(RuntimeEnvironment.getApplication());
         app=(LowfinApp)RuntimeEnvironment.getApplication(); series=Json.obj("Id","show","Type","Series","Name","Die lange Serie","Overview","45 Staffeln. Direkt zu deiner Lieblingsfolge.","ImageTags",Json.obj("Primary","poster"),"PrimaryImageAspectRatio",2.0/3);
         movie=Json.obj("Id","movie","Type","Movie","Name","Zwischen den Sternen","Overview","Eine Crew folgt einem rätselhaften Signal durch die Nacht. Als ihr Schiff die vertrauten Routen verlässt, wird aus der Suche nach Antworten eine Reise nach Hause.","ProductionYear",2025,"OfficialRating","FSK 12","RunTimeTicks",67200000000L,"Genres",Json.arr("Science-Fiction","Drama"),"ImageTags",Json.obj("Primary","poster"),"BackdropImageTags",Json.arr("backdrop"),"RemoteTrailers",Json.arr(Json.obj("Url","https://www.youtube.com/watch?v=M7lc1UVf-VE")));
         posterImage=fixture(240,360,"LOWFIN","AFTER HOURS"); thumbImage=fixture(480,270,"STAFFEL 40","Ein neuer Anfang");
         server=new MockWebServer(); server.setDispatcher(new Dispatcher() {
             @Override public MockResponse dispatch(RecordedRequest request) {
                 String path=request.getRequestUrl().encodedPath();
-                if(path.equals(blockedHomePath)) {homeBlocked.countDown();try {homeRelease.await();} catch(InterruptedException interrupted) {Thread.currentThread().interrupt();return new MockResponse().setResponseCode(503);}}
+                if(path.endsWith("/Items/Resume"))resumeRequests.incrementAndGet();
+                if(path.equals("/Movies/Recommendations"))recommendationRequests.incrementAndGet();
+                if(request.getRequestUrl().queryParameter("Genres")!=null)genreRequests.incrementAndGet();
+                if(path.equals(blockedHomePath)) {homeBlocked.countDown();try {homeRelease.await();} catch(InterruptedException interrupted) {Thread.currentThread().interrupt();return new MockResponse().setResponseCode(503);}if(blockedHomeFails)return new MockResponse().setResponseCode(503);}
                 if(path.startsWith(CompanionApi.ROOT)) {
                     if(!companionInstalled) return new MockResponse().setResponseCode(404);
                     if(path.endsWith("/capabilities")) return new MockResponse().setBody(Json.obj("available",true,"apiVersion",1).toString());
@@ -94,6 +99,18 @@ public class TvUiTest {
         if(app.images!=null) app.images.close(); if(app.ratings!=null) app.ratings.close(); app.io.shutdownNow(); app.cacheIo.shutdownNow(); app.navigationIo.shutdownNow(); app.reports.shutdownNow(); app.homeIo.shutdownNow(); server.shutdown();
     }
 
+    @Test public void freshAccountCanDeclinePrecacheWithoutBlockingTheHomeScreen() throws Exception {
+        app.settings.edit().putBoolean("precacheChoiceMade",false).remove("autoPrecache").apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));
+        activity=Robolectric.buildActivity(MainActivity.class).setup();await(()->org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()!=null&&org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().isShowing());
+        android.app.AlertDialog prompt=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();assertFalse(PrecacheSetup.enabled(app.settings));assertEquals(I18n.resource(R.string.precache_setup_skip),prompt.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).getText().toString());
+        prompt.getButton(android.app.AlertDialog.BUTTON_NEGATIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertFalse(prompt.isShowing());assertFalse(PrecacheSetup.pending(app.settings));assertFalse(PrecacheSetup.enabled(app.settings));
+        await(()->recycler()!=null&&!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty());activity.pause().resume();layout();assertFalse(prompt.isShowing());
+    }
+    @Test public void freshAccountCanExplicitlyEnablePrecache() throws Exception {
+        app.settings.edit().putBoolean("precacheChoiceMade",false).remove("autoPrecache").apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));
+        activity=Robolectric.buildActivity(MainActivity.class).setup();await(()->org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog()!=null&&org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().isShowing());
+        org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog().getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();shadowOf(Looper.getMainLooper()).idle();assertTrue(PrecacheSetup.enabled(app.settings));assertFalse(PrecacheSetup.pending(app.settings));
+    }
     @Test public void startupLogoWaitsForBothFreshRowsAndDoesNotReplayWhenReturningHome() throws Exception {
         app.settings.edit().putBoolean("startupLogo",true).putBoolean("animations",false).apply();app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));
         app.library.state("home-0",Json.arr(episode("cached0",4,6000000000L)).toString());blockedHomePath="/Users/user/Items/Resume";
@@ -102,6 +119,36 @@ public class TvUiTest {
             await(()->!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty());StartupOverlay splash=org.robolectric.util.ReflectionHelpers.getField(activity.get(),"startupOverlay");assertNotNull(splash);assertTrue(splash.showing());
             homeRelease.countDown();await(()->!splash.showing());
             java.lang.reflect.Method open=MainActivity.class.getDeclaredMethod("open",JSONObject.class);open.setAccessible(true);open.invoke(activity.get(),movie);layout();activity.get().onBackPressed();layout();assertNull(org.robolectric.util.ReflectionHelpers.getField(activity.get(),"startupOverlay"));
+        } finally {homeRelease.countDown();}
+    }
+    @Test public void primaryHomeRowsPrecedeExtrasAndResumeDoesNotDuplicateInFlightRequests() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));blockedHomePath="/Users/user/Items/Resume";
+        try {
+            activity=Robolectric.buildActivity(MainActivity.class).setup();assertTrue(homeBlocked.await(2,java.util.concurrent.TimeUnit.SECONDS));
+            await(()->!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty());
+            assertEquals(0,recommendationRequests.get());assertEquals(0,genreRequests.get());assertTrue(app.library.state("home-1").isEmpty());
+            shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(2));activity.pause().resume();layout();
+            app.homeIo.submit(()->{}).get(2,java.util.concurrent.TimeUnit.SECONDS);assertEquals(1,resumeRequests.get());
+            homeRelease.countDown();await(()->recommendationRequests.get()>0&&genreRequests.get()>0&&!app.library.state("home-1").isEmpty());
+        } finally {homeRelease.countDown();}
+    }
+    @Test public void stalledPrimaryResumeDoesNotStarveOtherHomeRows() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));blockedHomePath="/Users/user/Items/Resume";
+        try {
+            activity=Robolectric.buildActivity(MainActivity.class).setup();assertTrue(homeBlocked.await(2,java.util.concurrent.TimeUnit.SECONDS));
+            await(()->!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty());assertEquals(0,recommendationRequests.get());
+            shadowOf(Looper.getMainLooper()).idleFor(java.time.Duration.ofSeconds(6));
+            await(()->recommendationRequests.get()>0&&genreRequests.get()>0&&!app.library.state("home-1").isEmpty());assertEquals(1,resumeRequests.get());
+        } finally {homeRelease.countDown();}
+    }
+    @Test public void failedPrimaryResumeStillReleasesExtrasAndKeepsCachedProgress() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));blockedHomePath="/Users/user/Items/Resume";blockedHomeFails=true;
+        app.library.state("home-0",Json.arr(episode("cached0",4,6000000000L)).toString());
+        try {
+            activity=Robolectric.buildActivity(MainActivity.class).setup();assertTrue(homeBlocked.await(2,java.util.concurrent.TimeUnit.SECONDS));
+            await(()->!((HomeAdapter)recycler().getAdapter()).rows.get(1).isEmpty());assertEquals(0,recommendationRequests.get());
+            homeRelease.countDown();await(()->recommendationRequests.get()>0&&genreRequests.get()>0);
+            HomeAdapter home=(HomeAdapter)recycler().getAdapter();assertEquals("cached0",home.rows.get(0).get(0).optString("Id"));
         } finally {homeRelease.countDown();}
     }
     @Test public void optionalDiscoveryBannerHasNativeControlsAndRestoresItsFilmAfterDetails() throws Exception {

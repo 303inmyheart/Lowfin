@@ -29,7 +29,8 @@ final class StartupOverlay extends FrameLayout {
     private void check() {
         if(finished||!isAttachedToWindow()) return;
         long elapsed=SystemClock.uptimeMillis()-began;
-        if(elapsed>=MAX_WAIT_MS||elapsed>=400&&ready.getAsBoolean()&&!pendingImages(content)) {dismiss();return;}
+        if(elapsed>=MAX_WAIT_MS) {dismiss(1);return;}
+        if(elapsed>=400&&ready.getAsBoolean()&&!pendingImages(content)) {dismiss(0);return;}
         main.postDelayed(poll,100);
     }
     private boolean pendingImages(View view) {
@@ -38,8 +39,11 @@ final class StartupOverlay extends FrameLayout {
         if(view instanceof ViewGroup) {ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++) if(pendingImages(group.getChildAt(i))) return true;}
         return false;
     }
-    void dismiss() {
+    void dismiss() {dismiss(2);}
+    private void dismiss(int reason) {
         if(finished) return;finished=true;main.removeCallbacks(poll);if(pulse!=null){pulse.cancel();pulse=null;}
+        android.content.Context application=getContext().getApplicationContext();
+        if(application instanceof LowfinApp) ((LowfinApp)application).diagnostics.record(Diagnostics.Event.STARTUP_READY,SystemClock.uptimeMillis()-began,reason,0,0);
         Runnable remove=()->{if(getParent() instanceof ViewGroup) ((ViewGroup)getParent()).removeView(this);};
         if(Motion.enabled(this)&&isAttachedToWindow()) animate().alpha(0).setDuration(180).setInterpolator(new DecelerateInterpolator()).withEndAction(remove).start();else remove.run();
     }

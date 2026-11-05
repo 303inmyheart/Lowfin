@@ -468,4 +468,8 @@
     <string name="dashboard_notice_sound_hint">A brief, quiet tone for messages from the Jellyfin dashboard. Off by default; respects media volume and silent mode. Playback audio is lowered for 3 seconds.</string>
     <string name="cache_storage_loading">Reading stored cache totals …</string>
     <string name="cache_storage_summary">Metadata entries: %1$d · %2$s\nArtwork files: %3$d · %4$s\nLibrary cache total: %5$s</string>
+    <string name="precache_setup_title">Enable library precache?</string>
+    <string name="precache_setup_message">Preload library metadata and covers for faster browsing. This uses storage space and network traffic. You can change this later in Settings → Library and cache.</string>
+    <string name="precache_setup_enable">Enable precache</string>
+    <string name="precache_setup_skip">Not now</string>
 </resources>

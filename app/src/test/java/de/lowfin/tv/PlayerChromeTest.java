@@ -23,9 +23,12 @@ public class PlayerChromeTest {
     @After public void close() { if(activity!=null) activity.pause().stop().destroy(); }
     private FrameLayout setup(boolean live) { return setup(live,System::currentTimeMillis); }
     private FrameLayout setup(boolean live,java.util.function.LongSupplier clock) {
+        return setup(live,!live,clock);
+    }
+    private FrameLayout setup(boolean live,boolean episode,java.util.function.LongSupplier clock) {
         activity=Robolectric.buildActivity(Activity.class).setup(); Activity context=activity.get(); Ui.immersive(context);
         FrameLayout root=new FrameLayout(context); root.setBackgroundColor(0xff303a43);
-        chrome=new PlayerChrome(context,live,!live,new PlayerChrome.Actions() {
+        chrome=new PlayerChrome(context,live,episode,new PlayerChrome.Actions() {
             public void toggle() { toggles++; } public void seek(long value) { seek=value; } public void seekTo(long value) { seek=value; }
             public void options() { options++; } public void next() {} public void channels() {}
         },clock); root.addView(chrome,new FrameLayout.LayoutParams(-1,-2,Gravity.BOTTOM)); root.addView(chrome.identity,new FrameLayout.LayoutParams(-1,-2,Gravity.TOP)); context.setContentView(root);
@@ -87,18 +90,23 @@ public class PlayerChromeTest {
         setup(true); layout(); assertEquals(View.GONE,chrome.timeline.getVisibility()); assertEquals("0:00",chrome.current.getText().toString()); screenshot("player-live-hd.png");
     }
     @Test public void logoUsesFixedFrameWithoutStretchingAndFallsBackToTitle() {
-        setup(false); chrome.logo.setImageBitmap(Bitmap.createBitmap(400,80,Bitmap.Config.ARGB_8888)); layout();
-        assertEquals(View.VISIBLE,chrome.logo.getVisibility()); assertEquals(View.GONE,chrome.title.getVisibility());
-        int width=chrome.logo.getWidth(),height=chrome.logo.getHeight();
-        assertEquals(ImageView.ScaleType.FIT_CENTER,chrome.logo.getScaleType());
-        assertEquals(chrome.logo.getLeft()+chrome.logo.getWidth()/2,chrome.caption.getLeft()+chrome.caption.getWidth()/2);
-        assertTrue(chrome.caption.getTop()>=chrome.logo.getBottom());
-        assertEquals(Gravity.CENTER,chrome.caption.getGravity());
-        chrome.logo.setImageBitmap(Bitmap.createBitmap(80,400,Bitmap.Config.ARGB_8888)); layout();
-        assertEquals(width,chrome.logo.getWidth()); assertEquals(height,chrome.logo.getHeight());
-        float[] matrix=new float[9]; chrome.logo.getImageMatrix().getValues(matrix); assertEquals(matrix[Matrix.MSCALE_X],matrix[Matrix.MSCALE_Y],.001f);
-        chrome.logo.setImageDrawable(null); assertEquals(View.VISIBLE,chrome.title.getVisibility());layout();
-        assertEquals(chrome.title.getWidth(),chrome.caption.getWidth());
+        for(boolean episode:new boolean[]{true,false}) {
+            setup(false,episode,System::currentTimeMillis);
+            if(!episode)chrome.caption.setText("2025 · Science-Fiction · Abenteuer · Drama");
+            chrome.logo.setImageBitmap(Bitmap.createBitmap(400,80,Bitmap.Config.ARGB_8888)); layout();
+            assertEquals(View.VISIBLE,chrome.logo.getVisibility()); assertEquals(View.GONE,chrome.title.getVisibility());
+            int width=chrome.logo.getWidth(),height=chrome.logo.getHeight();
+            assertEquals(ImageView.ScaleType.FIT_CENTER,chrome.logo.getScaleType());
+            assertEquals(chrome.logo.getLeft()+chrome.logo.getWidth()/2,chrome.caption.getLeft()+chrome.caption.getWidth()/2);
+            assertTrue(chrome.caption.getTop()>=chrome.logo.getBottom());
+            assertEquals(Gravity.CENTER,chrome.caption.getGravity());
+            chrome.logo.setImageBitmap(Bitmap.createBitmap(80,400,Bitmap.Config.ARGB_8888)); layout();
+            assertEquals(width,chrome.logo.getWidth()); assertEquals(height,chrome.logo.getHeight());
+            float[] matrix=new float[9]; chrome.logo.getImageMatrix().getValues(matrix); assertEquals(matrix[Matrix.MSCALE_X],matrix[Matrix.MSCALE_Y],.001f);
+            chrome.logo.setImageDrawable(null); assertEquals(View.VISIBLE,chrome.title.getVisibility());layout();
+            assertEquals(chrome.title.getWidth(),chrome.caption.getWidth());
+            close();activity=null;
+        }
     }
     @Test public void backdropRetainsColorWhileReducingSaturation() {
         setup(false); BackdropView view=new BackdropView(activity.get()); Bitmap original=Bitmap.createBitmap(8,8,Bitmap.Config.ARGB_8888); original.eraseColor(Color.rgb(30,80,160)); view.setImageBitmap(original);

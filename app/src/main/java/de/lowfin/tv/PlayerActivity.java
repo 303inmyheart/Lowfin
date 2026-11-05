@@ -137,8 +137,15 @@ public final class PlayerActivity extends Activity {
             logoRequest=series; final Api logoApi=app.api;
             app.io.execute(()-> { try { JSONObject data=logoApi.item(series); runOnUiThread(()-> { if(!released&&series.equals(item.optString("SeriesId"))) { logoSeries=data; app.images.logo(chrome.logo,data); } }); } catch(Exception ignored) {} });
         }
-        chrome.caption.setVisibility(live?View.GONE:View.VISIBLE);
-        chrome.caption.setText(live?"":item.optString("Type").equals("Episode")?Json.label(item):item.optString("ProductionYear",""));
+        String caption="";
+        if(!live) {
+            if("Episode".equals(item.optString("Type"))) caption=Json.label(item);
+            else {
+                List<String> facts=new ArrayList<>();int year=item.optInt("ProductionYear");if(year>0)facts.add(String.valueOf(year));
+                String genres=Json.genres(item);if(!genres.isEmpty())facts.add(genres);caption=String.join(" · ",facts);
+            }
+        }
+        chrome.caption.setText(caption);chrome.caption.setVisibility(caption.isEmpty()?View.GONE:View.VISIBLE);
     }
     private void showChrome(boolean focus) {
         chrome.setVisibility(View.VISIBLE); chrome.identity.setVisibility(View.VISIBLE); if(player!=null&&!seekGesture.active()) chrome.update(position(),player.getBufferedPosition(),player.getDuration(),player.getPlayWhenReady(),live);

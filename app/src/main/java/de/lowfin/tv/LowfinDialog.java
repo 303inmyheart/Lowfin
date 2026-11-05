@@ -59,9 +59,30 @@ final class LowfinDialog {
             for(int i=0;i<list.getChildCount();i++) textStyle(list.getChildAt(i));
             list.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob)-> { for(int i=0;i<list.getChildCount();i++) textStyle(list.getChildAt(i)); });
         }
+        View custom=window.getDecorView().findViewById(context.getResources().getIdentifier("custom","id","android"));
+        View input=custom instanceof FrameLayout&&((FrameLayout)custom).getChildCount()==1?((FrameLayout)custom).getChildAt(0):null;
         legacyContent(dialog,title,buttons);
         centerTexts(window.getDecorView());
         fitContent(dialog,width,preferredWidth>0);
+        if(input!=null)focusContent(dialog,input);
+    }
+    private static void focusContent(AlertDialog dialog,View content) {
+        Runnable focus=()-> {
+            if(!dialog.isShowing()||!content.isAttachedToWindow())return;
+            View current=content.findFocus();
+            if(current!=null&&!(current instanceof ViewGroup))return;
+            // AlertController can select a scrolling wrapper before its zero-width
+            // weighted children receive their first layout. Prefer the actual control.
+            for(View candidate:content.getFocusables(View.FOCUS_FORWARD)) {
+                if(!(candidate instanceof ViewGroup)&&candidate.isEnabled()&&candidate.isShown()&&candidate.requestFocus())break;
+            }
+        };
+        if(content.isLaidOut())content.post(focus);
+        else content.addOnLayoutChangeListener(new View.OnLayoutChangeListener() {
+            @Override public void onLayoutChange(View view,int l,int t,int r,int b,int ol,int ot,int or,int ob) {
+                view.removeOnLayoutChangeListener(this);view.post(focus);
+            }
+        });
     }
     private static void legacyContent(AlertDialog dialog,View title,java.util.List<Button> buttons) {
         if(android.os.Build.VERSION.SDK_INT>28)return;

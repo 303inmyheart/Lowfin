@@ -35,6 +35,14 @@ public class HomeChannelsTest {
     }
     @After public void cleanup() { if(app.images!=null) app.images.close(); app.io.shutdownNow(); app.reports.shutdownNow(); }
     private JSONObject episode(String id,long ticks) { return Json.obj("Id",id,"Type","Episode","Name","Eine Folge","SeriesName","Eine Serie","SeriesId","show","ParentIndexNumber",40,"IndexNumber",6,"RunTimeTicks",27000000000L,"UserData",Json.obj("PlaybackPositionTicks",ticks)); }
+    @Test public void periodicLauncherRefreshKeepsItsScheduleAndDoesNotRequestAnImmediateStartupRun() {
+        android.app.job.JobScheduler jobs=(android.app.job.JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        app.channels.schedule();android.app.job.JobInfo first=jobs.getPendingJob(HomeChannels.JOB_ID);assertNotNull(first);
+        assertTrue(first.isPeriodic());assertTrue(first.isPersisted());assertEquals(3600000L,first.getIntervalMillis());assertEquals(900000L,first.getFlexMillis());
+        assertEquals(android.app.job.JobInfo.NETWORK_TYPE_ANY,first.getNetworkType());app.channels.schedule();assertSame(first,jobs.getPendingJob(HomeChannels.JOB_ID));
+        jobs.schedule(new android.app.job.JobInfo.Builder(HomeChannels.JOB_ID,new ComponentName(app,HomeJob.class)).setPeriodic(3600000L).setPersisted(true).build());
+        app.channels.schedule();assertEquals(900000L,jobs.getPendingJob(HomeChannels.JOB_ID).getFlexMillis());
+    }
     @Test public void baseChannelsAreWrittenOnlyOncePerPublicationAndExternalNamesStillRepair() throws Exception {
         java.lang.reflect.Method publish=HomeChannels.class.getDeclaredMethod("publishNow",Account.class);publish.setAccessible(true);
         publish.invoke(app.channels,account);assertEquals(4,provider.count("channel"));assertEquals(0,provider.channelWrites);

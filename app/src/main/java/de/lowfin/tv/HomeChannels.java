@@ -14,6 +14,7 @@ import java.util.concurrent.*;
 /** Native, bounded TV-provider publishing without a running UI or Flutter engine. */
 final class HomeChannels {
     static final int JOB_ID=4201;
+    static final long INTERVAL=60*60*1000L,FLEX=15*60*1000L;
     static final String EXTRA_SCOPE="lowfin.scope",EXTRA_ITEM="lowfin.item",EXTRA_MODE="lowfin.mode";
     private final LowfinApp app;
     private final ExecutorService worker=Executors.newSingleThreadExecutor();
@@ -25,8 +26,12 @@ final class HomeChannels {
     boolean supported() { return app.getPackageManager().resolveContentProvider(TvContractCompat.AUTHORITY,0)!=null; }
     void schedule() {
         if(!supported()||app.account==null||!app.settings.getBoolean("homeChannels",true)) return;
-        ((JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE)).schedule(new JobInfo.Builder(JOB_ID,new ComponentName(app,HomeJob.class))
-            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(60*60*1000L).setPersisted(true).build());
+        JobScheduler jobs=(JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+        ComponentName service=new ComponentName(app,HomeJob.class);JobInfo existing=jobs.getPendingJob(JOB_ID);
+        if(existing!=null&&existing.isPeriodic()&&existing.isPersisted()&&existing.getIntervalMillis()==INTERVAL&&existing.getFlexMillis()==FLEX&&existing.getNetworkType()==JobInfo.NETWORK_TYPE_ANY&&service.equals(existing.getService()))return;
+        // A full-interval flex permits an immediate run on every fresh schedule,
+        // duplicating foreground progress queries during process startup.
+        jobs.schedule(new JobInfo.Builder(JOB_ID,service).setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY).setPeriodic(INTERVAL,FLEX).setPersisted(true).build());
     }
     void cancelAndClear() {
         ((JobScheduler)app.getSystemService(Context.JOB_SCHEDULER_SERVICE)).cancel(JOB_ID);

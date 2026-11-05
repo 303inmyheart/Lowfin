@@ -17,6 +17,7 @@ final class DiscoveryBanner extends FrameLayout {
     private final LowfinApp app;
     private final Handler main=new Handler(Looper.getMainLooper());
     private final BannerImage backdrop;
+    private final FrameLayout information;
     private final ArtworkView poster;
     private final DetailLogo logo;
     private final TextView title,description,meta;
@@ -42,13 +43,14 @@ final class DiscoveryBanner extends FrameLayout {
         super(context);setDefaultFocusHighlightEnabled(false);app=(LowfinApp)context.getApplicationContext();setFocusable(true);setFocusableInTouchMode(true);setClickable(true);setDescendantFocusability(FOCUS_BLOCK_DESCENDANTS);
         setClipChildren(true);setClipToOutline(true);setBackground(Ui.background(0xff101012,0));
         backdrop=new BannerImage(context);backdrop.setScaleType(ImageView.ScaleType.CENTER_CROP);ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(.65f);backdrop.setColorFilter(new ColorMatrixColorFilter(matrix));addView(backdrop,new LayoutParams(-1,-1));
-        View shade=new View(context);shade.setBackground(SmoothGradient.linear(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,0xf0101012,0x80101012,0xc0101012));addView(shade,new LayoutParams(-1,-1));
-        LinearLayout text=Ui.column(context);text.setGravity(Gravity.CENTER_VERTICAL);text.setPadding(Ui.dp(context,TEXT_START),Ui.dp(context,14),Ui.dp(context,TEXT_END),0);LayoutParams textSize=new LayoutParams(-1,-1);textSize.rightMargin=Ui.dp(context,POSTER_COLUMN);textSize.bottomMargin=Ui.dp(context,42);addView(text,textSize);
+        information=new FrameLayout(context);addView(information,new LayoutParams(-1,-1));
+        View shade=new View(context);shade.setBackground(SmoothGradient.linear(android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,0xf0101012,0x80101012,0xc0101012));information.addView(shade,new LayoutParams(-1,-1));
+        LinearLayout text=Ui.column(context);text.setGravity(Gravity.CENTER_VERTICAL);text.setPadding(Ui.dp(context,TEXT_START),Ui.dp(context,14),Ui.dp(context,TEXT_END),0);LayoutParams textSize=new LayoutParams(-1,-1);textSize.rightMargin=Ui.dp(context,POSTER_COLUMN);textSize.bottomMargin=Ui.dp(context,42);information.addView(text,textSize);
         title=Ui.title(context,"",24);title.setMaxLines(2);title.setEllipsize(android.text.TextUtils.TruncateAt.END);
         FrameLayout identity=new FrameLayout(context);identity.addView(title,new LayoutParams(-1,-2,Gravity.CENTER_VERTICAL));logo=new DetailLogo(context,title);identity.addView(logo,new LayoutParams(Ui.dp(context,280),Ui.dp(context,66),Gravity.START|Gravity.CENTER_VERTICAL));text.addView(identity,new LinearLayout.LayoutParams(-1,Ui.dp(context,72)));
         meta=Ui.text(context,"",11,0xffccccd1);meta.setSingleLine(true);meta.setEllipsize(android.text.TextUtils.TruncateAt.END);text.addView(meta);Ui.space(text,4);
         description=Ui.text(context,"",13,0xffdddddf);description.setMaxLines(4);description.setEllipsize(android.text.TextUtils.TruncateAt.END);text.addView(description,new LinearLayout.LayoutParams(-1,0,1));Ui.space(text,4);
-        ratings=new RatingsRow(context,true,true).spread();ratings.reserve(app);LayoutParams ratingSize=new LayoutParams(-1,-2,Gravity.BOTTOM);ratingSize.leftMargin=Ui.dp(context,TEXT_START);ratingSize.rightMargin=Ui.dp(context,POSTER_COLUMN)+Ui.dp(context,TEXT_END);ratingSize.bottomMargin=Ui.dp(context,10);addView(ratings,ratingSize);poster=new ArtworkView(context);poster.ratio(2.0/3);poster.setScaleType(ImageView.ScaleType.FIT_CENTER);LayoutParams posterSize=new LayoutParams(Ui.dp(context,126),Ui.dp(context,189),Gravity.END|Gravity.CENTER_VERTICAL);posterSize.rightMargin=Ui.dp(context,20);addView(poster,posterSize);
+        ratings=new RatingsRow(context,true,true).spread();ratings.reserve(app);LayoutParams ratingSize=new LayoutParams(-1,-2,Gravity.BOTTOM);ratingSize.leftMargin=Ui.dp(context,TEXT_START);ratingSize.rightMargin=Ui.dp(context,POSTER_COLUMN)+Ui.dp(context,TEXT_END);ratingSize.bottomMargin=Ui.dp(context,10);information.addView(ratings,ratingSize);poster=new ArtworkView(context);poster.ratio(2.0/3);poster.setScaleType(ImageView.ScaleType.FIT_CENTER);LayoutParams posterSize=new LayoutParams(Ui.dp(context,126),Ui.dp(context,189),Gravity.END|Gravity.CENTER_VERTICAL);posterSize.rightMargin=Ui.dp(context,20);information.addView(poster,posterSize);
         View outline=new View(context);focus=Ui.background(Color.TRANSPARENT,0);((FocusBackground)focus).owner(this);outline.setBackground(focus);addView(outline,new LayoutParams(-1,-1));Accent.bind(outline,(v,color)->focus.setStroke(hasFocus()?Ui.dp(context,2):0,color));
         setOnFocusChangeListener((v,on)-> {focus.setStroke(on?Ui.dp(context,2):0,Accent.color);if(on) focused.run();syncVisibility();});
         setOnClickListener(v->{JSONObject item=history==null?null:history.current();if(item!=null) open.accept(item);});
@@ -107,6 +109,12 @@ final class DiscoveryBanner extends FrameLayout {
     }
     private void syncZoom() {
         boolean run=active&&Motion.enabled(this)&&backdrop.getDrawable()!=null;
+        // Cache the filtered backdrop and static information separately. Moving the
+        // backdrop must not rerasterize text, rating surfaces and gradient shaders.
+        // Release both layers when inactive, and bound their pixel budget in HD/4K.
+        int layer=run&&getWidth()>0&&getHeight()>0&&(long)getWidth()*getHeight()<=1920L*1080?View.LAYER_TYPE_HARDWARE:View.LAYER_TYPE_NONE;
+        if(information.getLayerType()!=layer)information.setLayerType(layer,null);
+        if(backdrop.getLayerType()!=layer)backdrop.setLayerType(layer,null);
         if(run&&zoom==null) {zoom=ObjectAnimator.ofPropertyValuesHolder(backdrop,PropertyValuesHolder.ofFloat("scaleX",1f,1.08f),PropertyValuesHolder.ofFloat("scaleY",1f,1.08f));zoom.setDuration(20000);zoom.setRepeatCount(ValueAnimator.INFINITE);zoom.setRepeatMode(ValueAnimator.REVERSE);zoom.setInterpolator(new LinearInterpolator());zoom.start();}
         else if(!run&&zoom!=null) {zoom.cancel();zoom=null;backdrop.setScaleX(1);backdrop.setScaleY(1);}
     }
