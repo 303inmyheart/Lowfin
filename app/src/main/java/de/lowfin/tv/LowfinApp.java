@@ -11,6 +11,7 @@ public final class LowfinApp extends Application {
     final ExecutorService cacheIo=Executors.newFixedThreadPool(1);
     final ExecutorService navigationIo=Executors.newFixedThreadPool(2);
     final ExecutorService homeIo=Executors.newFixedThreadPool(2);
+    final ExecutorService latestIo=Executors.newFixedThreadPool(1,work->new Thread(()-> {android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);work.run();},"LowfinLatest"));
     final ExecutorService reports=Executors.newFixedThreadPool(1);
     Account account; Api api; Library library; Images images;
     HomeChannels channels;

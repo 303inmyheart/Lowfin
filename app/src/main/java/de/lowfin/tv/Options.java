@@ -79,25 +79,39 @@ final class Options {
         });
         dialog.show();slider.requestFocus();dialog.getWindow().getDecorView().post(slider::requestFocus);
     }
-    private void homeOrder() {
-        Account account=app.account;List<String> keys=HomeLayout.keys(HomeGenres.read(app.settings,account),true,app.settings.getBoolean("discoveryBanner",false));
-        LinearLayout rows=Ui.column(activity);ScrollView scroll=new ScrollView(activity);scroll.addView(rows);
-        final Runnable[] render={null};final String[] selected={null};
-        render[0]=()-> {
-            rows.removeAllViews();List<String> order=HomeLayout.read(app.settings,account,keys);
-            for(int i=0;i<order.size();i++) {
-                String key=order.get(i);final int index=i;
-                Button row=Ui.button(activity,(i+1)+" · "+HomeLayout.label(key),()-> {
-                    List<String> names=new ArrayList<>();List<Integer> directions=new ArrayList<>();
-                    if(index>0) { names.add(I18n.resource(R.string.home_move_up));directions.add(-1); }
-                    if(index<order.size()-1) { names.add(I18n.resource(R.string.home_move_down));directions.add(1); }
-                    LowfinDialog.builder(activity).setTitle(HomeLayout.label(key)).setItems(names.toArray(new String[0]),(d,w)-> {
-                        if(app.account!=account) return;HomeLayout.move(app.settings,account,keys,key,directions.get(w));selected[0]=key;render[0].run();
-                    }).setNegativeButton(I18n.text("Abbrechen"),null).show();
-                });rows.addView(row);Ui.space(rows,4);if(key.equals(selected[0])) row.post(row::requestFocus);
+    private void homeLibraries(java.util.function.Consumer<List<JSONObject>> ready) {
+        Api api=app.api;Account account=app.account;if(api==null||account==null)return;
+        AlertDialog loading=LowfinDialog.builder(activity).setMessage(I18n.resource(R.string.ambient_libraries_loading)).setNegativeButton(I18n.text("Abbrechen"),null).show();
+        app.navigationIo.execute(()-> {
+            List<JSONObject> views=new ArrayList<>();
+            try {String saved=app.library.state("views");JSONArray rows=saved.isEmpty()?Json.array(api.get("/Users/"+account.user+"/Views"),"Items"):new JSONArray(saved);for(int i=0;i<rows.length();i++)if(rows.optJSONObject(i)!=null)views.add(rows.optJSONObject(i));}catch(Exception ignored){}
+            List<JSONObject> result=HomeLatest.libraries(views);
+            activity.runOnUiThread(()-> {if(!loading.isShowing())return;loading.dismiss();if(!activity.isFinishing()&&app.api==api)ready.accept(result);});
+        });
+    }
+    private void latestLibraries() {
+        homeLibraries(libraries-> {
+            Account account=app.account;SettingsColumn rows=new SettingsColumn(activity);ScrollView scroll=new ScrollView(activity);scroll.addView(rows);
+            rows.addView(Ui.text(activity,I18n.resource(R.string.home_latest_hint),13,Ui.MUTED));
+            for(JSONObject library:libraries) {
+                String key=HomeLatest.setting(account,library.optString("Id"));
+                rows.addView(Ui.toggle(activity,library.optString("Name"),app.settings.getBoolean(key,true),on->{if(app.account==account)app.settings.edit().putBoolean(key,on).apply();}));
             }
-        };
-        render[0].run();LowfinDialog.builder(activity).setTitle(I18n.resource(R.string.home_row_order)).setView(scroll).setNegativeButton(I18n.text("Schließen"),null).show();
+            if(libraries.isEmpty())rows.addView(Ui.text(activity,I18n.resource(R.string.ambient_libraries_empty),13,Ui.MUTED));
+            LowfinDialog.builder(activity).setTitle(I18n.resource(R.string.home_latest_libraries)).setView(scroll).setNegativeButton(I18n.text("Schließen"),null).show();
+        });
+    }
+    private void homeOrder() {homeLibraries(this::homeOrder);}
+    private void homeOrder(List<JSONObject> libraries) {
+        Account account=app.account;List<String> keys=HomeLayout.keys(HomeGenres.read(app.settings,account),true,app.settings.getBoolean("discoveryBanner",false),libraries);
+        OrderEditor.open(activity,app,I18n.resource(R.string.home_row_order),()-> {
+            List<OrderEditor.Item> entries=new ArrayList<>();
+            for(String key:HomeLayout.read(app.settings,account,keys))entries.add(new OrderEditor.Item(key,HomeLayout.label(key,libraries)));
+            return entries;
+        },order-> {
+            if(app.account!=account)throw new IllegalStateException("Account changed");
+            HomeLayout.save(app.settings,account,keys,order);
+        },null);
     }
     void home() {
         section(R.string.settings_group_banner);
@@ -108,6 +122,11 @@ final class Options {
         section(R.string.settings_group_rows);toggle(I18n.resource(R.string.home_show_libraries),"homeLibraries",false);
         button(I18n.resource(R.string.home_row_order),this::homeOrder);
         toggle("Fortsetzen-Reihe anzeigen","homeResume",true); toggle("Next-Up-Reihe anzeigen","homeNext",true);
+        if(app.account!=null) {
+            String key=HomeLatest.setting(app.account);
+            toggle(I18n.resource(R.string.home_latest_enable),key,true);
+            button(I18n.resource(R.string.home_latest_libraries),this::latestLibraries);
+        }
         number("Empfehlungsreihen","recommendationRows",5,new int[]{0,1,2,3,4,5},numbers(new int[]{0,1,2,3,4,5}));
     }
     void cache() {

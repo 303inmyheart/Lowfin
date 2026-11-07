@@ -37,6 +37,24 @@ public class OrderEditorTest {
     @Test public void emptyOrdersDoNotEnableSaving() throws Exception {
         AtomicInteger writes=new AtomicInteger();editor=OrderEditor.open(activity.get(),app,"Order",Collections::emptyList,order->writes.incrementAndGet(),null);await(()->editor.dialog.getButton(AlertDialog.BUTTON_NEUTRAL).getVisibility()==View.GONE);assertFalse(editor.dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());assertEquals(0,writes.get());
     }
+    @Test public void movingThroughLongOrderKeepsThePickedRowVisibleInBothDirectionsAndAfterUndo() throws Exception {
+        List<OrderEditor.Item> many=new ArrayList<>();for(int i=0;i<18;i++)many.add(new OrderEditor.Item("row-"+i,"Row "+i));
+        AtomicInteger writes=new AtomicInteger();editor=OrderEditor.open(activity.get(),app,"Order",()->many,order->writes.incrementAndGet(),null);
+        await(()->button(root(),"1 · Row 0")!=null);Button picked=button(root(),"1 · Row 0");picked.requestFocus();key(KeyEvent.KEYCODE_DPAD_CENTER);
+        for(int i=0;i<17;i++) {key(KeyEvent.KEYCODE_DPAD_DOWN);assertPickedVisible(picked);}
+        ScrollView scroll=(ScrollView)picked.getParent().getParent();assertTrue(scroll.getScrollY()>0);
+        key(KeyEvent.KEYCODE_BACK);assertEquals("1 · Row 0",picked.getText().toString());assertPickedVisible(picked);
+        key(KeyEvent.KEYCODE_DPAD_CENTER);
+        for(int i=0;i<17;i++)key(KeyEvent.KEYCODE_DPAD_DOWN);
+        for(int i=0;i<17;i++) {key(KeyEvent.KEYCODE_DPAD_UP);assertPickedVisible(picked);}
+        assertEquals(0,writes.get());assertFalse(editor.dialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+    }
+    private void assertPickedVisible(Button picked) {
+        assertTrue(picked.hasFocus());ScrollView scroll=(ScrollView)picked.getParent().getParent();
+        android.graphics.Rect rect=new android.graphics.Rect();picked.getDrawingRect(rect);scroll.offsetDescendantRectToMyCoords(picked,rect);
+        assertTrue("Row above viewport",rect.top>=scroll.getScrollY());
+        assertTrue("Row below viewport",rect.bottom<=scroll.getScrollY()+scroll.getHeight());
+    }
     @Test public void absoluteProviderArtworkSurvivesSettingsRowStyling() {
         Button row=Ui.button(activity.get(),"OMDb",()->{});android.graphics.drawable.Drawable icon=activity.get().getDrawable(R.drawable.provider_omdb);icon.setBounds(0,0,26,18);row.setCompoundDrawables(icon,null,null,null);new SettingsColumn(activity.get()).addView(row);assertSame(icon,row.getCompoundDrawables()[0]);assertNotNull(row.getCompoundDrawables()[2]);
     }

@@ -8,6 +8,8 @@
 
 A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.1.**
 
+> **1.5.2:** Recently added rows for each video library, with ratings, individual switches and free home ordering. All order editors follow the picked row while scrolling; library metadata refreshes avoid unnecessary card rebinding.
+
 > **1.5.1:** Prioritized cold-start loading, more reliable decoder recovery, centered movie year/genres, and a first-run precache choice. Companion 0.7.1 retains up to 250,000 library changes.
 
 > **1.5 — FIRE OS FIX:** Fixes flashing/stale focus outlines, inconsistent Fire TV dialogs, switch rendering and legacy in-app update verification. Also includes smoother home navigation, single-line shelf ratings and Jellyfin dashboard playback controls/messages.
@@ -47,7 +49,7 @@ A native programme timeline with channel logos and programme details, opened fro
 The 1.5.1 signed release APK is built and verified with GitHub Actions, with public diagnostics recording off by default. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.5.1-release.apk
+adb install -r Lowfin-1.5.2-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.
@@ -82,6 +84,8 @@ Version 1.4 adds a TV programme guide, redesigned settings and sidebar ordering,
 - **Tracearr statistics:** configure the connection locally (including TXT import), or use a connection shared by the Companion administrator. Statistics remain scoped to the signed-in Jellyfin user.
 - **Companion cover tags:** server-indexed resolution/audio facts are drawn inside Lowfin card frames. Device settings control their visibility; HDR tags also follow the device HDR playback setting.
 - Android TV preview channels for Continue watching, Next up, movies, shows and watched-movie recommendations. Separate movie/show library selection mixes cards across chosen libraries. Launcher support and channel visibility depend on Android TV / Google TV.
+
+- **Recently added by library:** default-on feature rows with descriptions and ratings. Use **Settings → Home screen** for the master switch and individual library switches. Under **Home row order**, press OK to pick up a row, move with Up/Down, press OK to drop, then Save. The list follows the picked row; Back undoes the current move.
 
 ## Settings
 

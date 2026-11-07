@@ -56,8 +56,21 @@ final class MediaAdapter extends RecyclerView.Adapter<MediaAdapter.Card> {
                 androidx.recyclerview.widget.GridLayoutManager layout=(androidx.recyclerview.widget.GridLayoutManager)recycler.getLayoutManager();
                 if(layout.getSpanSizeLookup().getSpanIndex(cardPosition,layout.getSpanCount())==0) { if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) openMenu.run(); return true; }
             } return false;
-        },()->actions.accept(item));
-        images.show(holder.image,item,wide); holder.itemView.setOnClickListener(v->open.accept(item));
+        },()->current(holder,actions));
+        images.show(holder.image,item,wide); holder.itemView.setOnClickListener(v->current(holder,open));
+    }
+    private void current(Card holder,Consumer<JSONObject> action) {
+        int position=holder.getBindingAdapterPosition();
+        if(position!=RecyclerView.NO_POSITION&&position<items.size()) action.accept(items.get(position));
+    }
+    @Override public void onBindViewHolder(Card holder,int position,List<Object> payloads) {
+        // A metadata refresh must not cancel a held OK gesture or restart artwork work.
+        if(!payloads.isEmpty()) {
+            boolean metadataOnly=true;
+            for(Object payload:payloads) if(payload!=MediaDiff.METADATA_ONLY) { metadataOnly=false;break; }
+            if(metadataOnly) return;
+        }
+        onBindViewHolder(holder,position);
     }
     @Override public void onViewRecycled(Card card) { ConfirmPress.cancel(card.itemView); card.image.badges("",0); card.image.setTag(null); card.image.setImageDrawable(null); Motion.reset(card.itemView); }
     static final class Card extends RecyclerView.ViewHolder {

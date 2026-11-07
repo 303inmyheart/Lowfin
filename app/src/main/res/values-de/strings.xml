@@ -472,4 +472,9 @@
     <string name="precache_setup_message">Metadaten und Cover vorladen, damit du schneller durch deine Bibliothek blättern kannst. Das benötigt Speicherplatz und Netzwerkverkehr. Du kannst dies später unter Einstellungen → Bibliothek und Cache ändern.</string>
     <string name="precache_setup_enable">Precache aktivieren</string>
     <string name="precache_setup_skip">Jetzt nicht</string>
+    <string name="home_latest_title">Zuletzt hinzugefügt</string>
+    <string name="home_latest_row">Zuletzt hinzugefügt · %1$s</string>
+    <string name="home_latest_enable">Zuletzt-hinzugefügt-Reihen anzeigen</string>
+    <string name="home_latest_libraries">Zuletzt hinzugefügt: Bibliotheken</string>
+    <string name="home_latest_hint">Eine Detailreihe pro Videobibliothek mit Beschreibung und Bewertungen. Hier Bibliotheken auswählen und die Reihen unter Startseiten-Reihenfolge verschieben.</string>
 </resources>

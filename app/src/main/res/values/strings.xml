@@ -472,4 +472,9 @@
     <string name="precache_setup_message">Preload library metadata and covers for faster browsing. This uses storage space and network traffic. You can change this later in Settings → Library and cache.</string>
     <string name="precache_setup_enable">Enable precache</string>
     <string name="precache_setup_skip">Not now</string>
+    <string name="home_latest_title">Recently added</string>
+    <string name="home_latest_row">Recently added · %1$s</string>
+    <string name="home_latest_enable">Show recently added rows</string>
+    <string name="home_latest_libraries">Recently added: libraries</string>
+    <string name="home_latest_hint">One featured row per video library, with descriptions and ratings. Choose libraries here and move their rows in Home row order.</string>
 </resources>

@@ -30,7 +30,7 @@ public final class MainActivity extends Activity {
     private final Deque<Screen> history=new ArrayDeque<>();
     private Screen screen;
     private int generation;
-    private Runnable homeReload;
+    private Runnable homeReload,homeLatestReload;
     private boolean startupPending=true;
     private StartupOverlay startupOverlay;
     private UpdateSettings updateSettings;
@@ -388,7 +388,7 @@ public final class MainActivity extends Activity {
         if(SidebarViews.sameData(views,next))return;
         boolean rebuild=!SidebarViews.sameButtons(views,next);views.clear();views.addAll(next);
         if(rebuild)buildSidebar();
-        if(screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter)((HomeAdapter)grid.getAdapter()).libraries(views);
+        if(screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) {((HomeAdapter)grid.getAdapter()).libraries(views);if(homeLatestReload!=null)homeLatestReload.run();}
     }
     private void loadViews() {
         checkLiveTv();
@@ -423,7 +423,7 @@ public final class MainActivity extends Activity {
         else if(!push) history.clear();
         if(homeBackdropUpdate!=null) handler.removeCallbacks(homeBackdropUpdate);
         focusedHomeRow=-1; focusedHomeId=""; homeDescription=null;
-        screen=next; homeReload=null; generation++; shell(next.kind.equals("detail")?"Details":next.title);
+        screen=next; homeReload=null;homeLatestReload=null; generation++; shell(next.kind.equals("detail")?"Details":next.title);
         switch(next.kind) {
             case "home": home(); break;
             case "recommendations": recommendationItems(); break;
@@ -553,11 +553,11 @@ public final class MainActivity extends Activity {
         final HomeAdapter[] holder=new HomeAdapter[1];
         HomeAdapter adapter=new HomeAdapter(app.images,pinned,(j,row)-> { if(holder[0].libraries(row)) show(new Screen("browse",j.optString("Name"),viewTypes(j),j.optString("Id"),j),true); else if(row<2) play(j,row==0?Json.position(j):0); else open(j); },row->{
             if(row==0) special(I18n.text("Weiterschauen"),"resume"); else if(row==1) special(I18n.text("Als Nächstes"),"next");
-            else if(HomeAdapter.recommendation(row)) show(new Screen("recommendations",holder[0].labels.get(row),null,null,Json.obj("Items",new JSONArray(holder[0].rows.get(row)))),true);
+            else if(holder[0].latest(row)||HomeAdapter.recommendation(row)) show(new Screen("recommendations",holder[0].labels.get(row),null,null,Json.obj("Items",new JSONArray(holder[0].rows.get(row)))),true);
             else if(row>=HomeAdapter.GENRE_START) show(new Screen("genre",pinned.get(row-HomeAdapter.GENRE_START),"Movie,Series",pinned.get(row-HomeAdapter.GENRE_START),null),true);
             else show(new Screen("browse",I18n.text("Filme"),"Movie",null,null),true);
         },this::homeFocus,row->{ setHomeFocusMode(row); holder[0].requestRow(row); }); holder[0]=adapter; adapter.onActions(this::itemActions); adapter.onOpenMenu(()->setDrawer(true));
-        adapter.configure(app.settings,app.account,pinned,app.settings.getBoolean("homeLibraries",false));
+        adapter.configure(app.settings,app.account,pinned,app.settings.getBoolean("homeLibraries",false),views);
         final boolean restored=adapter.restore(screen.homeState);
         adapter.bannerAllowed(()->importActive&&!drawerOpen&&screen!=null&&screen.kind.equals("home")&&app.api==app.images.api);
         grid.setAdapter(adapter);adapter.libraries(views); body.addView(grid,new LinearLayout.LayoutParams(-1,0,1));
@@ -581,12 +581,12 @@ public final class MainActivity extends Activity {
             if(restored) {
                 if(g!=generation||isFinishing()) return;
                 List<List<JSONObject>> snapshots=new ArrayList<>();
-                for(int row=0;row<restoredRows.size();row++) snapshots.add(adapter.libraries(row)||adapter.banner(row)?Collections.emptyList():restoredRows.get(row));
+                for(int row=0;row<restoredRows.size();row++) snapshots.add(adapter.libraries(row)||adapter.banner(row)||adapter.latest(row)?Collections.emptyList():restoredRows.get(row));
                 List<List<JSONObject>> currentRows=db.latestRows(snapshots);
                 for(int i=0;i<restoredRows.size();i++) {
                     if(g!=generation||isFinishing()) return;
                     int row=i;List<JSONObject> snapshot=restoredRows.get(row);
-                    if(adapter.libraries(row)||adapter.banner(row)||snapshot.isEmpty()) continue;
+                    if(adapter.libraries(row)||adapter.banner(row)||adapter.latest(row)||snapshot.isEmpty()) continue;
                     List<JSONObject> current=currentRows.get(row);
                     runOnUiThread(()-> {if(g==generation&&!fresh[row]&&adapter.rows.get(row)==snapshot) adapter.update(row,current);});
                 }
@@ -609,8 +609,34 @@ public final class MainActivity extends Activity {
         // UI-thread state: fresh progress wins before recommendation/genre writes.
         final int[] primaryPending={0};
         final List<Runnable> pendingStores=new ArrayList<>();
+        final Set<String> latestCached=new HashSet<>(),latestFresh=new HashSet<>(),latestLoading=new HashSet<>();
+        homeLatestReload=()-> {
+            if(g!=generation||isFinishing()||app.api!=api)return;
+            adapter.latestLibraries(app.settings,api.account,views);
+            for(Map.Entry<Integer,JSONObject> entry:adapter.latestLibraries().entrySet()) {
+                final int row=entry.getKey();final JSONObject view=entry.getValue();final String id=view.optString("Id"),key=HomeLatest.cache(id);
+                if(latestCached.add(id))app.cacheIo.execute(()-> {try {
+                    String saved=db.state(key);if(saved.isEmpty())return;List<JSONObject> old=list(new JSONArray(saved));List<String> ids=new ArrayList<>();for(JSONObject item:old)ids.add(item.optString("Id"));
+                    Map<String,JSONObject> current=db.itemsById(ids);List<JSONObject> cached=new ArrayList<>();for(JSONObject item:old)if(current.containsKey(item.optString("Id")))cached.add(current.get(item.optString("Id")));
+                    runOnUiThread(()-> {if(g==generation&&app.api==api&&adapter.latest(row)&&!latestFresh.contains(id))adapter.update(row,cached);});
+                }catch(Exception ignored) {}});
+                long last=adapter.latestChecked.getOrDefault(id,0L);
+                if(lastRefresh[0]==0||primaryPending[0]!=0||latestLoading.contains(id)||last>0&&SystemClock.elapsedRealtime()-last<120000)continue;
+                latestLoading.add(id);
+                app.latestIo.execute(()-> {long began=SystemClock.elapsedRealtime();try {
+                    if(g!=generation||app.api!=api)return;
+                    List<JSONObject> data=HomeLatest.load(api,db,view);JSONArray stored=new JSONArray(data);
+                    if(g!=generation||app.api!=api)return;
+                    db.put(stored,System.currentTimeMillis());db.state(key,stored.toString());
+                    runOnUiThread(()-> {if(g==generation&&app.api==api&&adapter.latest(row)) {latestFresh.add(id);adapter.update(row,data);app.diagnostics.record(Diagnostics.Event.HOME_LATEST,SystemClock.elapsedRealtime()-began,data.size(),row,0);}});
+                }catch(Exception ignored) { /* Keep the persistent shelf available offline. */ }
+                finally {runOnUiThread(()-> {latestLoading.remove(id);if(g==generation)adapter.latestChecked.put(id,SystemClock.elapsedRealtime());});}});
+            }
+        };
+        homeLatestReload.run();
         final Runnable supplementary=()-> {
             if(g!=generation||isFinishing()||app.api!=api) return;
+            if(homeLatestReload!=null)homeLatestReload.run();
             if(lastRecommendationRefresh[0]==0||SystemClock.elapsedRealtime()-lastRecommendationRefresh[0]>120000) {
                 lastRecommendationRefresh[0]=SystemClock.elapsedRealtime();
                 app.io.execute(()-> { if(g!=generation) return; try {

@@ -17,6 +17,11 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     final List<List<JSONObject>> rows=new ArrayList<>();
     private final List<Integer> order=new ArrayList<>();
     private int libraries=-1,banner=-1;
+    private List<String> configuredGenres=Collections.emptyList();
+    private final Map<Integer,JSONObject> latestLibraries=new LinkedHashMap<>();
+    final Map<String,Long> latestChecked=new HashMap<>();
+    boolean latest(int row) {return latestLibraries.containsKey(row);}
+    Map<Integer,JSONObject> latestLibraries() {return new LinkedHashMap<>(latestLibraries);}
     private DiscoveryHistory discovery=new DiscoveryHistory();
     private boolean initialBannerViewport=true,paired;
     private int departingShelf=-1;
@@ -45,21 +50,43 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     boolean feature(int row) { return row>=2&&row!=libraries&&row!=banner; }
     boolean libraries(int row) { return row>=0&&row==libraries; }
     void configure(android.content.SharedPreferences prefs,Account account,List<String> genres,boolean showLibraries) {
+        configure(prefs,account,genres,showLibraries,Collections.emptyList());
+    }
+    void configure(android.content.SharedPreferences prefs,Account account,List<String> genres,boolean showLibraries,List<JSONObject> views) {
+        configuredGenres=new ArrayList<>(genres);
         if(showLibraries) { libraries=rows.size();labels.add(I18n.resource(R.string.home_libraries));rows.add(new ArrayList<>()); }
         boolean showBanner=prefs.getBoolean("discoveryBanner",false);
         if(showBanner) {banner=rows.size();labels.add(I18n.resource(R.string.discovery_banner));rows.add(new ArrayList<>());}
         keys=HomeLayout.keys(genres,showLibraries);if(showBanner) keys.add(HomeLayout.BANNER);order.clear();
         for(String key:HomeLayout.read(prefs,account,HomeLayout.keys(genres,showLibraries,showBanner))) order.add(keys.indexOf(key));
+        latestLibraries(prefs,account,views);
+    }
+    void latestLibraries(android.content.SharedPreferences prefs,Account account,List<JSONObject> views) {
+        List<JSONObject> chosen=HomeLatest.selected(prefs,account,views);Map<Integer,JSONObject> active=new LinkedHashMap<>();boolean labelsChanged=false;
+        for(JSONObject view:chosen) {
+            String key=HomeLatest.PREFIX+view.optString("Id"),label=HomeLatest.label(view);int row=keys.indexOf(key);
+            if(row<0) {row=keys.size();keys.add(key);labels.add(label);rows.add(new ArrayList<>());}
+            else if(!labels.get(row).equals(label)) {labels.set(row,label);labelsChanged=true;}
+            active.put(row,view);
+        }
+        List<Integer> next=new ArrayList<>();
+        for(String key:HomeLayout.read(prefs,account,HomeLayout.keys(configuredGenres,libraries>=0,banner>=0,chosen)))next.add(keys.indexOf(key));
+        boolean changed=!next.equals(order);latestLibraries.clear();latestLibraries.putAll(active);
+        if(changed||labelsChanged) {
+            int keep=navigationRow;order.clear();order.addAll(next);notifyDataSetChanged();
+            if(owner!=null&&keep>=0)requestRow(position(keep)>=0?keep:firstRow());
+        }
     }
     /** Data/layout state only; never retain an old Activity view hierarchy. */
     static final class State {
         final List<String> keys,labels;final List<List<JSONObject>> rows=new ArrayList<>();
-        final Map<Integer,Integer> columns;final Map<String,android.os.Parcelable> positions;
+        final Map<Integer,Integer> columns;final Map<String,android.os.Parcelable> positions;final Map<String,Long> latestChecked;
         final int row;final String id;final boolean more;final DiscoveryHistory discovery;final boolean initialBannerViewport;
         State(HomeAdapter adapter,int focusedRow) {
             keys=new ArrayList<>(adapter.keys);labels=new ArrayList<>(adapter.labels);discovery=new DiscoveryHistory(adapter.discovery);initialBannerViewport=adapter.initialBannerViewport;
             for(List<JSONObject> data:adapter.rows) rows.add(new ArrayList<>(data));
             columns=new HashMap<>(adapter.selectedColumns);positions=new HashMap<>(adapter.positions);
+            latestChecked=new HashMap<>(adapter.latestChecked);
             row=focusedRow>=0&&focusedRow<rows.size()?focusedRow:adapter.firstRow();
             int column=columns.getOrDefault(row,0);more=!adapter.banner(row)&&!rows.get(row).isEmpty()&&column==rows.get(row).size();
             id=column>=0&&column<rows.get(row).size()?rows.get(row).get(column).optString("Id"):"";
@@ -76,7 +103,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     }
     boolean restore(State state) {
         if(state==null||!keys.equals(state.keys)||state.rows.size()!=rows.size()) return false;
-        for(int i=0;i<rows.size();i++) {rows.set(i,new ArrayList<>(state.rows.get(i)));labels.set(i,state.labels.get(i));publishedLabels.put(i,labels.get(i));}
+        for(int i=0;i<rows.size();i++) {rows.set(i,new ArrayList<>(state.rows.get(i)));if(!latest(i))labels.set(i,state.labels.get(i));publishedLabels.put(i,labels.get(i));}
+        latestChecked.putAll(state.latestChecked);
         selectedColumns.putAll(state.columns);positions.putAll(state.positions);entryPending=false;discovery=new DiscoveryHistory(state.discovery);initialBannerViewport=state.initialBannerViewport;
         if(!state.id.isEmpty()) for(int i=0;i<rows.get(state.row).size();i++) if(state.id.equals(rows.get(state.row).get(i).optString("Id"))) {selectedColumns.put(state.row,i);break;}
         if(state.more) selectedColumns.put(state.row,rows.get(state.row).size());
@@ -233,7 +261,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private boolean hidden(int row) {
         android.content.SharedPreferences prefs=I18n.preferences();
         if(row==0&&!prefs.getBoolean("homeResume",true)||row==1&&!prefs.getBoolean("homeNext",true)) return true;
-        return recommendation(row)&&(row-2>=prefs.getInt("recommendationRows",5)||rows.get(row).isEmpty());
+        return latest(row)&&rows.get(row).isEmpty()||recommendation(row)&&(row-2>=prefs.getInt("recommendationRows",5)||rows.get(row).isEmpty());
     }
     private int nextRow(int current,int direction) {
         int next=position(current)+direction;
@@ -243,6 +271,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     int firstRow() { for(int row:order) if(!banner(row)&&!hidden(row)) return row;return banner>=0?banner:0; }
     void moveRow(int current,int direction) { initialBannerViewport=false;int target=nextRow(current,direction); if(target>=0) move.accept(target); }
     void update(int index,List<JSONObject> data) {
+        if(position(index)<0) {rows.set(index,data);return;}
         Shelf shelf=owner==null?null:(Shelf)owner.findViewHolderForAdapterPosition(position(index));
         boolean restore=shelf!=null&&shelf.list!=null&&shelf.list.hasFocus()||focusedShelf==index;
         // A restored shelf may exist before its requested card has acquired focus.

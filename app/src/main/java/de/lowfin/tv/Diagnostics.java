@@ -14,7 +14,7 @@ final class Diagnostics {
     static final String SETTING="diagnostics";
     static final int CAPACITY=192;
     enum Event { SCREEN_BUILD, NAV_CACHE, NAV_SERVER, NAV_DISCARDED, NAV_ERROR, HTTP_READ, HTTP_WRITE, LIBRARY_STORE,
-        HOME_NEXT, HOME_RESUME, GRID_KEY, GRID_TARGET, GRID_FOCUS, PLAYER_STATE, FIRST_FRAME, VIDEO_DROPPED, PLAYER_ERROR, CACHE_CHANGES, CACHE_RESET, STARTUP_READY }
+        HOME_NEXT, HOME_RESUME, GRID_KEY, GRID_TARGET, GRID_FOCUS, PLAYER_STATE, FIRST_FRAME, VIDEO_DROPPED, PLAYER_ERROR, CACHE_CHANGES, CACHE_RESET, STARTUP_READY, HOME_LATEST }
     private static final long[] FRAME_LIMITS={8,16,24,33,50,100,250};
     private final LowfinApp app;
     private final Handler main=new Handler(Looper.getMainLooper());
@@ -89,7 +89,7 @@ final class Diagnostics {
         put(result,"javaUsedBytes",runtime.totalMemory()-runtime.freeMemory());put(result,"javaMaxBytes",runtime.maxMemory());
         put(result,"nativeAllocatedBytes",Debug.getNativeHeapAllocatedSize());put(result,"evictedEvents",evicted);
         JSONObject pools=new JSONObject();
-        for(Object[] pool:new Object[][]{{"navigation",app.navigationIo},{"home",app.homeIo},{"cache",app.cacheIo},{"general",app.io},{"reports",app.reports}}) {
+        for(Object[] pool:new Object[][]{{"navigation",app.navigationIo},{"home",app.homeIo},{"latest",app.latestIo},{"cache",app.cacheIo},{"general",app.io},{"reports",app.reports}}) {
             if(pool[1] instanceof ThreadPoolExecutor) {ThreadPoolExecutor p=(ThreadPoolExecutor)pool[1];put(pools,(String)pool[0],Json.obj("active",p.getActiveCount(),"queued",p.getQueue().size(),"completed",p.getCompletedTaskCount()));}
         }
         put(result,"executors",pools);

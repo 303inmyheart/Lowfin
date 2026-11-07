@@ -8,7 +8,9 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.1**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.2**.
+
+> **1.5.2:** Zuletzt-hinzugefügt-Reihen pro Videobibliothek mit Bewertungen, eigenen Schaltern und freier Reihenfolge. Alle Sortierdialoge scrollen mit der aufgenommenen Zeile; Metadatenaktualisierungen vermeiden unnötige Kartenbindungen.
 
 > **1.5.1:** Priorisierter Kaltstart, zuverlässigerer Decoder-Fallback, zentrierte Jahres-/Genreangaben im Player und eine Precache-Auswahl beim ersten Einrichten. Companion 0.7.1 hält bis zu 250.000 Bibliotheksänderungen vor.
 
@@ -56,10 +58,10 @@ Zusätzlich gibt es in Version 1.4 **Einstellungen → App-Updates**: optionale 
 - Detailaktionen erhalten dezente durchscheinende Akzentflächen, mittig gruppierte Symbole und Texte sowie einen klaren Fernbedienungsfokus. Bewertungen passen sich in Detailansicht, Banner und Startseitenreihen ohne kräftige Einzelrahmen ein; Anzeige- und Cache-Einstellungen bleiben erhalten.
 ## Installieren
 
-Die mit GitHub Actions gebaute und geprüfte Release-APK heißt `Lowfin-1.5.1-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die mit GitHub Actions gebaute und geprüfte Release-APK heißt `Lowfin-1.5.2-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.5.1-release.apk
+adb install -r Lowfin-1.5.2-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.
@@ -127,7 +129,7 @@ API-Dokumentation: [OMDb](https://www.omdbapi.com/), [MDBList](https://docs.mdbl
 
 - Ein kleiner Startpuffer verhindert, dass die Speicherreserve auf schwachen Geräten das Laden schon vor dem ersten Datenpaket blockiert. Live-TV startet ab 750 ms Puffer und verwendet kürzere Nachpufferzeiten. Ein kontinuierlicher Senderstream wird als Stream ohne bekannte Dateilänge behandelt, damit der Player nicht zum vermeintlichen Dateiende springt.
 - Nach 20 Sekunden ohne abspielbare Daten wird derselbe Live-Stream einmal neu verbunden. Nach weiteren 20 Sekunden erscheint eine Fehlermeldung. Unter **Player → Optionen → Stream erneut verbinden** ist ein manueller Versuch möglich. Automatisches Transcoding bleibt standardmäßig ausgeschaltet.
-- **Mehr anzeigen** steht als 2:3-Karte am Ende jeder Startseitenreihe. **Zuletzt hinzugefügt** entfällt innerhalb der App.
+- **Mehr anzeigen** steht als 2:3-Karte am Ende jeder Startseitenreihe. **Zuletzt hinzugefügt** erscheint pro Videobibliothek als standardmäßig aktivierte Reihe mit Beschreibung und Bewertungen. Unter **Einstellungen → Startseite** global oder pro Bibliothek ausschaltbar.
 - **Zufälliger Film** und **Genres anheften** stehen ausschließlich im ausklappbaren Menü. Zum Anheften: Genre auswählen, Menü öffnen und **Auf Startseite anheften** wählen. Die Zufallsauswahl berücksichtigt eine gerade geöffnete Filmbibliothek.
 - Filmroulette läuft mindestens vier Sekunden und endet mit einer kurzen monochromen Trefferanimation. Nach dem Effekt öffnet die Detailseite automatisch. Abbrechen verhindert das Öffnen; der Treffer-Effekt berücksichtigt die Animationseinstellung.
 
@@ -273,7 +275,7 @@ Mit **API-Key-Datei neu erstellen** in den API-Einstellungen lässt sich auch be
 
 Ab Companion 0.3 werden API-Schlüssel im Jellyfin-Plugin-Dashboard verwaltet und für alle oder ausgewählte Nutzer freigegeben. Lowfin behält Anbieter- und Bewertungs-Schalter sowie den standardmäßig aktiven, abschaltbaren lokalen Bewertungscache. Für freigegebene Nutzer entfallen lokale Schlüssel-/TXT-/Tracearr-Verbindungsfelder.
 
-Startseite: Unter **Einstellungen → Startseite** lässt sich die Bibliothekszeile mit 16:9-Vorschaubildern einschalten. Über **Reihenfolge der Startseitenzeilen** jede Zeile auswählen und nach oben/unten verschieben. Die Reihenfolge wird pro Konto gespeichert; wechselnde Empfehlungstitel ändern die Position nicht.
+Startseite: Unter **Einstellungen → Startseite** lässt sich die Bibliothekszeile mit 16:9-Vorschaubildern einschalten. Über **Reihenfolge der Startseitenzeilen** eine Zeile mit OK aufnehmen, mit Hoch/Runter verschieben, mit OK ablegen und anschließend speichern. Die Liste scrollt mit; Zurück verwirft die laufende Verschiebung. Die Reihenfolge wird pro Konto gespeichert; wechselnde Empfehlungstitel ändern die Position nicht.
 
 Optionale DVD-/5.1-Tags im sichtbaren Coverrahmen benötigen Companion 0.4.0. Im Plugin-Dashboard aktivieren, auf einzelnen TVs unter Einstellungen → Darstellung ausblenden. Covercache und Originalbilder bleiben unverändert; Tags bleiben auch bei auf 16:9 zugeschnittenen 4:3-Folgenbildern sichtbar.
 

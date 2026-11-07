@@ -7,6 +7,15 @@ import java.util.Iterator;
 
 /** AndroidX runs nontrivial snapshot comparisons on its shared background executor. */
 final class MediaDiff {
+    static final Object METADATA_ONLY=new Object();
+    /** Grid cards also show season counts and can switch between poster and thumb artwork. */
+    static boolean cardEquals(JSONObject before,JSONObject after) {
+        return presentationEquals(before,after)
+            &&jsonEquals(before.opt("RecursiveItemCount"),after.opt("RecursiveItemCount"))
+            &&jsonEquals(before.opt("ChildCount"),after.opt("ChildCount"))
+            &&Api.imageRef(before,240,false).equals(Api.imageRef(after,240,false))
+            &&Api.imageRef(before,240,true).equals(Api.imageRef(after,240,true));
+    }
     private static final String[] TEXT_FIELDS={"Name","Type","SeriesName","ProductionYear","RunTimeTicks","ParentIndexNumber","IndexNumber","Overview","Wide","ChannelNumber","PrimaryImageAspectRatio","SeriesId","SeriesPrimaryImageTag","ParentBackdropItemId"};
     private static final String[] JSON_FIELDS={"ImageTags","BackdropImageTags","ParentBackdropImageTags","Genres","ProviderIds"};
     /** Home shelves compare only visible/focus metadata, without serializing chapters and streams. */
@@ -47,5 +56,6 @@ final class MediaDiff {
     static final DiffUtil.ItemCallback<JSONObject> CALLBACK=new DiffUtil.ItemCallback<JSONObject>() {
         @Override public boolean areItemsTheSame(JSONObject before,JSONObject after) { return before.optString("Id").equals(after.optString("Id")); }
         @Override public boolean areContentsTheSame(JSONObject before,JSONObject after) { return jsonEquals(before,after); }
+        @Override public Object getChangePayload(JSONObject before,JSONObject after) { return cardEquals(before,after)?METADATA_ONLY:null; }
     };
 }

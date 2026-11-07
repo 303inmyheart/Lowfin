@@ -13,6 +13,16 @@ import static org.junit.Assert.*;
 public class HomeLayoutTest {
     private final Account a=new Account("http://server","a","token","A","device"),b=new Account("http://server","b","token","B","device");
     private SharedPreferences prefs() { return RuntimeEnvironment.getApplication().getSharedPreferences(UUID.randomUUID().toString(),0); }
+    @Test public void stagedSavePreservesDormantRowsAndAccountIsolationAndRejectsInvalidOrder() {
+        SharedPreferences prefs=prefs();List<String> all=Arrays.asList("resume","genre:Horror","next","latest:films");
+        HomeLayout.save(prefs,a,all,all);
+        List<String> visible=Arrays.asList("resume","next","latest:films"),desired=Arrays.asList("latest:films","next","resume");
+        HomeLayout.save(prefs,a,visible,desired);
+        assertEquals(Arrays.asList("latest:films","genre:Horror","next","resume"),HomeLayout.read(prefs,a,all));
+        assertEquals(all,HomeLayout.read(prefs,b,all));
+        try {HomeLayout.save(prefs,a,visible,Arrays.asList("resume","resume","next"));fail("Duplicate order accepted");}catch(IllegalArgumentException expected){}
+        assertEquals(desired,HomeLayout.read(prefs,a,visible));
+    }
     @Test public void everyRowMovesIndependentlyAndIsScopedToAccount() {
         SharedPreferences prefs=prefs();List<String> keys=HomeLayout.keys(Arrays.asList("Horror","Thriller"),true);
         for(int i=1;i<keys.size();i++) HomeLayout.move(prefs,a,keys,"libraries",-1);

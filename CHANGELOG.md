@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.2
+
+- Keep the picked row visible while reordering long settings lists, including movement back upwards and cancelling the current move.
+- Share this behavior across home rows, sidebar shortcuts and server-backed library ordering. Avoid redundant row layout requests and repeated child-index scans while moving entries.
+
+- Reuse the sidebar order editor for home rows: pick up with OK, move with Up/Down and drop with OK. Save once when finished; Back cancels the current move and disabled rows retain their saved positions.
+
+- Avoid rebinding library cards for changes to invisible playback metadata. Keep held confirm gestures intact during those refreshes and resolve clicks/context actions against the latest list snapshot; retain full updates for artwork, progress and season counts.
+
+- Add default-on, account-scoped recently-added feature shelves for each video library, with descriptions and ratings, individual library switches and stable freely configurable home ordering. Group added episodes/seasons into series, batch missing metadata and keep bounded background refreshes behind Continue watching/Next up.
+
 ## 1.5.1
 
 - Show movie genres alongside the year in the player, centered beneath the proportionally scaled logo. Bound long metadata to three lines and retain the existing episode caption and Live TV layout.

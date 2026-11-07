@@ -62,6 +62,7 @@ public class TvUiTest {
                     if(path.contains("/items/movie")) return new MockResponse().setBody(companionState.toString());
                     return new MockResponse().setBody(Json.obj("items",new JSONArray()).toString());
                 }
+                if(path.equals("/Users/user/Items/Latest"))return new MockResponse().setBody(("films".equals(request.getRequestUrl().queryParameter("ParentId"))?Json.arr(movie):Json.arr(series)).toString());
                 if(path.equals("/Movies/Recommendations")) return recommendationsOffline?new MockResponse().setResponseCode(503):new MockResponse().setBody(recommendations.toString());
                 if(recommendationsOffline&&path.equals("/Users/user/Items")&&request.getRequestUrl().queryParameter("IsPlayed")!=null) return new MockResponse().setResponseCode(503);
                 if(path.contains("/Images/")) return new MockResponse().setHeader("Content-Type","image/png").setBody(new okio.Buffer().write(path.contains("ep")||path.endsWith("Thumb")||path.endsWith("Backdrop")?thumbImage:posterImage));
@@ -92,11 +93,13 @@ public class TvUiTest {
                 return new MockResponse().setBody("{}");
             }
         }); server.start();
+        // Legacy-layout fixtures opt out; the dedicated latest-shelf tests verify the default-on behavior.
+        app.settings.edit().putBoolean(HomeLatest.setting(new Account(server.url("/").toString(),"user","token","Demo User","device")),false).commit();
     }
     @After public void stop() throws Exception {
         homeRelease.countDown();
         if(activity!=null) activity.pause().stop().destroy();
-        if(app.images!=null) app.images.close(); if(app.ratings!=null) app.ratings.close(); app.io.shutdownNow(); app.cacheIo.shutdownNow(); app.navigationIo.shutdownNow(); app.reports.shutdownNow(); app.homeIo.shutdownNow(); server.shutdown();
+        if(app.images!=null) app.images.close(); if(app.ratings!=null) app.ratings.close(); app.io.shutdownNow(); app.cacheIo.shutdownNow(); app.navigationIo.shutdownNow(); app.reports.shutdownNow(); app.homeIo.shutdownNow();app.latestIo.shutdownNow(); server.shutdown();
     }
 
     @Test public void freshAccountCanDeclinePrecacheWithoutBlockingTheHomeScreen() throws Exception {
@@ -1315,13 +1318,28 @@ public class TvUiTest {
         assertEquals("Meine Filme",findText(activity.get().findViewById(android.R.id.content),"Meine Filme").getText().toString());assertEquals("Movie",((MediaAdapter)recycler().getAdapter()).items.get(0).optString("Type"));
         activity.get().onBackPressed();await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter);assertTrue(((HomeAdapter)recycler().getAdapter()).libraries(((HomeAdapter)recycler().getAdapter()).logical(0)));
     }
+    @Test public void latestLibrariesAppearAsFeatureRowsAndExposeTheirOwnSwitches() throws Exception {
+        Account account=new Account(server.url("/").toString(),"user","token","Demo User","device");app.settings.edit().remove(HomeLatest.setting(account)).commit();app.setAccount(account);
+        activity=Robolectric.buildActivity(MainActivity.class).setup();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&((HomeAdapter)recycler().getAdapter()).latestLibraries().size()==2);
+        HomeAdapter home=(HomeAdapter)recycler().getAdapter();await(()-> {for(int row:home.latestLibraries().keySet())if(home.rows.get(row).isEmpty())return false;return true;});
+        for(java.util.Map.Entry<Integer,JSONObject> entry:home.latestLibraries().entrySet()) {int row=entry.getKey();assertTrue(home.feature(row));assertTrue(home.labels.get(row).contains(entry.getValue().optString("Name")));assertEquals("films".equals(entry.getValue().optString("Id"))?"Movie":"Series",home.rows.get(row).get(0).optString("Type"));}
+        findButton(activity.get().findViewById(android.R.id.content),"Einstellungen").performClick();layout();findButton(activity.get().findViewById(android.R.id.content),"Startseite").performClick();layout();
+        SettingSwitch master=(SettingSwitch)findText(activity.get().findViewById(android.R.id.content),I18n.resource(R.string.home_latest_enable));assertNotNull(master);assertTrue(master.isChecked());
+        findButton(activity.get().findViewById(android.R.id.content),I18n.resource(R.string.home_latest_libraries)).performClick();
+        await(()-> {android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();return dialog!=null&&dialog.isShowing()&&findText(dialog.getWindow().getDecorView(),"Meine Filme") instanceof SettingSwitch;});
+        android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();SettingSwitch films=(SettingSwitch)findText(dialog.getWindow().getDecorView(),"Meine Filme");assertTrue(films.isChecked());films.performClick();assertFalse(app.settings.getBoolean(HomeLatest.setting(account,"films"),true));
+    }
     @Test public void homeOrderingDialogMovesRowsAndRetainsTheSelectedControl() throws Exception {
         Account account=new Account(server.url("/").toString(),"user","token","Demo User","device");app.setAccount(account);app.library.state("lastSync",""+System.currentTimeMillis());activity=Robolectric.buildActivity(MainActivity.class).setup();
         findButton(activity.get().findViewById(android.R.id.content),"Einstellungen").performClick();layout();findButton(activity.get().findViewById(android.R.id.content),"Startseite").performClick();layout();
-        findButton(activity.get().findViewById(android.R.id.content),"Reihenfolge der Startseitenzeilen").performClick();android.app.AlertDialog order=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();shadowOf(Looper.getMainLooper()).idle();
-        Button next=findButton(order.getWindow().getDecorView(),"2 · Als Nächstes");assertNotNull(next);next.performClick();android.app.AlertDialog direction=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
-        direction.getListView().performItemClick(direction.getListView().getChildAt(0),0,0);shadowOf(Looper.getMainLooper()).idle();
-        assertEquals("next",HomeLayout.read(app.settings,account,HomeLayout.keys(HomeGenres.read(app.settings,account),true)).get(0));assertNotNull(findButton(order.getWindow().getDecorView(),"1 · Als Nächstes"));
+        findButton(activity.get().findViewById(android.R.id.content),"Reihenfolge der Startseitenzeilen").performClick();await(()-> {android.app.AlertDialog dialog=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();return dialog!=null&&dialog.isShowing()&&findButton(dialog.getWindow().getDecorView(),"2 · Als Nächstes")!=null;});android.app.AlertDialog order=org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+        Button next=findButton(order.getWindow().getDecorView(),"2 · Als Nächstes");assertNotNull(next);next.requestFocus();next.performClick();
+        order.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP));order.dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_UP));shadowOf(Looper.getMainLooper()).idle();
+        Button moved=findButton(order.getWindow().getDecorView(),"1 · Als Nächstes");assertNotNull(moved);assertTrue(moved.hasFocus());
+        assertEquals("resume",HomeLayout.read(app.settings,account,HomeLayout.keys(HomeGenres.read(app.settings,account),true)).get(0));
+        moved.performClick();order.getButton(android.app.AlertDialog.BUTTON_POSITIVE).performClick();await(()->!order.isShowing());
+        assertEquals("next",HomeLayout.read(app.settings,account,HomeLayout.keys(HomeGenres.read(app.settings,account),true)).get(0));
     }
     @Test public void manualPreloadIsDisabledAfterCompletionAndEnabledAfterClearing() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());app.library.state("precacheComplete","true");
