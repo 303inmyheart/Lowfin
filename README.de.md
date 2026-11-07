@@ -10,12 +10,6 @@
 
 Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.2**.
 
-> **1.5.2:** Zuletzt-hinzugefügt-Reihen pro Videobibliothek mit Bewertungen, eigenen Schaltern und freier Reihenfolge. Alle Sortierdialoge scrollen mit der aufgenommenen Zeile; Metadatenaktualisierungen vermeiden unnötige Kartenbindungen.
-
-> **1.5.1:** Priorisierter Kaltstart, zuverlässigerer Decoder-Fallback, zentrierte Jahres-/Genreangaben im Player und eine Precache-Auswahl beim ersten Einrichten. Companion 0.7.1 hält bis zu 250.000 Bibliotheksänderungen vor.
-
-> **1.5 — FIRE OS FIX:** Behebt flackernde/zurückbleibende Fokusrahmen, uneinheitliche Fire-TV-Dialoge, Schalterdarstellung und die Prüfung von In-App-Updates auf älteren Geräten. Dazu kommen flüssigere Startseitenübergänge, einzeilige Bewertungen und Wiedergabesteuerung/Nachrichten aus dem Jellyfin-Dashboard.
-
 Optionales **Lowfin Companion 0.7.1** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
 - Optionales natives Film-Entdeckungsbanner unter Startseite: Hintergrund, Logo/Titel, Poster, Beschreibung, Laufzeit, Genres und kompakte Bewertungen der gewählten Quellen. Links/rechts blättern, OK öffnet Details. Frei einsortierbar, standardmäßig aus.

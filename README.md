@@ -6,13 +6,7 @@
 
 > **Optional server plugin: [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion).** Add per-media Smart Completion/Persistent Resume, incremental library-cache updates, cover tags and centrally managed provider access. Lowfin also works fully without the plugin.
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.1.**
-
-> **1.5.2:** Recently added rows for each video library, with ratings, individual switches and free home ordering. All order editors follow the picked row while scrolling; library metadata refreshes avoid unnecessary card rebinding.
-
-> **1.5.1:** Prioritized cold-start loading, more reliable decoder recovery, centered movie year/genres, and a first-run precache choice. Companion 0.7.1 retains up to 250,000 library changes.
-
-> **1.5 — FIRE OS FIX:** Fixes flashing/stale focus outlines, inconsistent Fire TV dialogs, switch rendering and legacy in-app update verification. Also includes smoother home navigation, single-line shelf ratings and Jellyfin dashboard playback controls/messages.
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.2.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
