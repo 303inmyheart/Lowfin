@@ -1123,6 +1123,7 @@ public class TvUiTest {
     }
     @Test public void recommendationDetailsReturnToTheSameHomeCardAndHorizontalPosition() throws Exception { homeCardReturn(2,12,false); }
     @Test public void animatedGenreDetailsReturnToTheSameHomeCardAndHorizontalPosition() throws Exception { homeCardReturn(7,12,true); }
+    @Test public void animatedRecommendationDetailsReturnDirectlyWithoutScrollingThroughEarlierRows() throws Exception { homeCardReturn(5,12,true); }
     @Test public void recommendationMoreReturnsToItsOwnCardOnHome() throws Exception { homeCardReturn(2,40,false); }
     private void homeCardReturn(int row,int column,boolean animated) throws Exception {
         app.settings.edit().putBoolean("scrollAnimations",animated).putBoolean("animations",animated).apply();HomeAdapter adapter=stressHome();adapter.requestRow(row);
@@ -1134,7 +1135,12 @@ public class TvUiTest {
         String label=adapter.labels.get(row);selected.performClick();layout();
         if(column<40) {JSONObject changed=new JSONObject(adapter.rows.get(row).get(column).toString());changed.put("Name","Updated while in details");app.library.put(changed);}
         activity.get().onBackPressed();
+        RecyclerView returnedGrid=recycler();java.util.concurrent.atomic.AtomicInteger animatedReturns=new java.util.concurrent.atomic.AtomicInteger(),firstVisible=new java.util.concurrent.atomic.AtomicInteger(-1);
+        returnedGrid.addOnScrollListener(new RecyclerView.OnScrollListener(){@Override public void onScrollStateChanged(RecyclerView view,int state){if(state==RecyclerView.SCROLL_STATE_SETTLING)animatedReturns.incrementAndGet();}});
+        returnedGrid.addOnLayoutChangeListener((view,l,t,r,b,ol,ot,or,ob)-> {if(firstVisible.get()<0)firstVisible.set(((LinearLayoutManager)returnedGrid.getLayoutManager()).findFirstVisibleItemPosition());});
         if(animated) awaitAnimatedShelf(row,column);else awaitShelf(row,column);
+        assertEquals("Returning to a shelf must not animate through preceding rows",0,animatedReturns.get());
+        assertEquals("First home layout must already contain the saved row",row,firstVisible.get());
         HomeAdapter restored=(HomeAdapter)recycler().getAdapter();if(column<40) await(()->"Updated while in details".equals(restored.rows.get(row).get(column).optString("Name")));assertNotSame(adapter,restored);assertEquals(label,restored.labels.get(row));assertEquals(40,restored.rows.get(row).size());
         HomeAdapter.Shelf returned=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(row);View card=returned.list.getLayoutManager().findViewByPosition(column);
         assertTrue(card.hasFocus());assertTrue("Returned viewport moved too far",Math.abs(left-returned.list.getLayoutManager().getDecoratedLeft(card))<=(animated?Ui.dp(activity.get(),12):0));

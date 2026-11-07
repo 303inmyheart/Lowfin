@@ -188,6 +188,13 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         if(heading.getVisibility()!=visibility) heading.setVisibility(visibility);
     }
     void requestRow(int row) {
+        requestRow(row,true);
+    }
+    /** Returning from details restores the viewport before its first visible frame. */
+    void restoreRow(int row) {
+        requestRow(row,false);
+    }
+    private void requestRow(int row,boolean animate) {
         if(owner==null||row<0||row>=rows.size()) return;
         // Explicit navigation must win over a continue row which finishes loading later.
         if(row!=firstRow()) {entryPending=false;initialBannerViewport=false;}
@@ -209,7 +216,8 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         // Start only after the destination viewport has its final geometry.
         // Keep focus pending until the single motion completes.
         scrollingShelf=true;
-        if(owner.isLayoutRequested()&&ScrollMotion.enabled(owner))ScrollMotion.afterLayout(owner,viewport,true,settled);
+        if(!animate)ScrollMotion.snap(owner,viewport,true,settled);
+        else if(owner.isLayoutRequested()&&ScrollMotion.enabled(owner))ScrollMotion.afterLayout(owner,viewport,true,settled);
         else ScrollMotion.position(owner,viewport,true,settled);
         owner.post(()-> { Shelf shelf=(Shelf)owner.findViewHolderForAdapterPosition(position(row)); if(shelf!=null) focusPending(shelf); });
     }

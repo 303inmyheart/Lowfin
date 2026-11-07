@@ -53,6 +53,28 @@ public class RatingsNetworkTest {
         AtomicInteger done=new AtomicInteger(); ratings.request(movie(),scores->done.incrementAndGet()); ratings.request(movie(),scores->done.incrementAndGet()); waitFor(done,2); assertEquals(3,calls.get());
         ratings.close(); ratings=create(); ratings.request(movie(),scores->done.incrementAndGet()); waitFor(done,3); assertEquals(3,calls.get());
     }
+    private void auditRatingWrites() {
+        library.getWritableDatabase().execSQL("CREATE TABLE rating_write_audit (writes INTEGER)");
+        library.getWritableDatabase().execSQL("CREATE TRIGGER audit_rating_insert AFTER INSERT ON state WHEN NEW.key LIKE 'ratings-%' BEGIN INSERT INTO rating_write_audit VALUES (1); END");
+    }
+    private int ratingWrites() {try(android.database.Cursor c=library.getReadableDatabase().rawQuery("SELECT COUNT(*) FROM rating_write_audit",null)) {c.moveToFirst();return c.getInt(0);}}
+    @Test public void repeatedPersistentHitsAreReadOnlyAcrossRepositoryRestarts() throws Exception {
+        AtomicInteger done=new AtomicInteger();ratings.request(movie(),scores->done.incrementAndGet());waitFor(done,1);auditRatingWrites();
+        for(int i=2;i<=4;i++) {ratings.close();ratings=create();ratings.request(movie(),scores->{assertEquals(7.8,scores.optDouble("imdb"),.001);done.incrementAndGet();});waitFor(done,i);}
+        assertEquals(0,ratingWrites());assertEquals(3,calls.get());
+    }
+    @Test public void legacyEntryRepairsMissingPermanentValuesOnceWithoutRefetching() throws Exception {
+        AtomicInteger done=new AtomicInteger();ratings.request(movie(),scores->done.incrementAndGet());waitFor(done,1);
+        library.getWritableDatabase().delete("state","key=?",new String[]{"ratings-values-movie"});auditRatingWrites();
+        for(int i=2;i<=3;i++) {ratings.close();ratings=create();ratings.request(movie(),scores->{assertEquals(7.8,scores.optDouble("imdb"),.001);done.incrementAndGet();});waitFor(done,i);}
+        assertEquals(1,ratingWrites());assertFalse(library.state("ratings-values-movie").isEmpty());assertEquals(3,calls.get());
+    }
+    @Test public void providerCompletionFlagsPersistEvenWhenThatProviderReturnsAnExistingScore() throws Exception {
+        library.state("ratings-values-movie",Json.obj("scores",Json.obj("imdb",7.8,"tmdb",8.2),"providers",Json.obj("omdb",true,"mdblist",true)).toString());
+        AtomicInteger done=new AtomicInteger();ratings.request(movie(),scores->done.incrementAndGet());waitFor(done,1);
+        assertEquals(1,calls.get());JSONObject flags=new JSONObject(library.state("ratings-values-movie")).getJSONObject("providers");assertTrue(flags.getBoolean("omdb"));assertTrue(flags.getBoolean("mdblist"));assertTrue(flags.getBoolean("tmdb"));
+        ratings.close();ratings=create();ratings.request(movie(),scores->done.incrementAndGet());waitFor(done,2);assertEquals(1,calls.get());
+    }
     @Test public void successfulRatingsSurviveExpiredLegacyCacheAcrossRestarts() throws Exception {
         AtomicInteger done=new AtomicInteger(); ratings.request(movie(),scores->done.incrementAndGet()); waitFor(done,1);
         try(android.database.Cursor c=library.getReadableDatabase().rawQuery("SELECT key,value FROM state WHERE key LIKE 'ratings-%' AND key NOT LIKE 'ratings-values-%'",null)) {

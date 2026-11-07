@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.3
+
+- Restore the selected home shelf directly when returning from media details or More, without animating from the top through preceding rows. Keep ordinary D-pad scrolling animations enabled.
+
+- Read related local rating-cache entries together, skip identical permanent-score writes and persist newly fetched cache/provider values in one transaction. Retain legacy-cache repair, provider selections and uncached episode ratings.
+
 ## 1.5.2
 
 - Keep the picked row visible while reordering long settings lists, including movement back upwards and cancelling the current move.

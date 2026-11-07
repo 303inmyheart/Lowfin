@@ -705,7 +705,9 @@ public final class MainActivity extends Activity {
                     }); }
                 });
             }
-        }; int initialRow=restored?screen.homeState.row:adapter.firstRow();if(restored) setHomeFocusMode(initialRow);adapter.requestRow(initialRow);homeReload.run();
+        }; int initialRow=restored?screen.homeState.row:adapter.firstRow();
+        if(restored) {setHomeFocusMode(initialRow);adapter.restoreRow(initialRow);}else adapter.requestRow(initialRow);
+        homeReload.run();
         if(startupPending) {
             startupPending=false;
             if(app.settings.getBoolean("startupLogo",true)) {

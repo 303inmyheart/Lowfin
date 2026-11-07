@@ -8,7 +8,7 @@
 
 [Vollständiger Changelog ab 0.1.0](CHANGELOG.md) · [GitHub-Builds](https://github.com/303inmyheart/Lowfin/actions/workflows/android.yml)
 
-Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.2**.
+Native Android-TV-App mit monochromer Oberfläche, lokalem Bibliothekscache und Media3-Player. Für Android 11 ausgelegt; Mindestversion Android 8.0. Aktuelle Version: **1.5.3**.
 
 Optionales **Lowfin Companion 0.7.1** für Jellyfin 12.2+: ausdrücklich gewählte Abschluss-/Fortsetzregeln, gemeinsame Regeln für Geräte desselben Benutzers, sauber getrennte Bibliothekslisten und respektierte Startseiten-Ausschlüsse. Ohne gewählte Regel bleibt die Wiedergabe nativ. [Plugin installieren](https://github.com/303inmyheart/Lowfin-Companion) · [API und technische Grenzen](docs/lowfin-companion.md). Die zusätzlichen Einstellungen erscheinen nach Erkennung des Plugins; Lowfin funktioniert weiterhin auch ohne Plugin.
 
@@ -52,10 +52,10 @@ Zusätzlich gibt es in Version 1.4 **Einstellungen → App-Updates**: optionale 
 - Detailaktionen erhalten dezente durchscheinende Akzentflächen, mittig gruppierte Symbole und Texte sowie einen klaren Fernbedienungsfokus. Bewertungen passen sich in Detailansicht, Banner und Startseitenreihen ohne kräftige Einzelrahmen ein; Anzeige- und Cache-Einstellungen bleiben erhalten.
 ## Installieren
 
-Die mit GitHub Actions gebaute und geprüfte Release-APK heißt `Lowfin-1.5.2-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
+Die mit GitHub Actions gebaute und geprüfte Release-APK heißt `Lowfin-1.5.3-release.apk`; die Diagnoseaufzeichnung ist im öffentlichen Build standardmäßig aus. Auf den Fernseher kopieren, dort für den verwendeten Dateimanager die Installation unbekannter Apps erlauben und die APK öffnen. Alternativ bei eingerichteter ADB-Verbindung:
 
 ```bash
-adb install -r Lowfin-1.5.2-release.apk
+adb install -r Lowfin-1.5.3-release.apk
 ```
 
 Beim ersten Start Serveradresse inklusive `http://` oder `https://`, Benutzername und Passwort eingeben. Server unter einem Unterpfad sind möglich, z. B. `https://example.org/jellyfin`. Das Passwort wird nicht gespeichert; für die automatische Anmeldung wird der Sitzungstoken mit dem Android Keystore verschlüsselt abgelegt.

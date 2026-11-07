@@ -6,7 +6,7 @@
 
 > **Optional server plugin: [Lowfin Companion](https://github.com/303inmyheart/Lowfin-Companion).** Add per-media Smart Completion/Persistent Resume, incremental library-cache updates, cover tags and centrally managed provider access. Lowfin also works fully without the plugin.
 
-A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.2.**
+A native Jellyfin client for low-end Android TV devices. Designed for Android 11 and HD displays, with optional 4K playback limits and density-aware artwork; supports Android 8 or later. **Current version: 1.5.3.**
 
 [Deutsche Dokumentation](README.de.md) · [Complete changelog from 0.1.0](CHANGELOG.md)
 
@@ -43,7 +43,7 @@ A native programme timeline with channel logos and programme details, opened fro
 The 1.5.1 signed release APK is built and verified with GitHub Actions, with public diagnostics recording off by default. Download the current APK and its checksum from [GitHub releases](https://github.com/303inmyheart/Lowfin/releases). Transfer the APK to your TV and install it using a file manager with permission to install unknown apps. To update through ADB:
 
 ```sh
-adb install -r Lowfin-1.5.2-release.apk
+adb install -r Lowfin-1.5.3-release.apk
 ```
 
 Sign in with your Jellyfin server URL, username and password. The encrypted session token provides automatic sign-in; passwords are not saved. Server URLs with a subpath are supported.

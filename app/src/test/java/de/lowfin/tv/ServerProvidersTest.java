@@ -30,6 +30,14 @@ public class ServerProvidersTest {
         assertEquals(8.5,requestRating().optDouble("imdb"),.01); assertEquals(1,requests.get()); assertFalse(library.state("ratings-values-movie").isEmpty()); requestRating(); assertEquals(1,requests.get());
         app.settings.edit().putBoolean("ratingCache",false).commit(); requestRating(); requestRating(); assertEquals(3,requests.get());
     }
+    @Test public void serverRefreshPreservesLocalProviderFlagsWithoutRewritingIdenticalPermanentScores() throws Exception {
+        String permanent=Json.obj("scores",Json.obj("imdb",8.5),"providers",Json.obj("omdb",true)).toString();library.state("ratings-values-movie",permanent);
+        library.getWritableDatabase().execSQL("CREATE TABLE provider_write_audit (writes INTEGER)");
+        library.getWritableDatabase().execSQL("CREATE TRIGGER audit_permanent_provider_insert AFTER INSERT ON state WHEN NEW.key='ratings-values-movie' BEGIN INSERT INTO provider_write_audit VALUES (1); END");
+        assertEquals(8.5,requestRating().optDouble("imdb"),.01);assertEquals(permanent,library.state("ratings-values-movie"));assertEquals(1,requests.get());
+        try(android.database.Cursor c=library.getReadableDatabase().rawQuery("SELECT COUNT(*) FROM provider_write_audit",null)) {c.moveToFirst();assertEquals(0,c.getInt(0));}
+        ratings.close();ratings=new Ratings(app,library,api);assertEquals(8.5,requestRating().optDouble("imdb"),.01);assertEquals(1,requests.get());
+    }
     @Test public void ServerEpisodeScoresAreAlwaysFreshAndNeverWrittenToTheRatingCaches() throws Exception {
         JSONObject episode=Json.obj("Id","episode","Type","Episode");
         for(int i=0;i<2;i++) {AtomicReference<JSONObject> result=new AtomicReference<>();ratings.request(episode,result::set);long end=System.currentTimeMillis()+5000;while(result.get()==null&&System.currentTimeMillis()<end) {Shadows.shadowOf(Looper.getMainLooper()).idle();Thread.sleep(5);}assertNotNull(result.get());assertEquals(8.5,result.get().optDouble("imdb"),.01);assertNull(ratings.peek(episode));}

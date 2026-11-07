@@ -86,9 +86,10 @@ final class Ratings {
         JSONObject scores=new JSONObject(); boolean failed=false;
         try {
             Map<String,String> keys=new HashMap<>(); for(String p:new String[]{"omdb","mdblist","tmdb"}) keys.put(p,settings.getBoolean("rating-provider-"+p,true)?key.apply(p):"");
-            String cache="ratings-"+id+"-"+fingerprint(keys.toString()+selection()); String saved=cacheEnabled()?library.state(cache):"";
-            String existing=cacheEnabled()?library.state("ratings-values-"+id):""; JSONObject permanent=new JSONObject(existing.isEmpty()?"{}":existing); merge(scores,Json.object(permanent,"scores")); JSONObject providers=Json.object(permanent,"providers");
-            if(!saved.isEmpty()) { JSONObject entry=new JSONObject(saved); if((Json.object(entry,"scores").length()>0&&!entry.optBoolean("failed"))||System.currentTimeMillis()-entry.optLong("time")<entry.optLong("ttl",TTL)) { merge(scores,Json.object(entry,"scores")); library.state("ratings-values-"+id,Json.obj("scores",scores,"providers",providers).toString()); complete(id,scores,entry.optBoolean("failed")); return; } merge(scores,Json.object(entry,"scores")); }
+            String cache="ratings-"+id+"-"+fingerprint(keys.toString()+selection());
+            Map<String,String> stored=cacheEnabled()?library.states(Arrays.asList(cache,"ratings-values-"+id)):Collections.emptyMap();String saved=stored.getOrDefault(cache,"");
+            String existing=stored.getOrDefault("ratings-values-"+id,""); JSONObject permanent=new JSONObject(existing.isEmpty()?"{}":existing); merge(scores,Json.object(permanent,"scores")); JSONObject providers=new JSONObject(Json.object(permanent,"providers").toString());
+            if(!saved.isEmpty()) { JSONObject entry=new JSONObject(saved); if((Json.object(entry,"scores").length()>0&&!entry.optBoolean("failed"))||System.currentTimeMillis()-entry.optLong("time")<entry.optLong("ttl",TTL)) { merge(scores,Json.object(entry,"scores")); if(cacheEnabled()) {Map<String,String> writes=new LinkedHashMap<>();permanent(writes,id,permanent,scores,providers);if(!writes.isEmpty())library.stateBatch(writes);} complete(id,scores,entry.optBoolean("failed")); return; } merge(scores,Json.object(entry,"scores")); }
             boolean configured=keys.values().stream().anyMatch(value->!value.isEmpty());
             JSONObject item=original,ids=Json.object(item,"ProviderIds");
             if(configured&&ids.length()==0) { item=jellyfin.item(id); library.put(item); ids=Json.object(item,"ProviderIds"); }
@@ -107,8 +108,10 @@ final class Ratings {
                 if(result!=null&&result.optInt("vote_count")>0) { put(scores,"tmdb",result.optDouble("vote_average")); providers.put("tmdb",true); }
             } catch(Exception e) { failed=true; }
             if(configured) status=!cacheEnabled()?I18n.resource(R.string.rating_cache_disabled):failed?I18n.text("Ein Anbieter war nicht erreichbar oder hat den API-Key abgelehnt. Gespeicherte Werte bleiben verfügbar."):I18n.text("Bewertungen dauerhaft lokal gespeichert");
-            if(cacheEnabled()&&scores.length()>0) library.state("ratings-values-"+id,Json.obj("scores",scores,"providers",providers).toString());
-            JSONObject entry=Json.obj("time",System.currentTimeMillis(),"ttl",failed?180000:(scores.length()>0?TTL:180000),"failed",failed,"scores",scores); if(cacheEnabled()) library.state(cache,entry.toString());
+            if(cacheEnabled()) {
+                Map<String,String> writes=new LinkedHashMap<>();if(scores.length()>0)permanent(writes,id,permanent,scores,providers);
+                writes.put(cache,Json.obj("time",System.currentTimeMillis(),"ttl",failed?180000:(scores.length()>0?TTL:180000),"failed",failed,"scores",scores).toString());library.stateBatch(writes);
+            }
         } catch(Exception ignored) { failed=true; }
         complete(id,scores,failed);
     }
@@ -119,20 +122,25 @@ final class Ratings {
             if(selected.isEmpty()) { complete(id,scores,false); return; }
             String cache="companion-ratings-"+id+"-"+fingerprint(selected.toString()+selection()); String saved=cacheEnabled()?library.state(cache):"";
             if(!saved.isEmpty()) { JSONObject entry=new JSONObject(saved); if((!entry.optBoolean("failed")&&Json.object(entry,"scores").length()>0)||System.currentTimeMillis()-entry.optLong("time")<180000) { complete(id,Json.object(entry,"scores"),entry.optBoolean("failed")); return; } }
-            if(cacheEnabled()&&settings.getBoolean("rating-provider-omdb",true)&&settings.getBoolean("rating-provider-mdblist",true)&&settings.getBoolean("rating-provider-tmdb",true)) {
-                String existing=library.state("ratings-values-"+id); if(!existing.isEmpty()) merge(scores,Json.object(new JSONObject(existing),"scores"));
+            JSONObject permanent=new JSONObject();
+            boolean allProviders=settings.getBoolean("rating-provider-omdb",true)&&settings.getBoolean("rating-provider-mdblist",true)&&settings.getBoolean("rating-provider-tmdb",true);
+            if(cacheEnabled()&&allProviders) {
+                String existing=library.state("ratings-values-"+id);if(!existing.isEmpty())permanent=new JSONObject(existing);merge(scores,Json.object(permanent,"scores"));
             }
             JSONObject response=jellyfin.get(CompanionApi.ROOT+"/items/"+id+"/ratings","sources",String.join(",",selected)); merge(scores,Json.object(response,"scores")); failed=Json.array(response,"errors").length()>0;
             if(cacheEnabled()) {
-                library.state(cache,Json.obj("scores",scores,"failed",failed,"time",System.currentTimeMillis()).toString());
-                if(scores.length()>0&&settings.getBoolean("rating-provider-omdb",true)&&settings.getBoolean("rating-provider-mdblist",true)&&settings.getBoolean("rating-provider-tmdb",true)) {
-                    String previous=library.state("ratings-values-"+id); JSONObject savedProviders=previous.isEmpty()?new JSONObject():Json.object(new JSONObject(previous),"providers");
-                    library.state("ratings-values-"+id,Json.obj("scores",scores,"providers",savedProviders).toString());
-                }
+                Map<String,String> writes=new LinkedHashMap<>();writes.put(cache,Json.obj("scores",scores,"failed",failed,"time",System.currentTimeMillis()).toString());
+                if(scores.length()>0&&allProviders)permanent(writes,id,permanent,scores,Json.object(permanent,"providers"));
+                library.stateBatch(writes);
             }
             status=I18n.resource(R.string.companion_providers_hint);
         } catch(Exception ignored) { failed=true; }
         complete(id,scores,failed);
+    }
+    /** Preserve migration/provider flags, but never rewrite identical permanent scores. */
+    private static void permanent(Map<String,String> writes,String id,JSONObject previous,JSONObject scores,JSONObject providers) {
+        JSONObject value=Json.obj("scores",scores,"providers",providers);
+        if(!MediaDiff.jsonEquals(previous,value))writes.put("ratings-values-"+id,value.toString());
     }
     private String selection() { StringBuilder mask=new StringBuilder(); for(String id:IDS) mask.append(enabled(settings,id)); return mask.toString(); }
     private boolean needed(String... sources) { for(String source:sources) if(enabled(settings,source)) return true; return false; }
