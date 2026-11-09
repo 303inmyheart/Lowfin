@@ -1,4 +1,4 @@
-# App updater (unreleased)
+# App updater
 
 The native **Settings → App updates** page shows the installed build, latest public
 release, last successful check, status and readable GitHub release notes. The page
@@ -74,7 +74,7 @@ For packaging an already prepared public build, `python3 tools/make-update-metad
 creates the files without compiling or publishing; it does not change build defaults.
 
 Every newly published APK needs a higher Android versionCode. Local iterative builds
-remain 1.3 / 108 until explicitly authorized otherwise. Do not use a real release
+keep the versions agreed in the project instructions until another version is authorized. Do not use a real release
 or increment a production version merely to exercise the updater in tests.
 
 ## Platform references
@@ -86,16 +86,5 @@ or increment a production version merely to exercise the updater in tests.
 Test coverage includes metadata-only checks, ETag/offline behavior, notifications,
 same-display-name/internal-version checks, bounded/failed downloads, package/signer
 validation, legacy Android signatures, manual install sessions and pending-user-action
-handling. A genuine newer remote APK is still needed for end-to-end device validation
-of the platform installation, because the current public build has the same internal
-version as the local work. No fake or test release is published for this purpose.
-
-Local verification on 2026-11-01: the full 531-test suite passed with Core 1.12.0,
-followed by 18 focused updater/settings tests after the device-discovered check-button
-focus correction, including its new in-flight/failure regression. Release lint has
-zero errors, localization covers 506 English/German entries, and packaging has two
-passing Python tests. The signed R8 release retains version 1.3 / 108 and the existing
-certificate. It was installed only on .128 and opened. The device displayed the real
-GitHub 1.3 changelog, reported no newer internal build, and disabled download/install.
-Manual Check now refreshed the timestamp; final installed APK hash was verified.
-Further remote-key testing stopped when Button Mapper became the foreground app.
+handling. End-to-end platform installation tests require a genuine APK with a higher internal
+version and the existing signing certificate. No fake release is needed for unit tests.
