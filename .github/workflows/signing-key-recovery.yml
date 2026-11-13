@@ -1,0 +1,73 @@
+name: Recover local app signing key
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  recover:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate and encrypt existing signing key
+        env:
+          SIGNING_KEYSTORE: ${{ secrets.LOWFIN_SIGNING_KEYSTORE }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          plain="$RUNNER_TEMP/lowfin-recovery.keystore"
+          recipient="$RUNNER_TEMP/lowfin-recovery-public.pem"
+          tmpcert="$RUNNER_TEMP/lowfin-recovery-cert.der"
+          trap 'rm -f -- "$plain" "$recipient" "$tmpcert"' EXIT
+          if [ -z "${SIGNING_KEYSTORE:-}" ]; then
+            echo '::error::The existing LOWFIN_SIGNING_KEYSTORE secret is unavailable.'
+            exit 1
+          fi
+          printf '%s' "$SIGNING_KEYSTORE" | base64 --decode > "$plain"
+          cat > "$recipient" <<'LOWFIN_RECIPIENT'
+          -----BEGIN CERTIFICATE-----
+          MIIEJzCCAo+gAwIBAgIUHPYOPfsa2ApXUAp8wlklprlNxW0wDQYJKoZIhvcNAQEL
+          BQAwIzEhMB8GA1UEAwwYTG93ZmluIG9uZS10aW1lIHJlY292ZXJ5MB4XDTI2MTEx
+          MzExNDQ0NloXDTI2MTEyMDExNDQ0NlowIzEhMB8GA1UEAwwYTG93ZmluIG9uZS10
+          aW1lIHJlY292ZXJ5MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoT4o
+          3jKbHTaVGwIcpTcZo8dg0lOYAIUadTcN45uHa04y5DAE2CWDvmiWGmchHnrQ+0qe
+          rRPmK/X0sUoXyOToQJvJ4bgkfpZxLAcJuiiGQQ4d7p8T1dHiGETErTtyNan+eiHt
+          bRV3KeZdOic3fyIZM4EX5fX/RNjQUvv6P/bGIVZRLY+lf0Q3q+HM9EUoblc4wGRV
+          N/6MfG99fuQMzDQn2oAzNbJ3at3Xvi7NPhUSNBqjebdCxOFej7D/PJCNTj/7KcKX
+          o5ORwRxhJmg+8WaVfFFDUNYPnKCgnWa0eRu98rTt+dAZPDQrcQ0IlS8W8UtZVepH
+          /cScW4BP9BGtMLmlHqJVU57qagde46/EQboH2HRMtZZ3akqMYMAXRF2CDFSpar0c
+          upq6ZXXwoRKVSF90D+6JLEqTPckAJMaZXf7TpwRgCiXJ5k5Gzfv6qmuiIvkGGy36
+          Z2WBNgZCA5BDRHsiZdmik7IYF0XnVNIgD8fSKPf/A4eZRFhl3NwhY29dCnJpAgMB
+          AAGjUzBRMB0GA1UdDgQWBBQ4PJyBNnCzj/+bfAwY3+kv+e8djDAfBgNVHSMEGDAW
+          gBQ4PJyBNnCzj/+bfAwY3+kv+e8djDAPBgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3
+          DQEBCwUAA4IBgQBkx0uAHsUpA513ccbsGTccNSG8TdVylDJ90EO4GmOLHhgx6pLI
+          1EMzny0ZT+qS0TlQz3c3SWjvYxYfbAm1VWDB8gHNwvPW2vuy3CAn1HSAzekAAGk1
+          7r/A1iQeQxEbMlP3r5q1v2J5bjzpJ5jyuOPqBF+LMee3YxWxUopFMWwzJ8XBOS5A
+          iM88tB+0fkzyfyq79GOorEj0grd6ETToZEkfdwsfxpQ9ppMwiy6UAsNiIISDLJAq
+          lafcn/E72r0kdpxxFPN35zRHovkjTf+8kDIJOn56TMoSGf4q4VUdfLTSxgfRS+6W
+          8ssJ4RQE7UyFtjcZrwqreiiHJdAeS2OLLIKZVxhLDEzp+btr/V0XwhAAQi7ntx6h
+          wsoxd+B6VWlpAsB0Jhf3iNsfF7sfrk7oJ64S7QkuWSWeBawTdZkRokfs8MDEIu2l
+          WjYuUEnV+8fPXo5rGepvLduDP0IZYvPRWcF6fk94KOSTTGeG3RwFe3gzWCSpP2U5
+          uS6kccVey45uvRM=
+          -----END CERTIFICATE-----
+          LOWFIN_RECIPIENT
+          if ! keytool -exportcert -alias androiddebugkey -storepass android -keystore "$plain" > "$tmpcert" 2>/dev/null; then
+            echo '::error::The stored signing key could not be validated.'
+            exit 1
+          fi
+          actual="$(sha256sum "$tmpcert" | cut -d ' ' -f 1)"
+          if [ "$actual" != 'dd979891e6db0580522d2ebc66ec9c62e978c4fb4a80a4952762625529da5198' ]; then
+            echo '::error::The stored key does not match the expected app signing certificate.'
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/lowfin-key-recovery"
+          openssl cms -encrypt -aes-256-gcm -binary -in "$plain" -outform DER -out "$RUNNER_TEMP/lowfin-key-recovery/debug.keystore.cms" "$recipient"
+          echo 'Signing key encrypted for the local recovery recipient.'
+      - name: Upload encrypted recovery file
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: Lowfin-signing-key-recovery
+          path: ${{ runner.temp }}/lowfin-key-recovery/debug.keystore.cms
+          if-no-files-found: error
+          retention-days: 1
+          compression-level: 0
