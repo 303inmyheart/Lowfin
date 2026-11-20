@@ -15,8 +15,8 @@ case "${1:-status}" in
     if [[ -f "$ROOT/companion/artifacts/$PLUGIN/meta.json" ]]; then
       cp "$ROOT/companion/artifacts/$PLUGIN/meta.json" "$ROOT/companion/assets/lowfin-companion.png" "$TEST/data/plugins/$PLUGIN/"
     fi
-    if [[ ! -f "$TEST/media/Lowfin Sample (2026).mp4" ]]; then
-      ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=black:s=16x16:r=1/60 -t 43200 -c:v libx264 -preset ultrafast -an "$TEST/media/Lowfin Sample (2026).mp4"
+    if [[ ! -f "$TEST/media/Lowfin Long Video (2026).mp4" ]]; then
+      ffmpeg -hide_banner -loglevel error -f lavfi -i color=c=black:s=16x16:r=1/60 -t 43200 -c:v libx264 -preset ultrafast -an "$TEST/media/Lowfin Long Video (2026).mp4"
     fi
     if [[ ! -f "$TEST/config/network.xml" ]]; then
       cat > "$TEST/config/network.xml" <<'XML'

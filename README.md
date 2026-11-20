@@ -18,6 +18,7 @@ A native Jellyfin client designed for low-end **Android TV, Google TV and Fire T
 - **Customizable home:** Continue watching, Next up, Because you watched, genre rows and Recently added for each library. Optional discovery banner and library shelf; configurable visibility and row order.
 - **Media details and ratings:** artwork, synopsis, genres, runtime, resolution/file size and optional OMDb, MDBList and TMDB ratings. Enter/import keys locally or use access shared by Companion.
 - **Native playback:** audio/subtitle selection, 5.1-to-stereo downmix, configurable buffers/video cache, intro/outro skipping through Jellyfin media segments and native trailer playback. Playback capabilities depend on the device and media format.
+- **Volume leveling:** optional local scene leveling, enabled on Medium by default, with per-track calibration from Companion. [Setup and limitations](docs/audio-normalization.md).
 - **Live TV:** channel list, programme information and a TV guide. Live TV is hidden when unavailable on the server.
 - **Persistent library cache:** optional metadata/artwork preloading for faster browsing. With Companion, completed caches receive incremental changes instead of repeated full scans.
 - **TV integration:** optional Android TV home channels for playback progress and recommendations; availability depends on the launcher.

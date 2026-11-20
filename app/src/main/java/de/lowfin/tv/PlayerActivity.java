@@ -27,6 +27,7 @@ public final class PlayerActivity extends Activity {
     private CompanionApi.Session companionSession;
     private RemotePlayback remotePlayback;
     private ServerNotice serverNotice;
+    private String timingNoticeItem="";
     private PlaybackDuck<ExoPlayer> noticeDuck;
     private boolean explicitRestart,restoredPosition;
     private JSONObject item,source;
@@ -34,6 +35,10 @@ public final class PlayerActivity extends Activity {
     private final Set<String> skipped=new HashSet<>();
     private PlayerView view;
     private ExoPlayer player;
+    private volatile LoudnessAudioProcessor audioLeveler;
+    private boolean audioNormalizationDisabled;
+    private boolean audioLevelerStereo;
+    private JSONArray loudnessMeasurements=new JSONArray();
     private PlayerChrome chrome;
     private TextView message;
     private BufferBar bufferBar;
@@ -43,7 +48,8 @@ public final class PlayerActivity extends Activity {
     private String logoRequest="";
     private JSONObject logoSeries;
     private Button skip;
-    private long skipTarget,requestedPosition;
+    private JSONObject offeredSegment;
+    private long requestedPosition;
     private int audio=-1,subtitle=-1;
     private boolean initialAudioApplied;
     private volatile int generation;
@@ -123,7 +129,7 @@ public final class PlayerActivity extends Activity {
         message=Ui.text(this,I18n.text("Stream wird geöffnet …"),14,Color.WHITE); message.setGravity(Gravity.CENTER); message.setPadding(Ui.dp(this,20),Ui.dp(this,12),Ui.dp(this,20),Ui.dp(this,12)); message.setBackground(Ui.background(0xe619191c,0));
         FrameLayout.LayoutParams center=new FrameLayout.LayoutParams(Ui.dp(this,420),-2,Gravity.CENTER); root.addView(message,center);
         bufferBar=new BufferBar(this); bufferBar.setVisibility(View.GONE); root.addView(bufferBar,new FrameLayout.LayoutParams(Ui.dp(this,160),Ui.dp(this,20),Gravity.CENTER));
-        skip=Ui.quiet(this,I18n.text("Überspringen"),()-> { if(player!=null) { player.seekTo(skipTarget); skip.setVisibility(View.GONE); view.requestFocus(); } }); skip.setVisibility(View.GONE);
+        skip=Ui.quiet(this,I18n.text("Überspringen"),this::skipOfferedSegment); skip.setVisibility(View.GONE);
         FrameLayout.LayoutParams skipLayout=new FrameLayout.LayoutParams(-2,Ui.dp(this,36),Gravity.END|Gravity.BOTTOM); skipLayout.setMargins(0,0,Ui.dp(this,32),Ui.dp(this,192)); root.addView(skip,skipLayout);
         setContentView(root); view.setOnClickListener(v->{ if(chrome.getVisibility()==View.VISIBLE) hideChrome(); else showChrome(true); }); view.requestFocus();
     }
@@ -153,7 +159,18 @@ public final class PlayerActivity extends Activity {
     }
     private void hideChrome() { chrome.setVisibility(View.GONE); chrome.identity.setVisibility(View.GONE); handler.removeCallbacks(hideControls); view.requestFocus(); }
     private void seekTo(long target) {
-        if(player==null||live) return; long duration=player.getDuration(); player.seekTo(Math.max(0,duration>0?Math.min(target,duration):target)); showChrome(false);
+        seekTo(target,true);
+    }
+    private void seekTo(long target,boolean revealControls) {
+        if(player==null||live) return;long duration=player.getDuration();
+        if(player.isCurrentMediaItemSeekable()&&duration>0) player.seekTo(Math.max(0,Math.min(target,duration)));
+        if(revealControls) showChrome(false);
+    }
+    private void skipOfferedSegment() {
+        if(player==null||offeredSegment==null||skip.getVisibility()!=View.VISIBLE) return;
+        long target=PlaybackPolicy.segmentTarget(offeredSegment,position(),player.getDuration(),player.isCurrentMediaItemSeekable());
+        if(target>=0) seekTo(target,false);
+        offeredSegment=null;skip.setVisibility(View.GONE);view.requestFocus();
     }
     private void optionsMenu() {
         handler.removeCallbacks(hideControls);
@@ -168,7 +185,7 @@ public final class PlayerActivity extends Activity {
     private void load(long position,boolean keepSelections) { load(position,keepSelections,true); }
     private void load(long position,boolean keepSelections,boolean revealControls) {
         revealControlsOnStart=revealControls;
-        seekGesture.reset(); bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); skip.setVisibility(View.GONE);
+        seekGesture.reset(); bufferBar.setVisibility(View.GONE); cleanupSession(); final int g=++generation; started=false; requestedPosition=position; segments=new JSONArray(); skipped.clear(); offeredSegment=null;skip.setVisibility(View.GONE);
         if(player!=null) { view.setPlayer(null); player.release(); player=null; }
         message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); updateChromeTitle(); if(revealControlsOnStart) showChrome(false); else hideChrome();
         loadBegan=SystemClock.elapsedRealtime(); firstFrameLogged=false;
@@ -271,9 +288,15 @@ public final class PlayerActivity extends Activity {
     private void prepare(String url,boolean hls,long position,int g,DataSource.Factory data) {
         long prepareBegan=SystemClock.elapsedRealtime(); liveBuffer.reset();denoiseReadySince=0;
         AdaptiveLoadControl control=new AdaptiveLoadControl(this,live);
-        androidx.media3.extractor.DefaultExtractorsFactory extractors=new androidx.media3.extractor.DefaultExtractorsFactory();
-        if(live) extractors.setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES);
-        player=new ExoPlayer.Builder(this,LocalPlayback.renderers(this,app.settings.getBoolean("stereo",true)).setExtensionRendererMode(live?DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON:DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)).setMediaSourceFactory(new DefaultMediaSourceFactory(data,extractors).setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(6))).setLoadControl(control).build();
+        androidx.media3.extractor.ExtractorsFactory extractors=LocalPlayback.extractors(live,issue->runOnUiThread(()-> {
+            if(g!=generation||released||serverNotice==null||timingNoticeItem.equals(item.optString("Id"))) return;
+            timingNoticeItem=item.optString("Id");
+            serverNotice.show(I18n.resource(R.string.ts_timing_title),timingIssueText(issue),0);
+        }));
+        audioLeveler=!live&&!audioNormalizationDisabled&&app.settings.getBoolean("audioNormalization",true)?new LoudnessAudioProcessor(app.settings.getInt("audioNormalizationStrength",2)):null;
+        audioLevelerStereo=app.settings.getBoolean("stereo",true);
+        loudnessMeasurements=new JSONArray();
+        player=new ExoPlayer.Builder(this,LocalPlayback.renderers(this,audioLevelerStereo,audioLeveler).setExtensionRendererMode(live||audioLeveler!=null?DefaultRenderersFactory.EXTENSION_RENDERER_MODE_ON:DefaultRenderersFactory.EXTENSION_RENDERER_MODE_OFF)).setMediaSourceFactory(new DefaultMediaSourceFactory(data,extractors).setLoadErrorHandlingPolicy(new DefaultLoadErrorHandlingPolicy(6))).setLoadControl(control).build();
         denoiseActive=!denoiseDisabled&&DenoisePolicy.allowed(app.settings.getBoolean("videoDenoise",false),live,source);
         if(denoiseActive) try { player.setVideoEffects(Collections.singletonList(new DenoiseEffect())); }
         catch(RuntimeException error) { denoiseActive=false;denoiseDisabled=true;android.util.Log.w("LowfinPlayer","Noise reduction setup unavailable");player.release();player=null;prepare(url,hls,position,g,data);return; }
@@ -315,15 +338,18 @@ public final class PlayerActivity extends Activity {
             }
             @Override public void onRenderedFirstFrame() { if(g==generation&&!released&&!firstFrameLogged) { firstFrameLogged=true;app.diagnostics.record(Diagnostics.Event.FIRST_FRAME,SystemClock.elapsedRealtime()-loadBegan,0,0,0); android.util.Log.i("LowfinPlayer","First video frame after "+(SystemClock.elapsedRealtime()-loadBegan)+" ms"); } }
             @Override public void onTracksChanged(Tracks tracks) {
-                if(g!=generation||released||initialAudioApplied||audio<0||!method.equals("DirectPlay")) return;
-                initialAudioApplied=true;
-                if(!selectLocalAudio(audio)) initialAudioApplied=false;
+                if(g!=generation||released) return;
+                if(!initialAudioApplied&&audio>=0&&method.equals("DirectPlay")) {
+                    initialAudioApplied=true;
+                    if(!selectLocalAudio(audio)) initialAudioApplied=false;
+                }
+                applyAudioLoudness();
             }
             @Override public void onPlaybackStateChanged(int state) {
                 if(g!=generation||released) return;
                 app.diagnostics.record(Diagnostics.Event.PLAYER_STATE,state,position(),Math.max(0,player.getBufferedPosition()-position()),0);
                 if(state==Player.STATE_BUFFERING||state==Player.STATE_READY)
-                    android.util.Log.i("LowfinPlayer","Playback state="+state+" positionMs="+position()+" bufferedAheadMs="+Math.max(0,player.getBufferedPosition()-position()));
+                    android.util.Log.i("LowfinPlayer","Playback state="+state+" positionMs="+position()+" bufferedAheadMs="+Math.max(0,player.getBufferedPosition()-position())+" durationMs="+player.getDuration()+" seekable="+player.isCurrentMediaItemSeekable());
                 if(state!=Player.STATE_READY) denoiseReadySince=0;
                 if(state==Player.STATE_BUFFERING) { if(live) liveBuffer.begin(SystemClock.elapsedRealtime()); message.setVisibility(View.GONE); bufferBar.setVisibility(View.VISIBLE); }
                 if(state==Player.STATE_READY) {
@@ -347,6 +373,12 @@ public final class PlayerActivity extends Activity {
                 if(g!=generation||released) return;
                 PlaybackDiagnostics.record(app,error,player,live,method);
                 app.diagnostics.record(Diagnostics.Event.PLAYER_ERROR,error.errorCode,position(),Math.max(0,player.getBufferedPosition()-position()),0);
+                if(audioLeveler!=null&&!audioNormalizationDisabled&&LocalPlayback.audioFailure(error)) {
+                    audioNormalizationDisabled=true;long resume=position();
+                    toast(I18n.resource(R.string.audio_normalization_fallback));
+                    android.util.Log.w("LowfinPlayer","Volume leveling disabled for this playback; retrying original audio; code="+error.errorCode);
+                    load(resume,true,revealControlsOnStart);return;
+                }
                 if(denoiseActive&&(error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSOR_INIT_FAILED||error.errorCode==PlaybackException.ERROR_CODE_VIDEO_FRAME_PROCESSING_FAILED)) { fallbackDenoise("video-processing-error code="+error.errorCode);return; }
                 if(live&&liveCandidate+1<liveCandidates.size()) { retryLiveTransport(); return; }
                 if(!forceHls&&app.settings.getBoolean("serverFallback",false)) { long p=Math.max(requestedPosition,position()); forceHls=true; message.setText(I18n.text("Kompatibler Serverstream wird versucht …")); load(p,true,revealControlsOnStart); }
@@ -354,7 +386,35 @@ public final class PlayerActivity extends Activity {
             }
         });
         player.setMediaItem(media.build(),position); player.prepare(); player.setPlayWhenReady(true);
+        requestAudioLoudness(g);
         handler.removeCallbacks(tick); handler.post(tick);
+    }
+    private void requestAudioLoudness(int g) {
+        if(audioLeveler==null||live||!"DirectPlay".equals(method)||companion==null||sourceId==null||sourceId.isEmpty()) return;
+        final LoudnessAudioProcessor processor=audioLeveler;final ExoPlayer current=player;final CompanionApi client=companion;
+        final String id=item.optString("Id"),version=sourceId;
+        // Calibration never delays stream negotiation or first frame. One bounded read per source,
+        // not per track switch or playback progress report.
+        app.io.execute(()-> {
+            try {
+                JSONArray result=client.audioLoudness(id,version);
+                runOnUiThread(()-> { if(!released&&g==generation&&player==current&&audioLeveler==processor&&version.equals(sourceId)&&id.equals(item.optString("Id"))) { loudnessMeasurements=result;applyAudioLoudness(); } });
+            } catch(Exception ignored) { /* Local leveling remains available without Companion. */ }
+        });
+    }
+    private void applyAudioLoudness() {
+        if(audioLeveler==null||player==null) return;
+        audioLeveler.clearMeasurement();
+        if(live||!"DirectPlay".equals(method)||source==null) return;
+        Format selected=null;
+        for(Tracks.Group group:player.getCurrentTracks().getGroups()) if(group.getType()==C.TRACK_TYPE_AUDIO) for(int track=0;track<group.length;track++) if(group.isTrackSelected(track)) {
+            if(selected!=null) return;selected=group.getTrackFormat(track);
+        }
+        if(selected==null) return;
+        int index=LoudnessTracks.stream(Json.array(source,"MediaStreams"),selected);
+        String profile=audioLevelerStereo?LoudnessTracks.STEREO:LoudnessTracks.NATIVE;
+        JSONObject measurement=LoudnessTracks.measurement(loudnessMeasurements,index,profile);
+        if(measurement!=null) audioLeveler.measurement(measurement.optDouble("integratedLufs",Double.NaN),measurement.optDouble("truePeakDb",Double.NaN));
     }
     private boolean denoiseOverloaded(int count,long interval) {
         return player!=null&&DenoisePolicy.overloaded(count,interval,denoiseReadySince==0?0:SystemClock.elapsedRealtime()-denoiseReadySince,player.isPlaying(),player.getPlaybackState()==Player.STATE_READY);
@@ -378,15 +438,19 @@ public final class PlayerActivity extends Activity {
         boolean offer=false;
         for(int i=0;i<segments.length();i++) {
             JSONObject s=segments.optJSONObject(i); if(s==null||!PlaybackPolicy.active(s,position)) continue;
-            String type=s.optString("Type"),key=s.optString("Id",type+":"+s.optLong("StartTicks")); long end=s.optLong("EndTicks")/10000;
+            String type=s.optString("Type"),key=s.optString("Id",type+":"+s.optLong("StartTicks")); long end=PlaybackPolicy.segmentTarget(s,position,player.getDuration(),player.isCurrentMediaItemSeekable());
+            if(end<0) continue;
             if(PlaybackPolicy.autoSkip(type,item,app.settings)) {
-                if(skipped.add(key)) { long duration=player.getDuration(); player.seekTo(duration>0?Math.min(end,duration):end); }
+                if(skipped.add(key)) player.seekTo(end);
                 continue;
             }
-            offer=true; skipTarget=end; String label=type.equals("Recap")?I18n.text("Rückblick"):type.equals("Preview")?I18n.text("Vorschau"):type.equals("Commercial")?I18n.text("Werbung"):type.equals("Intro")?"Intro":type.equals("Outro")?"Outro":type;
-            skip.setText(I18n.language().equals("en")?I18n.text("Überspringen")+" "+label:label+I18n.text(" überspringen")); skip.setVisibility(View.VISIBLE); break;
+            boolean newlyVisible=skip.getVisibility()!=View.VISIBLE;
+            offer=true; offeredSegment=s; String label=type.equals("Recap")?I18n.text("Rückblick"):type.equals("Preview")?I18n.text("Vorschau"):type.equals("Commercial")?I18n.text("Werbung"):type.equals("Intro")?"Intro":type.equals("Outro")?"Outro":type;
+            skip.setText(I18n.language().equals("en")?I18n.text("Überspringen")+" "+label:label+I18n.text(" überspringen")); skip.setVisibility(View.VISIBLE);
+            if(newlyVisible&&"Intro".equalsIgnoreCase(type)&&chrome.getVisibility()!=View.VISIBLE&&view.hasFocus()) skip.requestFocus();
+            break;
         }
-        if(!offer) { if(skip.hasFocus()) view.requestFocus(); skip.setVisibility(View.GONE); }
+        if(!offer) { offeredSegment=null;if(skip.hasFocus()) view.requestFocus(); skip.setVisibility(View.GONE); }
     }
     private JSONObject reportBody(long pos) {
         return Json.obj("ItemId",item.optString("Id"),"MediaSourceId",sourceId,"PlaySessionId",sessionId,"PositionTicks",pos*10000,
@@ -475,7 +539,7 @@ public final class PlayerActivity extends Activity {
     private void chapters() {
         JSONArray chapters=Json.array(item,"Chapters"); if(chapters.length()==0) { toast(I18n.text("Keine Kapitel")); return; }
         String[] labels=new String[chapters.length()]; for(int i=0;i<chapters.length();i++) labels[i]=chapters.optJSONObject(i).optString("Name",I18n.text("Kapitel ")+(i+1));
-        LowfinDialog.builder(this).setTitle(I18n.text("Kapitel")).setItems(labels,(d,w)-> { if(player!=null) player.seekTo(chapters.optJSONObject(w).optLong("StartPositionTicks")/10000); }).show();
+        LowfinDialog.builder(this).setTitle(I18n.text("Kapitel")).setItems(labels,(d,w)-> { if(player!=null) seekTo(chapters.optJSONObject(w).optLong("StartPositionTicks")/10000); }).show();
     }
     private void nextEpisode(boolean automatic) {
         if(!"Episode".equals(item.optString("Type"))) return;
@@ -520,6 +584,11 @@ public final class PlayerActivity extends Activity {
         LowfinDialog.builder(this).setTitle(p.optString("Name")).setMessage(p.optString("Overview",I18n.text("Keine Beschreibung")))
             .setPositiveButton(I18n.text("Aufnehmen"),(d,w)-> { network.execute(()-> { try { JSONObject timer=api.get("/LiveTv/Timers/Defaults","ProgramId",p.optString("Id")); timer.put("ProgramId",p.optString("Id")); api.post("/LiveTv/Timers",timer); runOnUiThread(()->toast(I18n.text("Aufnahme geplant"))); } catch(Exception e) { runOnUiThread(()->toast(I18n.text("Aufnahme konnte nicht geplant werden"))); } }); }).setNegativeButton(I18n.text("Schließen"),null).show();
     }
+    static String timingIssueText(AdaptiveTsExtractor.Issue issue) {
+        AdaptiveTsExtractor.Failure reason=issue.reason;
+        int resource=reason==AdaptiveTsExtractor.Failure.UNKNOWN_LENGTH?R.string.ts_timing_unknown_length:reason==AdaptiveTsExtractor.Failure.SEARCH_LIMIT?R.string.ts_timing_search_limit:reason==AdaptiveTsExtractor.Failure.ALREADY_STARTED?R.string.ts_timing_already_started:R.string.ts_timing_missing;
+        return String.format(Locale.forLanguageTag(I18n.language()),I18n.resource(resource),issue.window/1024)+"\n\n"+I18n.resource(R.string.ts_timing_actions);
+    }
     private void toast(String s) { if(!released) Toast.makeText(this,s,Toast.LENGTH_LONG).show(); }
     private boolean heldSeek(int direction,KeyEvent event) {
         if(player==null||live) return true;
@@ -537,7 +606,8 @@ public final class PlayerActivity extends Activity {
     }
     @Override public boolean dispatchKeyEvent(KeyEvent e) {
         if(ServerNotice.key(this,e)) {menuPress.cancel();return true;}
-        if(chrome!=null&&menuPress.handle(e,chrome.getVisibility()==View.VISIBLE,()-> { if(player!=null) player.pause(); },key-> {
+        boolean introAvailable=player!=null&&skip!=null&&skip.getVisibility()==View.VISIBLE&&offeredSegment!=null&&"Intro".equalsIgnoreCase(offeredSegment.optString("Type"))&&PlaybackPolicy.segmentTarget(offeredSegment,position(),player.getDuration(),player.isCurrentMediaItemSeekable())>=0;
+        if(chrome!=null&&menuPress.handle(e,chrome.getVisibility()==View.VISIBLE,introAvailable,this::skipOfferedSegment,()-> { if(player!=null) player.pause(); },key-> {
             showChrome(true);
             if(!live&&(key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT)) chrome.timeline.requestFocus();
         })) return true;
@@ -584,4 +654,18 @@ public final class PlayerActivity extends Activity {
         app.reports.execute(()->app.channels.refresh(null));
     }
     @Override protected void onDestroy() { release(); super.onDestroy(); }
+    @Override public void dump(String prefix,java.io.FileDescriptor fd,java.io.PrintWriter writer,String[] args) {
+        if(args!=null&&Arrays.asList(args).contains("--lowfin-audio")) {
+            if(app==null||!app.diagnostics.enabled()) { writer.println("audioDiagnosticsEnabled=false");return; }
+            LoudnessAudioProcessor processor=audioLeveler;
+            writer.println("audioProcessorPresent="+(processor!=null));
+            if(processor!=null) {
+                writer.println("companionCalibration="+processor.measured());
+                writer.println("calibrationDb="+processor.calibrationDb());
+                writer.println("processedAudioFrames="+processor.processedFrames());
+            }
+            return;
+        }
+        super.dump(prefix,fd,writer,args);
+    }
 }

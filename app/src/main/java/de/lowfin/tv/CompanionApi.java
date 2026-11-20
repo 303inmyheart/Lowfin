@@ -27,7 +27,7 @@ final class CompanionApi {
     private final OkHttpClient http;
     private final SharedPreferences outbox;
     private volatile boolean available;
-    private volatile boolean scopedResume,resumeVisibility,incrementalCache,serverProviders;
+    private volatile boolean scopedResume,resumeVisibility,incrementalCache,serverProviders,audioLoudness;
     private volatile int coverTagFilter;
     private volatile boolean coverTagsSupported,extendedTags;
     private volatile Set<String> coverLabelKeys=Collections.emptySet();
@@ -39,6 +39,7 @@ final class CompanionApi {
         available=outbox.getBoolean("available",false); library.companionAvailable=available;
         scopedResume=outbox.getBoolean("scopedResume",false); resumeVisibility=outbox.getBoolean("resumeVisibility",false);
         incrementalCache=outbox.getBoolean("incrementalCache",false); serverProviders=outbox.getBoolean("serverProviders",false);
+        audioLoudness=outbox.getBoolean("audioLoudness",false);
         coverTagFilter=outbox.getInt("coverTagFilter",0);coverTagsSupported=outbox.getBoolean("coverTagsSupported",false);
         extendedTags=outbox.getBoolean("extendedTags",false);try {JSONArray saved=new JSONArray(outbox.getString("coverLabelKeys","[]"));Set<String> keys=new HashSet<>();for(int i=0;i<saved.length();i++) if(CoverTagLabels.KEYS.contains(saved.optString(i))) keys.add(saved.optString(i));coverLabelKeys=Collections.unmodifiableSet(keys);}catch(Exception ignored){}
         http=api.http.newBuilder().connectTimeout(3,TimeUnit.SECONDS).readTimeout(4,TimeUnit.SECONDS).callTimeout(5,TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).build();
@@ -51,12 +52,12 @@ final class CompanionApi {
         try { JSONObject response=call("GET","/capabilities",null); available=response.optBoolean("available")&&response.optInt("apiVersion")==1;
             JSONObject tags=Json.object(response,"imageBadges");coverTagsSupported=tags.optInt("version")==1;coverTagFilter=tags.optBoolean("enabled")&&tags.optInt("version")==1?((tags.optBoolean("dvd")?1:0)|(tags.optBoolean("surround")?2:0)|(tags.optBoolean("hdr")?4:0)):0;
             extendedTags=tags.optInt("labelVersion")==1;Set<String> keys=new HashSet<>();JSONArray configured=Json.array(tags,"tags");if(tags.optBoolean("enabled")) for(int i=0;i<configured.length();i++) if(CoverTagLabels.KEYS.contains(configured.optString(i))) keys.add(configured.optString(i));coverLabelKeys=Collections.unmodifiableSet(keys);
-            JSONArray features=Json.array(response,"features"); scopedResume=false; resumeVisibility=false; incrementalCache=false; serverProviders=false;
-            for(int index=0;index<features.length();index++) { scopedResume|="scopedResume".equals(features.optString(index)); resumeVisibility|="resumeVisibility".equals(features.optString(index)); incrementalCache|="incrementalCache".equals(features.optString(index)); serverProviders|="serverProviders".equals(features.optString(index)); }
+            JSONArray features=Json.array(response,"features"); scopedResume=false; resumeVisibility=false; incrementalCache=false; serverProviders=false;audioLoudness=false;
+            for(int index=0;index<features.length();index++) { audioLoudness|="audioLoudness".equals(features.optString(index));scopedResume|="scopedResume".equals(features.optString(index)); resumeVisibility|="resumeVisibility".equals(features.optString(index)); incrementalCache|="incrementalCache".equals(features.optString(index)); serverProviders|="serverProviders".equals(features.optString(index)); }
         }
         catch(Exception e) { if(e instanceof Api.Failure&&(((Api.Failure)e).status==404||((Api.Failure)e).status==401||((Api.Failure)e).status==403)) available=false; }
         library.companionAvailable=available; Runnable changed=coverTagsChanged;if(changed!=null) changed.run();
-        outbox.edit().putBoolean("extendedTags",extendedTags).putString("coverLabelKeys",new JSONArray(coverLabelKeys).toString()).putBoolean("coverTagsSupported",coverTagsSupported).putInt("coverTagFilter",coverTagFilter).putBoolean("available",available).putBoolean("scopedResume",scopedResume).putBoolean("resumeVisibility",resumeVisibility).putBoolean("incrementalCache",incrementalCache).putBoolean("serverProviders",serverProviders).apply(); return available;
+        outbox.edit().putBoolean("audioLoudness",audioLoudness).putBoolean("extendedTags",extendedTags).putString("coverLabelKeys",new JSONArray(coverLabelKeys).toString()).putBoolean("coverTagsSupported",coverTagsSupported).putInt("coverTagFilter",coverTagFilter).putBoolean("available",available).putBoolean("scopedResume",scopedResume).putBoolean("resumeVisibility",resumeVisibility).putBoolean("incrementalCache",incrementalCache).putBoolean("serverProviders",serverProviders).apply(); return available;
     }
     boolean coverTagsSupported() { return available&&coverTagsSupported; }
     int coverTagFilter() { return available?coverTagFilter:0; }
@@ -64,6 +65,11 @@ final class CompanionApi {
     Set<String> coverLabelKeys() {return coverLabelKeys;}
     boolean serverProviders() { return available&&serverProviders; }
     boolean incrementalCache() { return available&&incrementalCache; }
+    JSONArray audioLoudness(String item,String source) throws Exception {
+        if(!discover()||!audioLoudness) return new JSONArray();
+        JSONObject response=call("GET","/items/"+item+"/audio-loudness",null,"sourceId",source);
+        return response.optBoolean("enabled")&&source.equals(response.optString("sourceId"))?Json.array(response,"measurements"):new JSONArray();
+    }
     JSONObject call(String method,String path,JSONObject body,Object... pairs) throws Exception {
         Request.Builder request=api.request(api.url(ROOT+path,pairs));
         if(method.equals("GET")) request.get(); else request.method(method,RequestBody.create(body==null?"{}":body.toString(),Api.JSON));

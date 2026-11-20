@@ -1,4 +1,11 @@
 <resources>
+    <string name="audio_normalization">Wiedergabelautstärke normalisieren</string>
+    <string name="audio_normalization_strength">Stärke des Lautstärkeausgleichs</string>
+    <string name="audio_normalization_light">Leicht</string>
+    <string name="audio_normalization_medium">Mittel</string>
+    <string name="audio_normalization_strong">Stark</string>
+    <string name="audio_normalization_fallback">Lautstärkeausgleich nicht verfügbar. Originalton wird erneut gestartet.</string>
+    <string name="audio_normalization_hint">Gilt ab der nächsten Wiedergabe. Gleicht die Lautstärke von Filmen und Folgen lokal aus; Companion-Messwerte verbessern den Ausgangspegel je Tonspur. Ohne Messwert bleibt der lokale Ausgleich aktiv. Verwendet dekodierten PCM-Ton statt komprimierter Durchleitung. Live TV ist ausgenommen.</string>
     <string name="cache_checking">Bibliothekscache wird geprüft …</string>
     <string name="cache_refreshing">Bibliothek wird aktualisiert · Cache bleibt verfügbar</string>
     <string name="cache_initial_build">Bibliothekscache wird erstmals erstellt …</string>
@@ -477,4 +484,10 @@
     <string name="home_latest_enable">Zuletzt-hinzugefügt-Reihen anzeigen</string>
     <string name="home_latest_libraries">Zuletzt hinzugefügt: Bibliotheken</string>
     <string name="home_latest_hint">Eine Detailreihe pro Videobibliothek mit Beschreibung und Bewertungen. Hier Bibliotheken auswählen und die Reihen unter Startseiten-Reihenfolge verschieben.</string>
+    <string name="ts_timing_title">Zeitinformationen nicht verfügbar</string>
+    <string name="ts_timing_unknown_length">Die Gesamtlänge dieses Streams ist unbekannt. Lowfin kann sein Ende nicht nach Zeitinformationen durchsuchen. Deshalb fehlen eine verlässliche Laufzeit und Suchpositionen.</string>
+    <string name="ts_timing_search_limit">Auch bei einer Zeitstempelsuche in bis zu %1$d KiB am Anfang und Ende dieses Transportstreams konnten keine verlässliche Laufzeit und Suchpositionen ermittelt werden. Die Suchgrenze verhindert übermäßiges Nachladen.</string>
+    <string name="ts_timing_missing">In den geprüften Daten dieses Transportstreams (bis zu %1$d KiB am Anfang und Ende) sind keine brauchbaren Zeitinformationen verfügbar. Lowfin kann keine verlässliche Laufzeit und Suchpositionen bestimmen.</string>
+    <string name="ts_timing_already_started">Dem Transportstream fehlen eine verlässliche Laufzeit und Suchpositionen. Es wurden bereits Mediendaten ausgegeben. Lowfin startet ihn deshalb nicht erneut, um die Zeitstempelsuche zu erweitern.</string>
+    <string name="ts_timing_actions">Spulen, Fortsetzen an einer gespeicherten Position und Intro-/Outro-Skip sind in diesem Stream nicht verfügbar. Für einen kompatiblen Serverstream unter Optionen „Über Server abspielen“ wählen. Mit OK lässt sich diese Meldung schließen.</string>
 </resources>

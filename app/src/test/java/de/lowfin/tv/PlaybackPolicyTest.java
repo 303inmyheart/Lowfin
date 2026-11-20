@@ -35,6 +35,14 @@ public class PlaybackPolicyTest {
         assertFalse(PlaybackPolicy.active(Json.obj("StartTicks",20L,"EndTicks",10L),0));
         assertFalse(PlaybackPolicy.active(new JSONObject(),0));
     }
+    @Test public void UnseekableOrUnknownDurationCannotTriggerIntroResetLoops() {
+        JSONObject intro=Json.obj("StartTicks",600000000L,"EndTicks",900000000L);
+        assertEquals(-1,PlaybackPolicy.segmentTarget(intro,60000,0,true));
+        assertEquals(-1,PlaybackPolicy.segmentTarget(intro,60000,120000,false));
+        assertEquals(-1,PlaybackPolicy.segmentTarget(intro,60000,androidx.media3.common.C.TIME_UNSET,true));
+        assertEquals(90000,PlaybackPolicy.segmentTarget(intro,60000,120000,true));
+        assertEquals(-1,PlaybackPolicy.segmentTarget(intro,60000,30000,true));
+    }
     @Test public void liveAlwaysOpensTunerAndKeepsServerFallback() {
         JSONObject r=PlaybackPolicy.request("user",720,4000000,true,false,0,-1,-1,null);
         assertTrue(r.optBoolean("AutoOpenLiveStream")); assertFalse(r.optBoolean("EnableDirectPlay"));

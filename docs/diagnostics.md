@@ -74,3 +74,7 @@ Compare like-for-like warm-cache navigation, record configuration, and distingui
 queue wait, work/persistence and UI delivery. Missing events or overwritten history
 are not proof that a problem did not occur. No performance improvement is claimed
 solely from adding diagnostics.
+
+### Audio calibration
+
+With local diagnostics enabled, `adb shell dumpsys activity de.lowfin.tv/.PlayerActivity --lowfin-audio` reports whether the PCM leveler has accepted Companion calibration, its baseline gain in dB and the number of processed audio frames. Increasing frame counts demonstrate audio processing; calibration is reported separately from the local fallback, including valid unity-gain measurements. The output contains no media IDs, titles, server addresses or credentials. Public releases keep diagnostics off by default.

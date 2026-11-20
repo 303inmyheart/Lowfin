@@ -1,4 +1,11 @@
 <resources>
+    <string name="audio_normalization">Normalize playback volume</string>
+    <string name="audio_normalization_strength">Volume leveling strength</string>
+    <string name="audio_normalization_light">Light</string>
+    <string name="audio_normalization_medium">Medium</string>
+    <string name="audio_normalization_strong">Strong</string>
+    <string name="audio_normalization_fallback">Volume leveling unavailable. Retrying original audio.</string>
+    <string name="audio_normalization_hint">Applies from the next playback. Levels movie and episode volume locally; Companion measurements improve the starting level for each audio track. Without a measurement, local leveling remains active. Uses decoded PCM audio instead of encoded passthrough. Live TV is excluded.</string>
     <string name="cache_checking">Checking library cache …</string>
     <string name="cache_refreshing">Refreshing library · Cached data remains available</string>
     <string name="cache_initial_build">Creating library cache for the first time …</string>
@@ -477,4 +484,10 @@
     <string name="home_latest_enable">Show recently added rows</string>
     <string name="home_latest_libraries">Recently added: libraries</string>
     <string name="home_latest_hint">One featured row per video library, with descriptions and ratings. Choose libraries here and move their rows in Home row order.</string>
+    <string name="ts_timing_title">Playback timing unavailable</string>
+    <string name="ts_timing_unknown_length">This stream has no known total length. Lowfin cannot search its end for timing information, so a reliable duration and seek map are unavailable.</string>
+    <string name="ts_timing_search_limit">No reliable duration or seek map could be determined from this transport stream, even with timestamp searches of up to %1$d KiB at its beginning and end. The search limit prevents excessive loading.</string>
+    <string name="ts_timing_missing">The transport stream does not provide usable timing information within the searched data (up to %1$d KiB at its beginning and end). Lowfin cannot determine a reliable duration or seek map.</string>
+    <string name="ts_timing_already_started">The transport stream has no reliable duration or seek map. Media data has already been output, so Lowfin will not restart it to extend the timestamp search.</string>
+    <string name="ts_timing_actions">Seeking, resuming at a saved position and Intro/Outro Skip are unavailable in this stream. To try a compatible server stream, choose “Play via server” in Options. Press OK to dismiss this message.</string>
 </resources>

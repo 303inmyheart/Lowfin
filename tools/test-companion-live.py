@@ -41,7 +41,7 @@ if not any(folder['Name']=='Companion Tests' for folder in folders):
     request('/Library/VirtualFolders?name=Companion%20Tests&collectionType=movies&refreshLibrary=true','POST',{'LibraryOptions':{'PathInfos':[{'Path':str(ROOT/'.tools/companion-test/media')}],'EnableInternetProviders':False,'EnableRealtimeMonitor':False}})
 for attempt in range(50):
     items=request('/Users/'+user+'/Items?Recursive=true&IncludeItemTypes=Movie&Fields=MediaSources,Path')['Items']
-    fixture=next((row for row in items if row.get('Path')==str(ROOT/'.tools/companion-test/media/Lowfin Sample (2026).mp4')),None)
+    fixture=next((row for row in items if row.get('Path')==str(ROOT/'.tools/companion-test/media/Lowfin Long Video (2026).mp4')),None)
     if fixture and fixture.get('RunTimeTicks',0)>0: break
     time.sleep(1)
 else: raise RuntimeError('Fixture was not scanned')
@@ -96,7 +96,7 @@ assert request('/Users/'+user+'/Items/'+item)['UserData']['Played'] and not requ
 request('/Sessions/Playing/Stopped','POST',native_body)
 # Two real library roots must not be mixed, even when both have independent resume entries.
 second_folder=ROOT/'.tools/companion-test/media-second'; second_folder.mkdir(exist_ok=True)
-shutil.copy2(ROOT/'.tools/companion-test/media/Lowfin Sample (2026).mp4',second_folder/'Lowfin Hidden (2026).mp4')
+shutil.copy2(ROOT/'.tools/companion-test/media/Lowfin Long Video (2026).mp4',second_folder/'Lowfin Hidden (2026).mp4')
 folders=request('/Library/VirtualFolders')
 if not any(folder['Name']=='Companion Hidden Library' for folder in folders):
     request('/Library/VirtualFolders?name=Companion%20Hidden%20Library&collectionType=movies&refreshLibrary=true','POST',{'LibraryOptions':{'PathInfos':[{'Path':str(second_folder)}],'EnableInternetProviders':False,'EnableRealtimeMonitor':False}})

@@ -1,0 +1,13 @@
+# Finite transport-stream playback
+
+Some downloaded transport streams have misleading file extensions or long sections without PCR clock timestamps near the end. Lowfin retains Media3's content sniffing, independent of the extension. Only the progressive TS extractor receives adaptive timestamp discovery; actual MP4, Matroska, HLS and Live TV retain their existing extractor behavior.
+
+Discovery starts with Media3's normal search window. If the published seek map has no positive, seekable duration, Lowfin can recreate the same native extractor with 512 KiB, 2 MiB and at most 4 MiB search windows. It only retries known-length inputs before any sample data has passed through, and stops growing once the entire input fits the current window. Network exceptions propagate normally; this is not a connection-retry mechanism. It does not scan the whole video, rewrite the file, use a different decoder or invent duration from file size or server metadata.
+
+Track outputs are reused across discovery attempts and end-of-track discovery is forwarded once. Once samples are emitted, no discovery restart is allowed. Missing timestamps beyond the limit remain unseekable. Manual seeks, chapter seeks and segment skips require a positive duration and a seekable timeline; invalid segment ends cannot trigger a seek loop. This cannot repair genuinely corrupt streams or guarantee seeking for arbitrary transport-stream timestamp discontinuities.
+
+If discovery fails, a native Lowfin notice explains the observed limitation in English or German: unknown stream length, exhausted search budget, unusable timing or media output already started. It explains unavailable seek/resume/segment-skip operations and suggests the existing server playback option without switching automatically. It appears once for the current media in the playback activity; OK dismisses it without forwarding that press to playback controls.
+
+Synthetic regression fixtures cover ordinary streams, several tail sizes through the maximum budget, absent PCRs, unknown input length, already emitted samples and I/O errors. Owner-supplied diagnostic media stays outside the repository and packages. Physical-TV playback remains an owner test.
+
+The wrapper uses the public [Media3 extractor interfaces](https://github.com/androidx/media/blob/1.8.0/libraries/extractor/src/main/java/androidx/media3/extractor/Extractor.java) and the native [TS timestamp-search setting](https://github.com/androidx/media/blob/1.8.0/libraries/extractor/src/main/java/androidx/media3/extractor/DefaultExtractorsFactory.java); it does not fork Media3's TS parser.

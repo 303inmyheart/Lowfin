@@ -23,6 +23,8 @@ Nativer Jellyfin-Client für schwache **Android-TV-, Google-TV- und Fire-TV-Ger�
 - **TV-Integration:** optionale Android-TV-Startbildschirmzeilen für Wiedergabefortschritt und Empfehlungen; die Verfügbarkeit hängt vom Launcher ab.
 - **Anpassbare Darstellung:** dezente Akzentfarben, optionale Animationen, bibliotheksbasierter Bildschirmschoner und fernbedienbare Einstellungen.
 
+- **Lautstärkeausgleich:** lokal und standardmäßig auf Mittel aktiv, optional mit Companion-Messwerten je Tonspur. [Einrichtung und Grenzen (Englisch)](docs/audio-normalization.md).
+
 ## Installation und Updates
 
 1. Die Release-APK unter [GitHub Releases](https://github.com/303inmyheart/Lowfin/releases/latest) herunterladen.

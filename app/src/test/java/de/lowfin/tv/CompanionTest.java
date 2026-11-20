@@ -21,6 +21,8 @@ public class CompanionTest {
     private volatile JSONObject backend;
     private volatile boolean installed=true,failProgress,failStartAfterApply,independent=true,legacyPlugin;
     private volatile String returnedScope;
+    private volatile boolean loudnessFeature;
+    private volatile String loudnessSource="source-a";
     private int starts,nativeReports;
     private final long duration=432000000000L;
     @Before public void setup() throws Exception {
@@ -33,7 +35,8 @@ public class CompanionTest {
                     if(path.startsWith("/Sessions/Playing")) { nativeReports++; return new MockResponse().setResponseCode(204); }
                     if(path.equals("/Users/user/Items/movie")) return ok(movie());
                     if(!installed) return new MockResponse().setResponseCode(404);
-                    if(path.equals(CompanionApi.ROOT+"/capabilities")) return ok(Json.obj("available",true,"apiVersion",1,"features",legacyPlugin?new JSONArray():Json.arr("scopedResume","resumeVisibility","explicitOptIn")));
+                    if(path.equals(CompanionApi.ROOT+"/capabilities")) { JSONArray features=legacyPlugin?new JSONArray():Json.arr("scopedResume","resumeVisibility","explicitOptIn");if(loudnessFeature) features.put("audioLoudness");return ok(Json.obj("available",true,"apiVersion",1,"features",features)); }
+                    if(path.equals(CompanionApi.ROOT+"/items/movie/audio-loudness")) return ok(Json.obj("enabled",true,"sourceId",loudnessSource,"measurements",Json.arr(Json.obj("streamIndex",3,"profile","native-v1","integratedLufs",-24,"truePeakDb",-2))));
                     if(path.equals(CompanionApi.ROOT+"/resume")) { JSONObject row=Json.obj("itemId","movie","state",backend); String scope=request.getRequestUrl().queryParameter("parentId"); return ok(Json.obj("items",independent&&backend.optBoolean("hasResume")?Json.arr(row):new JSONArray(),"states",Json.arr(row),"parentId",returnedScope==null?scope:returnedScope)); }
                     if(path.endsWith("/playback")) {
                         JSONObject frame=new JSONObject(request.getBody().clone().readUtf8()); long sequence=frame.optLong("sequence"); String event=frame.optString("event");
@@ -60,6 +63,12 @@ public class CompanionTest {
     @Test public void emptyOutboxDoesNotProbeButNormalDiscoveryRemainsAvailable() {
         context.getSharedPreferences("companion-outbox-"+account.scope(),0).edit().putBoolean("available",true).apply();
         client.replay();assertEquals(0,server.getRequestCount());assertTrue(client.discover());assertEquals(1,server.getRequestCount());
+    }
+    @Test public void loudnessRequiresCapabilityAndRejectsAnotherSource() throws Exception {
+        assertEquals(0,client.audioLoudness("movie","source-a").length());assertEquals(1,server.getRequestCount());
+        loudnessFeature=true;client.refreshDiscovery();assertEquals(1,client.audioLoudness("movie","source-a").length());
+        loudnessSource="another-version";assertEquals(0,client.audioLoudness("movie","source-a").length());
+        assertEquals(4,server.getRequestCount());
     }
     @Test public void simultaneousStartupDiscoverySharesProbeAndExplicitRefreshStillReloads() throws Exception {
         java.util.concurrent.ExecutorService workers=java.util.concurrent.Executors.newFixedThreadPool(2);

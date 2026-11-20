@@ -160,6 +160,9 @@ final class Options {
         toggle(I18n.resource(R.string.denoise_title),"videoDenoise",false);content.addView(Ui.text(activity,I18n.resource(R.string.denoise_hint),12,Ui.MUTED));
         toggle("Server-Transcoding bei Bedarf zulassen","serverFallback",false);
         section(R.string.settings_group_audio);
+        toggle(I18n.resource(R.string.audio_normalization),"audioNormalization",true);
+        selection(R.string.audio_normalization_strength,"audioNormalizationStrength",2,new int[]{1,2,3},new String[]{I18n.resource(R.string.audio_normalization_light),I18n.resource(R.string.audio_normalization_medium),I18n.resource(R.string.audio_normalization_strong)});
+        content.addView(Ui.text(activity,I18n.resource(R.string.audio_normalization_hint),12,Ui.MUTED));
         toggle("Audio auf Stereo (2.0) heruntermischen","stereo",true);
         selection(R.string.audio_channels,"audioChannels",6,new int[]{0,2,6,8},new String[]{I18n.text("Original / automatisch"),"2.0","5.1","7.1"});
         content.addView(Ui.text(activity,I18n.resource(R.string.audio_channels_hint),12,Ui.MUTED));

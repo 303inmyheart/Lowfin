@@ -12,10 +12,14 @@ final class PlayerMenuPress {
         return true;
     }
     boolean handle(KeyEvent event,boolean visible,Runnable pause,IntConsumer reveal) {
+        return handle(event,visible,false,()->{},pause,reveal);
+    }
+    boolean handle(KeyEvent event,boolean visible,boolean introAvailable,Runnable skipIntro,Runnable pause,IntConsumer reveal) {
         int key=event.getKeyCode();
         if(opening!=KeyEvent.KEYCODE_UNKNOWN&&key==opening) { if(event.getAction()==KeyEvent.ACTION_UP) opening=KeyEvent.KEYCODE_UNKNOWN; return true; }
         boolean confirm=key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER||key==KeyEvent.KEYCODE_NUMPAD_ENTER;
         boolean arrow=key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT||key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_DOWN;
+        if(!visible&&confirm&&introAvailable) return activate(event,skipIntro);
         if(!visible&&(confirm||arrow)) {
             if(event.getAction()==KeyEvent.ACTION_DOWN&&event.getRepeatCount()==0) { opening=key; if(confirm) pause.run(); reveal.accept(key); }
             return true;

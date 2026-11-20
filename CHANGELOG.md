@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6
+
+- Release Android build 114 with the existing signing identity, English/German UI and diagnostics disabled by default in public builds. Add opt-in numeric audio diagnostics to verify Companion calibration and PCM processing without exposing media or account information.
+
+- Preselect a visible manual Intro Skip offer while player controls are hidden. OK skips immediately without pausing or opening controls; consume held repeats and release, revalidate the segment before seeking, and preserve confirmation behavior in open controls.
+- Explain unsuccessful TS timestamp discovery once per media playback in a native, dismissible English/German notice. Distinguish unknown stream length, exhausted search budget and unusable timing; suggest the existing server playback option without switching automatically.
+- Adapt finite transport-stream timestamp discovery from Media3's normal window through 512 KiB, 2 MiB and at most 4 MiB only when duration is missing, including files mislabeled as MP4. Never retry unknown-length inputs, network failures or streams that have emitted samples. Keep missing timestamps unseekable and guard manual skip/chapter seeks. Cover varied tails, missing PCRs and the retry limit with synthetic regression fixtures.
+- Restore duration detection and seeking for file-based transport streams with long audio-only tails, including streams mislabeled as MP4. Retain Live TV behavior. Prevent automatic segment skips and manual seek actions from resetting unseekable sources to the beginning.
+
+- Add default-on, medium-strength local PCM volume leveling for file playback, with linked peak limiting, optional strength/off controls and asynchronous per-track Companion calibration. Keep Live TV unchanged.
+- Match measurements to media source, embedded audio track and stereo/native processing profile; use local leveling when calibration is absent or ambiguous. Preserve ordinary playback reporting and avoid startup waits.
+
 ## 1.5.3
 
 - Restore the selected home shelf directly when returning from media details or More, without animating from the top through preceding rows. Keep ordinary D-pad scrolling animations enabled.

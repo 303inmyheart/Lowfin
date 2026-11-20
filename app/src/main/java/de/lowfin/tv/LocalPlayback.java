@@ -2,6 +2,10 @@ package de.lowfin.tv;
 
 import android.content.Context;
 import androidx.media3.common.C;
+import androidx.media3.common.Format;
+import androidx.media3.common.MimeTypes;
+import androidx.media3.common.PlaybackException;
+import androidx.media3.exoplayer.ExoPlaybackException;
 import androidx.media3.common.audio.*;
 import androidx.media3.exoplayer.DefaultRenderersFactory;
 import androidx.media3.exoplayer.audio.*;
@@ -11,6 +15,22 @@ import java.util.*;
 /** Device decoders and PCM stereo mixing, without forcing server audio conversion. */
 @androidx.media3.common.util.UnstableApi
 final class LocalPlayback {
+    static androidx.media3.extractor.ExtractorsFactory extractors(boolean live) {
+        return extractors(live,issue->{});
+    }
+    static androidx.media3.extractor.ExtractorsFactory extractors(boolean live,java.util.function.Consumer<AdaptiveTsExtractor.Issue> failure) {
+        androidx.media3.extractor.DefaultExtractorsFactory factory=new androidx.media3.extractor.DefaultExtractorsFactory();
+        if(live) factory.setTsExtractorFlags(androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES);
+        return live?factory:new PlaybackExtractors(failure);
+    }
+    static boolean audioFailure(PlaybackException error) {
+        if(error.errorCode==PlaybackException.ERROR_CODE_AUDIO_TRACK_INIT_FAILED||error.errorCode==PlaybackException.ERROR_CODE_AUDIO_TRACK_WRITE_FAILED) return true;
+        if(error instanceof ExoPlaybackException) {
+            Format format=((ExoPlaybackException)error).rendererFormat;
+            return format!=null&&MimeTypes.isAudio(format.sampleMimeType);
+        }
+        return false;
+    }
     static void negotiate(JSONObject request) throws JSONException {
         JSONObject profile=request.getJSONObject("DeviceProfile");
         Map<String,String> video=new LinkedHashMap<>(),audio=new LinkedHashMap<>();
@@ -46,14 +66,30 @@ final class LocalPlayback {
         return matrix.scaleBy(1/peak);
     }
     static DefaultRenderersFactory renderers(Context context,boolean stereo) {
+        return renderers(context,stereo,null);
+    }
+    static AudioSink pcmOnly(AudioSink delegate) {
+        return new ForwardingAudioSink(delegate) {
+            @Override public boolean supportsFormat(Format format) { return MimeTypes.AUDIO_RAW.equals(format.sampleMimeType)&&super.supportsFormat(format); }
+            @Override public int getFormatSupport(Format format) { return MimeTypes.AUDIO_RAW.equals(format.sampleMimeType)?super.getFormatSupport(format):AudioSink.SINK_FORMAT_UNSUPPORTED; }
+            @Override public AudioOffloadSupport getFormatOffloadSupport(Format format) { return AudioOffloadSupport.DEFAULT_UNSUPPORTED; }
+        };
+    }
+    static DefaultRenderersFactory renderers(Context context,boolean stereo,LoudnessAudioProcessor leveler) {
         return new DefaultRenderersFactory(context) {
             @Override protected AudioSink buildAudioSink(Context c,boolean floats,boolean params) {
-                if(!stereo) return super.buildAudioSink(c,floats,params);
-                ChannelMixingAudioProcessor mixer=new ChannelMixingAudioProcessor();
-                for(int channels=1;channels<=6;channels++) mixer.putChannelMixingMatrix(stereoMatrix(channels));
-                return new DefaultAudioSink.Builder(c).setEnableFloatOutput(false)
+                if(!stereo&&leveler==null) return super.buildAudioSink(c,floats,params);
+                List<AudioProcessor> processors=new ArrayList<>();
+                if(stereo) {
+                    ChannelMixingAudioProcessor mixer=new ChannelMixingAudioProcessor();
+                    for(int channels=1;channels<=6;channels++) mixer.putChannelMixingMatrix(stereoMatrix(channels));
+                    processors.add(mixer);
+                }
+                if(leveler!=null) processors.add(leveler);
+                AudioSink sink=new DefaultAudioSink.Builder(c).setEnableFloatOutput(false)
                     .setAudioCapabilities(new AudioCapabilities(new int[]{C.ENCODING_PCM_16BIT},6))
-                    .setAudioProcessors(new AudioProcessor[]{mixer}).build();
+                    .setAudioProcessors(processors.toArray(new AudioProcessor[0])).build();
+                return leveler==null?sink:pcmOnly(sink);
             }
         }.setEnableDecoderFallback(true);
     }

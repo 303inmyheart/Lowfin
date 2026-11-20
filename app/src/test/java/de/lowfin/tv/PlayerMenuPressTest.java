@@ -44,4 +44,25 @@ public class PlayerMenuPressTest {
         assertTrue(press.handle(key(code,KeyEvent.ACTION_UP,0),true,()->fail(),k->fail()));
         assertEquals(1,actions.size());
     }
+    @Test public void offeredIntroSkipsWithoutPauseOrMenuAndConsumesReleaseAfterButtonDisappears() {
+        for(int code:new int[]{KeyEvent.KEYCODE_DPAD_CENTER,KeyEvent.KEYCODE_ENTER,KeyEvent.KEYCODE_NUMPAD_ENTER}) {
+            PlayerMenuPress press=new PlayerMenuPress();List<String> actions=new ArrayList<>();
+            assertTrue(press.handle(key(code,KeyEvent.ACTION_DOWN,0),false,true,()->actions.add("skip"),()->fail("Intro confirmation paused"),k->fail("Intro confirmation opened menu")));
+            for(int repeat=1;repeat<5;repeat++) assertTrue(press.handle(key(code,KeyEvent.ACTION_DOWN,repeat),false,false,()->fail("Repeated skip"),()->fail("Repeated pause"),k->fail("Repeated menu")));
+            assertTrue(press.handle(key(code,KeyEvent.ACTION_UP,0),false,false,()->fail(),()->fail(),k->fail()));
+            assertEquals(Collections.singletonList("skip"),actions);
+            assertTrue(press.handle(key(code,KeyEvent.ACTION_DOWN,0),false,false,()->fail(),()->actions.add("pause"),k->actions.add("menu")));
+            assertEquals(Arrays.asList("skip","pause","menu"),actions);
+        }
+    }
+    @Test public void introDoesNotStealConfirmationFromOpenPlayerControls() {
+        PlayerMenuPress press=new PlayerMenuPress();
+        assertFalse(press.handle(key(KeyEvent.KEYCODE_DPAD_CENTER,KeyEvent.ACTION_DOWN,0),true,true,()->fail("Focused controls must keep OK"),()->fail(),k->fail()));
+    }
+    @Test public void introAppearingDuringAnExistingPressCannotTriggerAnExtraSkip() {
+        PlayerMenuPress press=new PlayerMenuPress();int code=KeyEvent.KEYCODE_DPAD_CENTER;
+        assertTrue(press.handle(key(code,KeyEvent.ACTION_DOWN,0),false,false,()->fail(),()->{},k->{}));
+        assertTrue(press.handle(key(code,KeyEvent.ACTION_DOWN,1),false,true,()->fail("Held confirm must not skip new intro"),()->fail(),k->fail()));
+        assertTrue(press.handle(key(code,KeyEvent.ACTION_UP,0),false,true,()->fail(),()->fail(),k->fail()));
+    }
 }

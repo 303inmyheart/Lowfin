@@ -25,6 +25,11 @@ final class PlaybackPolicy {
         long start=segment.optLong("StartTicks")/10000, end=segment.optLong("EndTicks")/10000;
         return end>start&&positionMs>=start&&positionMs<end;
     }
+    static long segmentTarget(JSONObject segment,long positionMs,long durationMs,boolean seekable) {
+        if(!seekable||durationMs<=0||!active(segment,positionMs)) return -1;
+        long target=Math.min(segment.optLong("EndTicks")/10000,durationMs);
+        return target>positionMs?target:-1;
+    }
     static JSONObject profile(int height,int bitrate) { return profile(height,bitrate,true); }
     static JSONObject profile(int height,int bitrate,boolean stereo) {
         return Json.obj("Name","Lowfin HD","MaxStreamingBitrate",bitrate,"MaxStaticBitrate",bitrate,
