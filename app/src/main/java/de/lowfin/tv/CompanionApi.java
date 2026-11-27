@@ -28,6 +28,8 @@ final class CompanionApi {
     private final SharedPreferences outbox;
     private volatile boolean available;
     private volatile boolean scopedResume,resumeVisibility,incrementalCache,serverProviders,audioLoudness;
+    private volatile Set<String> ratingProviders=Collections.emptySet();
+    boolean ratingProvider(String provider) {return serverProviders()&&ratingProviders.contains(provider);}
     private volatile int coverTagFilter;
     private volatile boolean coverTagsSupported,extendedTags;
     private volatile Set<String> coverLabelKeys=Collections.emptySet();
@@ -40,6 +42,7 @@ final class CompanionApi {
         scopedResume=outbox.getBoolean("scopedResume",false); resumeVisibility=outbox.getBoolean("resumeVisibility",false);
         incrementalCache=outbox.getBoolean("incrementalCache",false); serverProviders=outbox.getBoolean("serverProviders",false);
         audioLoudness=outbox.getBoolean("audioLoudness",false);
+        ratingProviders=Collections.unmodifiableSet(new HashSet<>(outbox.getStringSet("ratingProviders",Collections.emptySet())));
         coverTagFilter=outbox.getInt("coverTagFilter",0);coverTagsSupported=outbox.getBoolean("coverTagsSupported",false);
         extendedTags=outbox.getBoolean("extendedTags",false);try {JSONArray saved=new JSONArray(outbox.getString("coverLabelKeys","[]"));Set<String> keys=new HashSet<>();for(int i=0;i<saved.length();i++) if(CoverTagLabels.KEYS.contains(saved.optString(i))) keys.add(saved.optString(i));coverLabelKeys=Collections.unmodifiableSet(keys);}catch(Exception ignored){}
         http=api.http.newBuilder().connectTimeout(3,TimeUnit.SECONDS).readTimeout(4,TimeUnit.SECONDS).callTimeout(5,TimeUnit.SECONDS).followRedirects(false).followSslRedirects(false).build();
@@ -56,6 +59,11 @@ final class CompanionApi {
             for(int index=0;index<features.length();index++) { audioLoudness|="audioLoudness".equals(features.optString(index));scopedResume|="scopedResume".equals(features.optString(index)); resumeVisibility|="resumeVisibility".equals(features.optString(index)); incrementalCache|="incrementalCache".equals(features.optString(index)); serverProviders|="serverProviders".equals(features.optString(index)); }
         }
         catch(Exception e) { if(e instanceof Api.Failure&&(((Api.Failure)e).status==404||((Api.Failure)e).status==401||((Api.Failure)e).status==403)) available=false; }
+        if(serverProviders()) {
+            try {JSONObject providers=call("GET","/providers",null);Set<String> configured=new HashSet<>();for(String provider:new String[]{"omdb","mdblist","tmdb"})if(providers.optBoolean(provider))configured.add(provider);ratingProviders=Collections.unmodifiableSet(configured);}
+            catch(Exception error) {if(error instanceof Api.Failure&&(((Api.Failure)error).status==401||((Api.Failure)error).status==403||((Api.Failure)error).status==404))ratingProviders=Collections.emptySet();}
+        } else ratingProviders=Collections.emptySet();
+        outbox.edit().putStringSet("ratingProviders",ratingProviders).apply();
         library.companionAvailable=available; Runnable changed=coverTagsChanged;if(changed!=null) changed.run();
         outbox.edit().putBoolean("audioLoudness",audioLoudness).putBoolean("extendedTags",extendedTags).putString("coverLabelKeys",new JSONArray(coverLabelKeys).toString()).putBoolean("coverTagsSupported",coverTagsSupported).putInt("coverTagFilter",coverTagFilter).putBoolean("available",available).putBoolean("scopedResume",scopedResume).putBoolean("resumeVisibility",resumeVisibility).putBoolean("incrementalCache",incrementalCache).putBoolean("serverProviders",serverProviders).apply(); return available;
     }

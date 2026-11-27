@@ -19,6 +19,7 @@ final class Ratings {
     private boolean cacheEnabled() { return settings.getBoolean("ratingCache",true); }
     private final Api jellyfin;
     private final Function<String,String> key;
+    private Predicate<String> configured;
     private final String omdb,mdb,tmdb;
     private final OkHttpClient http=new OkHttpClient.Builder().connectTimeout(5,TimeUnit.SECONDS).readTimeout(7,TimeUnit.SECONDS).callTimeout(10,TimeUnit.SECONDS).followRedirects(false).build();
     private final ThreadPoolExecutor worker=new ThreadPoolExecutor(2,2,0,TimeUnit.SECONDS,new ArrayBlockingQueue<>(24));
@@ -27,9 +28,15 @@ final class Ratings {
     private final LinkedHashMap<String,JSONObject> memory=new LinkedHashMap<>(32,.75f,true);
     private final Map<String,Long> blocked=new ConcurrentHashMap<>();
     volatile String status=I18n.text("API-Keys hinterlegen, um externe Bewertungen zu laden.");
-    Ratings(Context c,Library db,Api api) { this(c.getSharedPreferences("settings",0),db,api,new RatingKeys(c)::get,"https://www.omdbapi.com/","https://api.mdblist.com/","https://api.themoviedb.org/3/"); companion=()->c.getApplicationContext() instanceof LowfinApp?((LowfinApp)c.getApplicationContext()).companion:null; }
-    Ratings(SharedPreferences settings,Library db,Api api,Function<String,String> key,String omdb,String mdb,String tmdb) { this.settings=settings;library=db;jellyfin=api;this.key=key;this.omdb=omdb;this.mdb=mdb;this.tmdb=tmdb; }
+    Ratings(Context c,Library db,Api api) { this(c.getSharedPreferences("settings",0),db,api,new RatingKeys(c)::get,"https://www.omdbapi.com/","https://api.mdblist.com/","https://api.themoviedb.org/3/"); configured=new RatingKeys(c)::configured;companion=()->c.getApplicationContext() instanceof LowfinApp?((LowfinApp)c.getApplicationContext()).companion:null; }
+    Ratings(SharedPreferences settings,Library db,Api api,Function<String,String> key,String omdb,String mdb,String tmdb) { this.settings=settings;library=db;jellyfin=api;this.key=key;this.omdb=omdb;this.mdb=mdb;this.tmdb=tmdb;configured=provider->!key.apply(provider).trim().isEmpty(); }
     static boolean enabled(SharedPreferences settings,String source) { return settings.getBoolean("rating-show-"+source,true); }
+    boolean visible(String score) {
+        if(!enabled(settings,score))return false;
+        CompanionApi bridge=companion.get();
+        Predicate<String> usable=provider->settings.getBoolean("rating-provider-"+provider,true)&&(bridge!=null&&bridge.serverProviders()?bridge.ratingProvider(provider):configured.test(provider));
+        return usable.test("mdblist")||score.equals("tmdb")&&usable.test("tmdb")||(score.equals("imdb")||score.equals("tomatoes")||score.equals("metacritic"))&&usable.test("omdb");
+    }
     void clearMemory() { synchronized(pending) { memory.clear(); } blocked.clear(); }
     void close() { worker.shutdownNow(); http.dispatcher().cancelAll(); }
     /** UI-only fast path: never reads disk or starts provider work. */

@@ -23,6 +23,8 @@ English is the default language regardless of the device language. Select **Lang
 
 **With Lowfin Companion:** configure OMDb, MDBList, TMDB and Tracearr in the Jellyfin plugin dashboard and share access with all or selected Jellyfin users. For shared providers, local key-entry/import and Tracearr connection controls are hidden; each TV still chooses which providers and ratings to show and whether to cache ratings. The following TXT instructions apply to locally configured connections when server-managed access is unavailable. The Companion manages credentials centrally; it does not read the Android Download TXT file.
 
+Rating values, icons and placeholders are hidden when no enabled local provider or authorized Companion provider has a configured key capable of supplying that score. Existing rating-cache entries are retained. Layout space remains reserved so descriptions, controls and focus positions do not move when rating displays disappear.
+
 When no rating API keys are saved, Lowfin creates **Download/Lowfin-API-Keys.txt** on launch. Fill the provider fields, save as UTF-8 and return to Lowfin. The app checks the file every five seconds while open, encrypts the supplied keys and deletes the file after successful storage. Leave unused providers empty. Existing keys disable automatic import; individual keys remain editable in rating settings. A TXT picker is available if your editor replaces the original Download entry.
 
 ```ini

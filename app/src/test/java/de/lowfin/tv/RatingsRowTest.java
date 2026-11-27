@@ -58,7 +58,7 @@ public class RatingsRowTest {
     @Test public void detailMetadataRetainsFullTextAccessibleNamesAndViewsWithoutChipBackgrounds(){
         row=RatingsRow.details(app);row.show(app,Json.obj("imdb",7.8,"mdblist",87));height(Ui.dp(app,640));TextView first=(TextView)row.getChildAt(0);assertNull(first.getBackground());assertEquals("IMDb\n7,8/10",first.getText().toString());assertEquals("IMDb 7,8/10",first.getContentDescription());assertTrue(first.getText() instanceof android.text.Spanned);assertFalse(first.isFocusable());
         java.util.concurrent.atomic.AtomicInteger writes=new java.util.concurrent.atomic.AtomicInteger();first.addTextChangedListener(new android.text.TextWatcher(){public void beforeTextChanged(CharSequence s,int start,int count,int after){}public void onTextChanged(CharSequence s,int start,int before,int count){writes.incrementAndGet();}public void afterTextChanged(android.text.Editable text){}});
-        row.show(app,Json.obj("imdb",7.8,"mdblist",87));assertSame(first,row.getChildAt(0));assertEquals(0,writes.get());row.show(app,Json.obj("imdb",7.9,"mdblist",87));assertEquals(1,writes.get());assertTrue(first.getText().toString().contains("7,9"));row.show(app,Json.obj());assertEquals(View.GONE,row.getVisibility());
+        row.show(app,Json.obj("imdb",7.8,"mdblist",87));assertSame(first,row.getChildAt(0));assertEquals(0,writes.get());row.show(app,Json.obj("imdb",7.9,"mdblist",87));assertEquals(1,writes.get());assertTrue(first.getText().toString().contains("7,9"));row.show(app,Json.obj());assertEquals(View.VISIBLE,row.getVisibility());
     }
     @Test public void hiddenBannerCanRejectLateResultsWithoutDiscardingSharedCachedScores() throws Exception {
         Library db=new Library(app,"ratings-cancel-"+java.util.UUID.randomUUID());Ratings repository=new Ratings(app.settings,db,new Api(new Account("http://127.0.0.1:1","user","token","User","device")),provider->"","http://127.0.0.1:1/","http://127.0.0.1:1/","http://127.0.0.1:1/");app.ratings=repository;
@@ -76,7 +76,7 @@ public class RatingsRowTest {
         assertSame(imdb,row.getChildAt(0));assertSame(tmdb,row.getChildAt(1));assertSame(background,imdb.getBackground());assertSame(icon,imdb.getCompoundDrawables()[0]);assertEquals(0,writes.get());
         row.show(app,Json.obj("imdb",7.9,"tmdb",8.1));assertSame(imdb,row.getChildAt(0));assertEquals(1,writes.get());assertTrue(imdb.getText().toString().contains("7,9"));
         app.settings.edit().putBoolean("rating-show-imdb",false).apply();row.show(app,Json.obj("imdb",7.9,"tomatoes",91,"tmdb",8.1));assertEquals(2,row.getChildCount());assertEquals("tomatoes",row.getChildAt(0).getTag());assertEquals("tmdb",row.getChildAt(1).getTag());assertNotSame(shape,row.getChildAt(0));
-        row.show(app,Json.obj());assertEquals(0,row.getChildCount());assertEquals(View.GONE,row.getVisibility());
+        row.show(app,Json.obj());assertEquals(0,row.getChildCount());assertEquals(View.VISIBLE,row.getVisibility());
     }
     @Test public void sameItemRefreshKeepsBadgesButItemSwitchClearsThemAndRejectsLateOldResults() throws Exception {
         Library db=new Library(app,"ratings-row-"+java.util.UUID.randomUUID());Ratings repository=new Ratings(app.settings,db,new Api(new Account("http://127.0.0.1:1","user","token","User","device")),provider->"","http://127.0.0.1:1/","http://127.0.0.1:1/","http://127.0.0.1:1/");app.ratings=repository;
@@ -85,7 +85,7 @@ public class RatingsRowTest {
             db.state("ratings-values-first",Json.obj("scores",Json.obj("imdb",7.8)).toString());db.state("ratings-values-second",Json.obj("scores",Json.obj("imdb",8.9)).toString());
             org.json.JSONObject first=Json.obj("Id","first","Type","Movie"),second=Json.obj("Id","second","Type","Movie");row.load(app,first);await(()->row.getChildCount()==1);View badge=row.getChildAt(0);repository.clearMemory();
             for(int i=0;i<2;i++) worker.execute(()-> {occupied.countDown();try {release.await();} catch(InterruptedException e) {Thread.currentThread().interrupt();}});assertTrue(occupied.await(2,java.util.concurrent.TimeUnit.SECONDS));
-            row.load(app,first);assertSame(badge,row.getChildAt(0));assertEquals(View.VISIBLE,row.getVisibility());row.load(app,second);assertEquals(0,row.getChildCount());assertEquals(View.GONE,row.getVisibility());
+            row.load(app,first);assertSame(badge,row.getChildAt(0));assertEquals(View.VISIBLE,row.getVisibility());row.load(app,second);assertEquals(0,row.getChildCount());assertEquals(View.VISIBLE,row.getVisibility());
             java.util.List<String> added=new java.util.ArrayList<>();row.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener(){public void onChildViewAdded(View parent,View child){added.add(((TextView)child).getText().toString());}public void onChildViewRemoved(View parent,View child){}});
             release.countDown();await(()->row.getChildCount()==1&&((TextView)row.getChildAt(0)).getText().toString().contains("8,9"));assertEquals(1,added.size());assertTrue(added.get(0).contains("8,9"));assertNotSame(badge,row.getChildAt(0));
         } finally {release.countDown();repository.close();worker.awaitTermination(2,java.util.concurrent.TimeUnit.SECONDS);app.ratings=null;db.close();}
@@ -109,7 +109,7 @@ public class RatingsRowTest {
         for(String id:Ratings.IDS) app.settings.edit().putBoolean("rating-show-"+id,false).commit();row.reserve(app);assertEquals(0,row.getChildCount());assertEquals(View.GONE,row.getVisibility());
         app.settings.edit().putBoolean("rating-show-imdb",true).commit();row.reserve(app);assertEquals(1,row.getChildCount());assertEquals(View.VISIBLE,row.getVisibility());
     }
-    @Test public void ordinaryDetailBadgesStillCollapseWithoutScores() {
-        row.show(app,Json.obj("imdb",7.8));assertEquals(View.VISIBLE,row.getVisibility());row.clear();assertEquals(View.GONE,row.getVisibility());assertEquals(0,row.getChildCount());
+    @Test public void ordinaryDetailBadgesRetainTheirHeightWithoutScores() {
+        row.show(app,Json.obj("imdb",7.8));assertEquals(View.VISIBLE,row.getVisibility());row.clear();assertEquals(View.VISIBLE,row.getVisibility());assertEquals(0,row.getChildCount());
     }
 }

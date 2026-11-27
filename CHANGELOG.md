@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.1
+
+- Keep rapid library Continue Watching navigation on its logical card while rows scroll, recycle or refresh. Gate header focus behind a fresh deliberate Up press, preserve pending targets, consume confirmation during transitions and retain access to headers in empty libraries.
+
+- Replace the library-only started-episodes grid with a Continue Watching tab containing separate Resume and Next Up shelves. Keep library filters, caches, More pages and remembered positions independent of home exclusions and home-row switches.
+- Hide rating values, provider icons and placeholders when no configured local or authorized Companion provider can supply them. Retain cached scores and layout space, including detail/screensaver height and fixed banner/feature-shelf slot geometry.
+
 ## 1.6
 
 - Release Android build 114 with the existing signing identity, English/German UI and diagnostics disabled by default in public builds. Add opt-in numeric audio diagnostics to verify Companion calibration and PCM processing without exposing media or account information.

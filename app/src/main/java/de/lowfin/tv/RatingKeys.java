@@ -25,6 +25,7 @@ final class RatingKeys {
             decoded.put(provider,new String[]{encrypted,iv,value}); while(decoded.size()>64) decoded.remove(decoded.keySet().iterator().next()); return value;
         } catch(Exception ignored) { decoded.remove(provider); return ""; }
     }
+    boolean configured(String provider) { return !saved.getString(provider,"").isEmpty()&&!saved.getString(provider+"-iv","").isEmpty(); }
     boolean hasAny() { for(String provider:new String[]{"omdb","mdblist","tmdb","tracearr"}) if(saved.contains(provider)) return true; for(String provider:saved.getAll().keySet()) if(provider.matches("tracearr-[a-zA-Z0-9]+")) return true; return false; }
     boolean matches(Map<String,String> values) { return !values.isEmpty()&&values.entrySet().stream().allMatch(e->e.getValue().equals(get(e.getKey()))); }
     void put(String provider,String value) throws Exception {

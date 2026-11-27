@@ -596,24 +596,53 @@ public class TvUiTest {
     }
     @Test public void compactSeriesTabsKeepTheirSelectionAndHaveExplicitHeaderNavigation() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);await(()->findButton(root,"Serien")!=null);findButton(root,"Serien").performClick();await(()->recycler()!=null&&recycler().getChildCount()>0&&!recycler().hasPendingAdapterUpdates());
-        Button all=findButton(root,"Alle Serien"),started=findButton(root,"Begonnene Folgen"),letters=findButton(root,"Zu Buchstaben springen");assertTrue(all.isSelected());assertFalse(started.isSelected());assertNotNull(letters.getCompoundDrawables()[0]);assertTrue(recycler().hasFocus());screenshot("library-series-header-hd.png");
+        Button all=findButton(root,"Alle Serien"),started=findButton(root,"Weiterschauen"),letters=findButton(root,"Zu Buchstaben springen");assertTrue(all.isSelected());assertFalse(started.isSelected());assertNotNull(letters.getCompoundDrawables()[0]);assertTrue(recycler().hasFocus());screenshot("library-series-header-hd.png");
         remote(KeyEvent.KEYCODE_DPAD_UP,1);layout();assertTrue("Series header focus="+activity.get().getWindow().getDecorView().findFocus(),all.hasFocus()||started.hasFocus());if(all.hasFocus())remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(started.hasFocus());remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertTrue(letters.hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(started.hasFocus());
-        started.performClick();await(()->recycler()!=null&&recycler().getChildCount()>0&&!recycler().hasPendingAdapterUpdates());assertTrue(findButton(root,"Begonnene Folgen").isSelected());assertFalse(findButton(root,"Alle Serien").isSelected());screenshot("library-started-header-hd.png");findButton(root,"Alle Serien").performClick();await(()->findButton(root,"Zu Buchstaben springen")!=null);assertTrue(findButton(root,"Alle Serien").isSelected());
+        started.performClick();await(()->recycler()!=null&&recycler().getChildCount()>0&&!recycler().hasPendingAdapterUpdates());assertTrue(findButton(root,"Weiterschauen").isSelected());assertFalse(findButton(root,"Alle Serien").isSelected());screenshot("library-started-header-hd.png");findButton(root,"Alle Serien").performClick();await(()->findButton(root,"Zu Buchstaben springen")!=null);assertTrue(findButton(root,"Alle Serien").isSelected());
     }
-    @Test public void seriesLibraryHasScopedResumeTabAndLaunchesAtSavedPosition() throws Exception {
+    @Test public void seriesLibraryHasTwoScopedShelvesAndLaunchesResumeAndNextAtTheirCorrectPositions() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());
         activity=Robolectric.buildActivity(MainActivity.class).setup();
         await(()->findButton(activity.get().findViewById(android.R.id.content),"Meine Filme")!=null);
         View root=activity.get().findViewById(android.R.id.content);
-        findButton(root,"Meine Filme").performClick(); assertNull(findButton(root,"Begonnene Folgen"));
-        findButton(root,"Serien").performClick(); assertNotNull(findButton(root,"Alle Serien")); findButton(root,"Begonnene Folgen").performClick();
-        await(()->recycler()!=null&&recycler().getAdapter().getItemCount()==1);
-        recycler().getChildAt(0).performClick(); android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity();
-        assertEquals(PlayerActivity.class.getName(),intent.getComponent().getClassName()); assertEquals(600000L,intent.getLongExtra("position",-1));
-        String cached=app.library.state("seriesResume-v2-shows-0"); assertTrue(cached.contains("ep5"));
-        boolean scoped=false; okhttp3.mockwebserver.RecordedRequest request;
-        while((request=server.takeRequest(100,java.util.concurrent.TimeUnit.MILLISECONDS))!=null) if("IsResumable".equals(request.getRequestUrl().queryParameter("Filters"))) { assertEquals("shows",request.getRequestUrl().queryParameter("ParentId")); assertEquals("Episode",request.getRequestUrl().queryParameter("IncludeItemTypes")); scoped=true; }
-        assertTrue(scoped);
+        findButton(root,"Meine Filme").performClick();assertNull(findButton(root,"Weiterschauen"));
+        findButton(root,"Serien").performClick();assertNotNull(findButton(root,"Alle Serien"));findButton(root,"Weiterschauen").performClick();
+        await(()->recycler()!=null&&recycler().getAdapter() instanceof HomeAdapter&&((HomeAdapter)recycler().getAdapter()).rows.get(0).size()==1&&((HomeAdapter)recycler().getAdapter()).rows.get(1).size()==1);
+        layout();HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();assertEquals(2,adapter.getItemCount());assertNull(findButton(root,"Als Nächstes"));
+        adapter.requestRow(0);layout();HomeAdapter.Shelf resume=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);assertNotNull(resume);
+        resume.list.getChildAt(0).performClick();android.content.Intent intent=shadowOf(activity.get()).getNextStartedActivity();
+        assertEquals(PlayerActivity.class.getName(),intent.getComponent().getClassName());assertEquals(600000L,intent.getLongExtra("position",-1));
+        assertTrue(app.library.state("library-continue-v1-resume-shows-0-18").contains("ep5"));
+        adapter.requestRow(1);layout();HomeAdapter.Shelf next=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(1);assertNotNull(next);
+        next.list.getChildAt(0).performClick();intent=shadowOf(activity.get()).getNextStartedActivity();assertEquals(0,intent.getLongExtra("position",-1));assertEquals("ep6",new JSONObject(intent.getStringExtra("item")).optString("Id"));
+        boolean scopedResume=false,scopedNext=false;okhttp3.mockwebserver.RecordedRequest request;
+        while((request=server.takeRequest(100,java.util.concurrent.TimeUnit.MILLISECONDS))!=null) {
+            if("IsResumable".equals(request.getRequestUrl().queryParameter("Filters"))) {assertEquals("shows",request.getRequestUrl().queryParameter("ParentId"));assertEquals("Episode",request.getRequestUrl().queryParameter("IncludeItemTypes"));scopedResume=true;}
+            if(request.getRequestUrl().encodedPath().equals("/Shows/NextUp")&&"shows".equals(request.getRequestUrl().queryParameter("ParentId")))scopedNext=true;
+        }
+        assertTrue(scopedResume);assertTrue(scopedNext);
+    }
+    private void awaitContinueCard(int row,int column) throws Exception {
+        await(()-> {HomeAdapter.Shelf shelf=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(row);if(shelf==null)return false;View card=shelf.list.getLayoutManager().findViewByPosition(column);return card!=null&&card.hasFocus()&&!shelf.list.getLayoutManager().isSmoothScrolling()&&!recycler().getLayoutManager().isSmoothScrolling();});
+    }
+    @Test public void rapidLibraryContinueNavigationNeverLeaksToHeadersDuringRecyclingOrRefresh() throws Exception {
+        app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device"));app.library.state("lastSync",""+System.currentTimeMillis());
+        app.settings.edit().putBoolean("animations",true).putBoolean("scrollAnimations",true).commit();activity=Robolectric.buildActivity(MainActivity.class).setup();View root=activity.get().findViewById(android.R.id.content);
+        await(()->findButton(root,"Serien")!=null);findButton(root,"Serien").performClick();findButton(root,"Weiterschauen").performClick();
+        await(()->recycler() instanceof ContinueGrid&&((HomeAdapter)recycler().getAdapter()).rows.get(0).size()==1&&((HomeAdapter)recycler().getAdapter()).rows.get(1).size()==1);
+        HomeAdapter adapter=(HomeAdapter)recycler().getAdapter();java.util.List<JSONObject> data=new java.util.ArrayList<>();for(int i=0;i<40;i++)data.add(episode("progress-"+i,i+1,6000000000L));adapter.update(0,data);adapter.update(1,new java.util.ArrayList<>(data));layout();adapter.restoreRow(0);awaitContinueCard(0,0);
+        Button all=findButton(root,"Alle Serien"),started=findButton(root,"Weiterschauen");java.util.concurrent.atomic.AtomicInteger escaped=new java.util.concurrent.atomic.AtomicInteger();
+        root.getViewTreeObserver().addOnGlobalFocusChangeListener((before,after)->{if(after==all||after==started)escaped.incrementAndGet();});
+        assertFalse(all.isFocusable());assertFalse(started.isFocusable());
+        remote(KeyEvent.KEYCODE_DPAD_RIGHT,25);remote(KeyEvent.KEYCODE_DPAD_CENTER,1);assertNull(shadowOf(activity.get()).getNextStartedActivity());
+        HomeAdapter.Shelf original=(HomeAdapter.Shelf)recycler().findViewHolderForAdapterPosition(0);original.list.clearFocus();recycler().requestFocus();remote(KeyEvent.KEYCODE_DPAD_RIGHT,5);
+        java.util.List<JSONObject> fresh=new java.util.ArrayList<>();for(JSONObject item:data){JSONObject copy=new JSONObject(item.toString());copy.put("UserData",Json.obj("PlaybackPositionTicks",7000000000L));fresh.add(copy);}adapter.update(0,fresh);awaitContinueCard(0,30);
+        assertEquals(0,escaped.get());assertFalse(all.requestFocus());assertFalse(started.requestFocus());
+        adapter.requestRow(1);awaitContinueCard(1,30);remote(KeyEvent.KEYCODE_DPAD_UP,1);
+        activity.get().dispatchKeyEvent(new KeyEvent(android.os.SystemClock.uptimeMillis(),android.os.SystemClock.uptimeMillis(),KeyEvent.ACTION_DOWN,KeyEvent.KEYCODE_DPAD_UP,1));activity.get().dispatchKeyEvent(new KeyEvent(KeyEvent.ACTION_UP,KeyEvent.KEYCODE_DPAD_UP));awaitContinueCard(0,30);assertEquals(0,escaped.get());
+        remote(KeyEvent.KEYCODE_DPAD_UP,1);assertTrue(started.hasFocus());remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue(all.hasFocus());remote(KeyEvent.KEYCODE_DPAD_DOWN,1);awaitContinueCard(0,30);assertFalse(all.isFocusable());assertFalse(started.isFocusable());
+        remote(KeyEvent.KEYCODE_DPAD_LEFT,30);awaitContinueCard(0,0);remote(KeyEvent.KEYCODE_DPAD_LEFT,1);assertTrue((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerOpen"));remote(KeyEvent.KEYCODE_DPAD_RIGHT,1);assertFalse((Boolean)org.robolectric.util.ReflectionHelpers.getField(activity.get(),"drawerRightKey"));remote(KeyEvent.KEYCODE_DPAD_RIGHT,2);awaitContinueCard(0,2);
+        adapter.update(0,java.util.Collections.emptyList());adapter.update(1,java.util.Collections.emptyList());assertTrue(((ContinueGrid)recycler()).focusEmptyHeader());assertTrue(started.hasFocus());remote(KeyEvent.KEYCODE_DPAD_DOWN,1);assertTrue(started.hasFocus());assertFalse(((ContinueGrid)recycler()).ownsNavigation());
     }
     @Test public void moreIsAPosterAtRowEndAndOpensTheCorrectListWithoutHomeActionButtons() throws Exception {
         app.setAccount(new Account(server.url("/").toString(),"user","token","Demo User","device")); app.library.state("lastSync",""+System.currentTimeMillis());

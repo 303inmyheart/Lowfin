@@ -14,7 +14,7 @@ Nativer Jellyfin-Client für schwache **Android-TV-, Google-TV- und Fire-TV-Ger�
 
 ## Wichtigste Funktionen
 
-- **Filme und Serien:** Bibliotheken, globale Suche, umfangreiche Staffelsammlungen, Schauspielerseiten, Favoriten, Später ansehen und Gesehen/Ungesehen. Anmeldung mit Jellyfin-Benutzername und Passwort, danach automatische Anmeldung mit dem letzten Konto.
+- **Filme und Serien:** Bibliotheken, globale Suche, umfangreiche Staffelsammlungen, bibliothekseigene Fortsetzen-/Als-Nächstes-Reihen, Schauspielerseiten, Favoriten, Später ansehen und Gesehen/Ungesehen. Anmeldung mit Jellyfin-Benutzername und Passwort, danach automatische Anmeldung mit dem letzten Konto.
 - **Anpassbare Startseite:** Weiterschauen, Als Nächstes, Weil du gesehen hast, Genre-Reihen und Zuletzt hinzugefügt pro Bibliothek. Optionales Entdeckungsbanner und Bibliothekszeile; Sichtbarkeit und Reihenfolge sind einstellbar.
 - **Details und Bewertungen:** Bilder, Beschreibung, Genres, Laufzeit, Auflösung/Dateigröße und optionale Bewertungen von OMDb, MDBList und TMDB. API-Keys lokal eingeben/importieren oder die Freigabe über Companion nutzen.
 - **Native Wiedergabe:** Tonspur-/Untertitelauswahl, 5.1-auf-Stereo-Downmix, einstellbare Puffer/Videocache, Intro-/Outro-Skip über Jellyfin-Mediensegmente und nativer Trailer-Player. Unterstützte Formate hängen vom Gerät und den Medien ab.

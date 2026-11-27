@@ -14,7 +14,7 @@ A native Jellyfin client designed for low-end **Android TV, Google TV and Fire T
 
 ## Main features
 
-- **Movies and series:** library browsing, global search, large season collections, cast pages, favorites, Watch later and watched/unwatched controls. Sign in with a Jellyfin username/password and return automatically to the last account.
+- **Movies and series:** library browsing, global search, large season collections, library-specific Resume/Next Up shelves, cast pages, favorites, Watch later and watched/unwatched controls. Sign in with a Jellyfin username/password and return automatically to the last account.
 - **Customizable home:** Continue watching, Next up, Because you watched, genre rows and Recently added for each library. Optional discovery banner and library shelf; configurable visibility and row order.
 - **Media details and ratings:** artwork, synopsis, genres, runtime, resolution/file size and optional OMDb, MDBList and TMDB ratings. Enter/import keys locally or use access shared by Companion.
 - **Native playback:** audio/subtitle selection, 5.1-to-stereo downmix, configurable buffers/video cache, intro/outro skipping through Jellyfin media segments and native trailer playback. Playback capabilities depend on the device and media format.

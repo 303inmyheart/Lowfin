@@ -124,6 +124,53 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     private final IntConsumer move;
     private RecyclerView owner;
     private boolean entryPending=true;
+    private boolean libraryContinue;
+    private boolean libraryConfirmBlocked;
+    private Runnable leaveTop=()->{};
+    void libraryContinue(Runnable top) {
+        libraryContinue=true;leaveTop=top;labels.subList(2,labels.size()).clear();rows.subList(2,rows.size()).clear();
+        order.clear();order.add(0);order.add(1);keys=new ArrayList<>(Arrays.asList("library-resume","library-next"));
+        labels.set(0,I18n.text("Fortsetzen"));
+    }
+    void leaveLibraryRows() {
+        if(!libraryContinue)return;
+        pendingRow=-1;navigationRow=-1;scrollingShelf=false;
+        if(owner!=null)for(int i=0;i<owner.getChildCount();i++) {
+            Shelf shelf=(Shelf)owner.getChildViewHolder(owner.getChildAt(i));
+            if(shelf.list!=null){((ShelfList)shelf.list).cancelEntry();shelf.list.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);}
+        }
+    }
+    boolean libraryKey(KeyEvent event) {
+        if(!libraryContinue||owner==null)return false;
+        int row=pendingRow>=0?pendingRow:navigationRow,key=event.getKeyCode();
+        Shelf shelf=row<0?null:(Shelf)owner.findViewHolderForAdapterPosition(position(row));
+        ShelfList list=shelf==null?null:(ShelfList)shelf.list;
+        boolean confirm=key==KeyEvent.KEYCODE_DPAD_CENTER||key==KeyEvent.KEYCODE_ENTER||key==KeyEvent.KEYCODE_NUMPAD_ENTER;
+        if(confirm) {
+            if(libraryConfirmBlocked||pendingRow>=0||list!=null&&list.pendingCard>=0) {
+                if(event.getAction()==KeyEvent.ACTION_DOWN)libraryConfirmBlocked=true;
+                if(event.getAction()==KeyEvent.ACTION_UP)libraryConfirmBlocked=false;
+                return true;
+            }
+            return false;
+        }
+        if(row<0||row>=rows.size())return false;
+        boolean vertical=key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_DOWN;
+        boolean horizontal=key==KeyEvent.KEYCODE_DPAD_LEFT||key==KeyEvent.KEYCODE_DPAD_RIGHT;
+        if(!vertical&&!horizontal)return false;
+        if(event.getAction()!=KeyEvent.ACTION_DOWN)return true;
+        int direction=key==KeyEvent.KEYCODE_DPAD_UP||key==KeyEvent.KEYCODE_DPAD_LEFT?-1:1;
+        if(vertical) {
+            int target=nextRow(row,direction);
+            if(target>=0)move.accept(target);
+            else if(direction<0&&event.getRepeatCount()==0&&pendingRow<0&&!scrollingShelf)leaveTop.run();
+        } else if(pendingRow>=0) {
+            int target=pendingColumn+direction;
+            if(target<0)openMenu.run();
+            else if(target<=rows.get(row).size()){pendingColumn=target;selectedColumns.put(row,target);}
+        } else if(list!=null)list.moveCard(list.findFocus(),direction);
+        return true;
+    }
     private boolean scrollingShelf;
     private int pendingRow=-1,pendingColumn,lastColumn,focusedShelf=-1,navigationRow=-1;
     private final Map<Integer,Integer> selectedColumns=new HashMap<>();
@@ -155,7 +202,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         });
         recycler.addItemDecoration(new RecyclerView.ItemDecoration() {
             @Override public void getItemOffsets(android.graphics.Rect out,View view,RecyclerView parent,RecyclerView.State state) {
-                if(parent.getChildAdapterPosition(view)==getItemCount()-1) out.bottom=Ui.dp(parent.getContext(),244);
+                if(parent.getChildAdapterPosition(view)==getItemCount()-1) out.bottom=Ui.dp(parent.getContext(),libraryContinue?12:244);
             }
         });
     }
@@ -267,16 +314,17 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         for(int i=0;i<items.length();i++) { JSONObject item=items.optJSONObject(i); if(item!=null) result.add(item); }
     }
     private boolean hidden(int row) {
+        if(libraryContinue) return false;
         android.content.SharedPreferences prefs=I18n.preferences();
         if(row==0&&!prefs.getBoolean("homeResume",true)||row==1&&!prefs.getBoolean("homeNext",true)) return true;
         return latest(row)&&rows.get(row).isEmpty()||recommendation(row)&&(row-2>=prefs.getInt("recommendationRows",5)||rows.get(row).isEmpty());
     }
     private int nextRow(int current,int direction) {
         int next=position(current)+direction;
-        while(next>=0&&next<order.size()&&hidden(logical(next))) next+=direction;
+        while(next>=0&&next<order.size()&&(hidden(logical(next))||libraryContinue&&rows.get(logical(next)).isEmpty())) next+=direction;
         return next>=0&&next<order.size()?logical(next):-1;
     }
-    int firstRow() { for(int row:order) if(!banner(row)&&!hidden(row)) return row;return banner>=0?banner:0; }
+    int firstRow() { if(libraryContinue&&rows.get(0).isEmpty()&&!rows.get(1).isEmpty())return 1;for(int row:order) if(!banner(row)&&!hidden(row)) return row;return banner>=0?banner:0; }
     void moveRow(int current,int direction) { initialBannerViewport=false;int target=nextRow(current,direction); if(target>=0) move.accept(target); }
     void update(int index,List<JSONObject> data) {
         if(position(index)<0) {rows.set(index,data);return;}
@@ -349,15 +397,16 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
         shelf.list.setDescendantFocusability(navigationRow<0||navigationRow==index?ViewGroup.FOCUS_AFTER_DESCENDANTS:ViewGroup.FOCUS_BLOCK_DESCENDANTS);
         shelf.key="home-row-"+index; Ui.textIfChanged(shelf.label,labels.get(index)); shelfHeading(shelf,index);
         ViewGroup.LayoutParams rowSize=shelf.itemView.getLayoutParams(); int rowHeight=hidden(index)?0:ViewGroup.LayoutParams.WRAP_CONTENT;if(rowSize.height!=rowHeight){rowSize.height=rowHeight;shelf.itemView.setLayoutParams(rowSize);}
-        List<JSONObject> data=rows.get(index); shelf.empty.setVisibility(data.isEmpty()&&index<2?View.VISIBLE:View.GONE); Ui.textIfChanged(shelf.empty,I18n.text("Hier erscheinen deine ")+(index==0?I18n.text("angefangenen Filme und Folgen"):index==1?I18n.text("nächsten Folgen"):index>=2?labels.get(index)+I18n.text("-Filme"):I18n.text("neuen Filme und Serien")));
+        List<JSONObject> data=rows.get(index); shelf.empty.setVisibility(data.isEmpty()&&index<2?View.VISIBLE:View.GONE); Ui.textIfChanged(shelf.empty,libraryContinue?I18n.text("Keine Einträge"):I18n.text("Hier erscheinen deine ")+(index==0?I18n.text("angefangenen Filme und Folgen"):index==1?I18n.text("nächsten Folgen"):index>=2?labels.get(index)+I18n.text("-Filme"):I18n.text("neuen Filme und Serien")));
         shelf.list.setVisibility(View.VISIBLE);
         Cards adapter=(Cards)shelf.list.getAdapter();
         if(adapter==null) {
-            adapter=new Cards(images,new ArrayList<>(),item->{ int position=logical(shelf.getBindingAdapterPosition()); if(position!=RecyclerView.NO_POSITION) { if("More".equals(item.optString("Type"))) more.accept(position); else play.accept(item,position); } },(item,column)->{ int position=logical(shelf.getBindingAdapterPosition()); if(position!=RecyclerView.NO_POSITION&&(focusedShelf<0||position==focusedShelf)) { lastColumn=column; selectedColumns.put(position,lastColumn); focused.accept("More".equals(item.optString("Type"))?(rows.get(position).isEmpty()?null:rows.get(position).get(rows.get(position).size()-1)):item,position); } },direction->{ int position=logical(shelf.getBindingAdapterPosition()); int target=nextRow(position,direction); if(position!=RecyclerView.NO_POSITION&&target>=0) { move.accept(target); return true; } return false; }); shelf.list.setAdapter(adapter);
+            adapter=new Cards(images,new ArrayList<>(),item->{ int position=logical(shelf.getBindingAdapterPosition()); if(position!=RecyclerView.NO_POSITION) { if("More".equals(item.optString("Type"))) more.accept(position); else play.accept(item,position); } },(item,column)->{ int position=logical(shelf.getBindingAdapterPosition()); if(position!=RecyclerView.NO_POSITION&&(focusedShelf<0||position==focusedShelf)) { lastColumn=libraryContinue?((ShelfList)shelf.list).selection():column; selectedColumns.put(position,lastColumn); focused.accept("More".equals(item.optString("Type"))?(rows.get(position).isEmpty()?null:rows.get(position).get(rows.get(position).size()-1)):item,position); } },direction->{ int position=logical(shelf.getBindingAdapterPosition()); int target=nextRow(position,direction); if(position!=RecyclerView.NO_POSITION&&target>=0) { move.accept(target); return true; } if(libraryContinue&&direction<0&&position!=RecyclerView.NO_POSITION){leaveTop.run();return true;}return false; }); shelf.list.setAdapter(adapter);
         }
         adapter.actions=actions;
+        ((ShelfList)shelf.list).guarded=libraryContinue;
         ((ShelfList)shelf.list).openMenu=openMenu;
-        List<JSONObject> cards=new ArrayList<>(data); if(!libraries(index)&&(!data.isEmpty()||!entryPending)) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=feature(index); adapter.wide=index<2||libraries(index); adapter.update(cards);
+        List<JSONObject> cards=new ArrayList<>(data); if(!libraries(index)&&(!data.isEmpty()||!libraryContinue&&!entryPending)) cards.add(Json.obj("Id","more-"+index,"Type","More","Name",I18n.text("Mehr anzeigen"),"Wide",index<2)); adapter.compact=feature(index); adapter.wide=index<2||libraries(index); adapter.update(cards);
         int height=index<2||libraries(index)?180:204; for(JSONObject item:data) { double ratio=index<2||libraries(index)?16.0/9:Artwork.ratio(item,true); height=Math.max(height,(int)Math.ceil((ratio<1?(index>=2?96:106):216)/ratio)+60); }
         ViewGroup.LayoutParams dimensions=shelf.list.getLayoutParams(); int pixels=Ui.dp(shelf.list.getContext(),height);if(dimensions.height!=pixels){dimensions.height=pixels;shelf.list.setLayoutParams(dimensions);}
         if(positions.containsKey(shelf.key)) shelf.list.getLayoutManager().onRestoreInstanceState(positions.get(shelf.key));
@@ -378,12 +427,16 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
     /** Android's default focus search can move right into the next vertical row. */
     static final class ShelfList extends RecyclerView {
         Runnable afterLayout,openMenu;
+        private boolean guarded;
+        private int anchor=NO_POSITION;
+        private long anchorId=NO_ID;
         private int pendingCard=-1;
         private boolean recoveryPosted;
         ShelfList(Context context) { super(context);setDefaultFocusHighlightEnabled(false); }
         @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) { super.onLayout(changed,left,top,right,bottom); focusCard(); post(()-> {focusCard();if(afterLayout!=null)afterLayout.run();}); }
         void cancelEntry() {pendingCard=-1;stopScroll();}
         void enterCard(int position) {
+            remember(position);
             pendingCard=position;
             View ready=getLayoutManager()==null?null:getLayoutManager().findViewByPosition(position);
             if(ready!=null&&!isLayoutRequested()&&!hasPendingAdapterUpdates()&&ready.getLeft()>=getPaddingLeft()&&ready.getRight()<=getWidth()-getPaddingRight()) {
@@ -395,12 +448,22 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             if(pendingCard>=0)post(this::focusCard);
         }
         void requestCard(int position) {
+            remember(position);
             pendingCard=position; ScrollMotion.position(this,position,false,this::focusCard); focusCard(); if(pendingCard>=0) post(this::focusCard);
         }
         int selection() {
             if(pendingCard>=0) return pendingCard;
+            if(guarded&&anchor>=0&&getAdapter()!=null&&getAdapter().getItemCount()>0) {
+                Adapter<?> adapter=getAdapter();
+                if(adapter.hasStableIds())for(int i=0;i<adapter.getItemCount();i++)if(adapter.getItemId(i)==anchorId)return i;
+                return Math.min(anchor,adapter.getItemCount()-1);
+            }
             View focused=findFocus(),card=focused==null?null:findContainingItemView(focused);
             return card==null?0:Math.max(0,getChildAdapterPosition(card));
+        }
+        private void remember(int position) {
+            if(!guarded||getAdapter()==null||position<0||position>=getAdapter().getItemCount())return;
+            anchor=position;anchorId=getAdapter().hasStableIds()?getAdapter().getItemId(position):NO_ID;
         }
         private void focusCard() {
             if(pendingCard<0||isLayoutRequested()||hasPendingAdapterUpdates()||getLayoutManager()==null||getAdapter()==null||getAdapter().getItemCount()==0) return;
@@ -414,7 +477,7 @@ final class HomeAdapter extends RecyclerView.Adapter<HomeAdapter.Shelf> {
             }
         }
         void moveCard(View focused,int direction) {
-            View card=findContainingItemView(focused); int current=pendingCard>=0?pendingCard:card==null?NO_POSITION:getChildAdapterPosition(card);
+            View card=focused==null?null:findContainingItemView(focused); int current=guarded?selection():pendingCard>=0?pendingCard:card==null?NO_POSITION:getChildAdapterPosition(card);
             if(current==NO_POSITION) return; int target=current+direction;
             if(target<0) { if(openMenu!=null) openMenu.run(); return; }
             if(target>=getAdapter().getItemCount()) return;

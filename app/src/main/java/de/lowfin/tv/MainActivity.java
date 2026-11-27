@@ -61,6 +61,7 @@ public final class MainActivity extends Activity {
     private static void setStatusText(TextView view,String value) { if(!android.text.TextUtils.equals(view.getText(),value)) view.setText(value); }
     private static final int PAGE=60,KEY_FILE_REQUEST=1201,KEY_STORAGE_REQUEST=1202,EPISODE_PLAYER_REQUEST=1203;
     private boolean importActive,importBusy;
+    private Runnable libraryContinueReload;
     private boolean deferredHome,televisionPlayerPaused;
     private String lastImportNotice="",pendingKeyDocument;
     private TextView importStatus;
@@ -101,7 +102,7 @@ public final class MainActivity extends Activity {
         if(serverNotice!=null) {serverNotice.close();serverNotice=null;}
         messageApi=null;
     }
-    @Override protected void onResume() { super.onResume();startServerMessages();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run();offerPrecache(); }
+    @Override protected void onResume() { super.onResume();startServerMessages();if(liveGuide!=null)liveGuide.resume();if(updateSettings!=null)updateSettings.resume();if(screensaver!=null) screensaver.resume(); if(detailNeedsReload) { detailNeedsReload=false;if(detailReload!=null) detailReload.run(); } if(deferredHome&&televisionPlayerPaused) { deferredHome=false; televisionPlayerPaused=false; show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false); loadViews(); checkSession(); } app.cacheListener=response->handler.post(()-> { if(importActive&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).metadata(response); }); if(app.cacheChanges!=null) app.cacheChanges.resume(); checkLiveTv();if(app.api!=null&&!deferredHome&&!viewsLoading&&(viewsChecked==0||SystemClock.elapsedRealtime()-viewsChecked>=60000))loadViews(); Ui.immersive(this); importActive=true; handler.removeCallbacks(importTick); handler.post(importTick); handler.post(statusTick); if(homeReload!=null&&screen!=null&&screen.kind.equals("home")) homeReload.run();if(libraryContinueReload!=null&&screen!=null&&screen.kind.equals("seriesResume"))libraryContinueReload.run();offerPrecache(); }
     @Override protected void onPause() { stopServerMessages();if(liveGuide!=null)liveGuide.pause();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause(); if(detailReload!=null) detailNeedsReload=true; if(deferredHome) televisionPlayerPaused=true; app.cacheListener=null; importActive=false; handler.removeCallbacks(importTick); handler.removeCallbacks(statusTick); super.onPause(); }
     @Override protected void onDestroy() { if(precacheChoice!=null)precacheChoice.dismiss();stopServerMessages();if(liveGuide!=null)liveGuide.close();if(updateSettings!=null)updateSettings.pause();if(screensaver!=null) screensaver.pause();generation++; handler.removeCallbacksAndMessages(null); super.onDestroy(); }
     private AlertDialog precacheChoice;
@@ -255,6 +256,7 @@ public final class MainActivity extends Activity {
                 drawerShade.animate().alpha(0).setDuration(120).withEndAction(()-> { if(!drawerOpen) drawerShade.setVisibility(View.GONE); }).start();
             } else { drawer.setVisibility(View.GONE); drawerShade.setVisibility(View.GONE); drawer.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS); }
             if(drawerReturnFocus!=null&&drawerReturnFocus!=menuButton&&drawerReturnFocus.isAttachedToWindow()&&drawerReturnFocus.isShown()) drawerReturnFocus.requestFocus();
+            else if(grid instanceof ContinueGrid&&((ContinueGrid)grid).focusEmptyHeader()) { }
             else if(grid!=null&&grid.getAdapter() instanceof HomeAdapter) ((HomeAdapter)grid.getAdapter()).requestRow(focusedHomeRow>=0?focusedHomeRow:((HomeAdapter)grid.getAdapter()).firstRow());
             else if(grid!=null&&grid.getChildCount()>0) grid.getChildAt(0).requestFocus(); else if(liveGuide!=null)liveGuide.focusSelected();else if(settingsGrid!=null)settingsGrid.focusFirst();else if(body!=null&&screen!=null&&isSettingsPage(screen.kind))SettingsPage.focusFirst(body);else if(body!=null) { body.setFocusable(true); body.requestFocus(); }
         }
@@ -314,6 +316,7 @@ public final class MainActivity extends Activity {
                 if(!buttons.isEmpty()) buttons.get(target).requestFocus();
             } return true;
         }
+        if(!drawerOpen&&grid instanceof ContinueGrid&&((ContinueGrid)grid).ownsNavigation()&&((event.getKeyCode()>=KeyEvent.KEYCODE_DPAD_UP&&event.getKeyCode()<=KeyEvent.KEYCODE_DPAD_CENTER)||event.getKeyCode()==KeyEvent.KEYCODE_ENTER||event.getKeyCode()==KeyEvent.KEYCODE_NUMPAD_ENTER))return grid.dispatchKeyEvent(event);
         if(!drawerOpen&&screen!=null&&screen.kind.equals("home")&&grid!=null&&grid.getAdapter() instanceof HomeAdapter&&focusedHomeRow>=0&&(event.getKeyCode()==KeyEvent.KEYCODE_DPAD_UP||event.getKeyCode()==KeyEvent.KEYCODE_DPAD_DOWN)) {
             if(event.getAction()==KeyEvent.ACTION_DOWN) ((HomeAdapter)grid.getAdapter()).moveRow(focusedHomeRow,event.getKeyCode()==KeyEvent.KEYCODE_DPAD_UP?-1:1);
             return true;
@@ -423,12 +426,13 @@ public final class MainActivity extends Activity {
         else if(!push) history.clear();
         if(homeBackdropUpdate!=null) handler.removeCallbacks(homeBackdropUpdate);
         focusedHomeRow=-1; focusedHomeId=""; homeDescription=null;
-        screen=next; homeReload=null;homeLatestReload=null; generation++; shell(next.kind.equals("detail")?"Details":next.title);
+        screen=next; libraryContinueReload=null;homeReload=null;homeLatestReload=null; generation++; shell(next.kind.equals("detail")?"Details":next.title);
         switch(next.kind) {
             case "home": home(); break;
             case "recommendations": recommendationItems(); break;
             case "browse": browse(); break;
             case "seriesResume": seriesResume(); break;
+            case "seriesContinueItems": seriesContinueItems(); break;
             case "genres": genres(); break;
             case "genre": genreItems(); break;
             case "detail": detail(next.item); break;
@@ -459,7 +463,7 @@ public final class MainActivity extends Activity {
         return kind.equals("settings")||kind.endsWith("Settings")||kind.equals("ratings");
     }
     private int pageSize(Screen selected) {
-        if(selected.pageSize==0)selected.pageSize=selected.kind.equals("browse")||selected.kind.equals("episodes")||selected.kind.equals("seriesResume")?LibraryPageSize.read(app.settings):PAGE;
+        if(selected.pageSize==0)selected.pageSize=selected.kind.equals("browse")||selected.kind.equals("episodes")||selected.kind.equals("seriesResume")||selected.kind.equals("seriesContinueItems")?LibraryPageSize.read(app.settings):PAGE;
         return selected.pageSize;
     }
     private interface Work { List<JSONObject> run() throws Exception; }
@@ -779,7 +783,7 @@ public final class MainActivity extends Activity {
     private List<View> seriesControls(Screen selected,boolean started) {
         LinearLayout tabs=Ui.row(this);tabs.setClipChildren(false);tabs.setPadding(Ui.dp(this,4),0,Ui.dp(this,4),Ui.dp(this,5));
         Button all=LibraryHeader.button(this,I18n.text("Alle Serien"),!started,false,()->{if(started){if(!history.isEmpty()&&history.peek().kind.equals("browse")&&Objects.equals(history.peek().parent,selected.parent))onBackPressed();else show(new Screen("browse",selected.title,"Series",selected.parent,null),false);}});
-        Button resume=LibraryHeader.button(this,I18n.text("Begonnene Folgen"),started,false,()->{if(!started)show(new Screen("seriesResume",selected.title,null,selected.parent,null),true);});Ui.addButton(tabs,all);Ui.addButton(tabs,resume);body.addView(tabs);return Arrays.asList(all,resume);
+        Button resume=LibraryHeader.button(this,I18n.text("Weiterschauen"),started,false,()->{if(!started)show(new Screen("seriesResume",selected.title,null,selected.parent,null),true);});Ui.addButton(tabs,all);Ui.addButton(tabs,resume);body.addView(tabs);return Arrays.asList(all,resume);
     }
     private void addLetterButton(MediaAdapter adapter) {
         Button jump=LibraryHeader.button(this,I18n.resource(R.string.jump_to_letter),false,true,()->letterMenu());jump.setFocusable(false);
@@ -824,17 +828,42 @@ public final class MainActivity extends Activity {
         });
     }
     private void seriesResume() {
-        final Screen s=screen;final int limit=pageSize(s); final Api api=app.api; final Library db=app.library;
-        List<View> controls=seriesControls(s,true);
-        TextView status=note(I18n.text("Wird geladen …")); MediaAdapter adapter=cards(false); pager();((LibraryGrid)grid).topControls(controls.toArray(new View[0]));
-        String key=(limit==PAGE?"seriesResume-v2-":"seriesResume-size-"+limit+"-")+(s.parent==null?"all":s.parent)+"-"+s.page;
-        async(adapter,()-> { String stored=db.state(key); if(stored.isEmpty()) return new ArrayList<>(); List<JSONObject> values=new ArrayList<>(); for(JSONObject current:db.withCompanionItems(list(new JSONArray(stored)))) if(Json.canResume(current)) values.add(current); return values; },null);
-        async(adapter,()-> { JSONArray items=Json.array(api.get("/Users/"+api.account.user+"/Items","Recursive",true,"ParentId",s.parent,"IncludeItemTypes","Episode","Filters","IsResumable","SortBy","DatePlayed","SortOrder","Descending","StartIndex",s.page*limit,"Limit",limit+1,"Fields","Overview,ParentId,PrimaryImageAspectRatio"),"Items"); db.put(items,System.currentTimeMillis()); if(s.parent!=null) db.link(s.parent,items,System.currentTimeMillis());
-            if(s.page==0&&app.api==api&&app.companion!=null&&app.companion.discover()) {
-                List<JSONObject> scoped=app.companion.mergeResume(list(items),limit+1,s.parent,"Episode");
-                db.state(key,new JSONArray(scoped).toString()); return scoped;
+        final Screen selected=screen;final Api api=app.api;final Library db=app.library;final int g=generation;
+        List<View> controls=seriesControls(selected,true);
+        ContinueGrid shelves=new ContinueGrid(this);grid=shelves;grid.setLayoutManager(new LinearLayoutManager(this) {
+            @Override public boolean onRequestChildFocus(RecyclerView parent,RecyclerView.State state,View child,View focused){return true;}
+            @Override public boolean requestChildRectangleOnScreen(RecyclerView parent,View child,android.graphics.Rect rect,boolean immediate,boolean keepFocusedChildVisible){return false;}
+        });grid.setItemAnimator(null);
+        final HomeAdapter[] holder=new HomeAdapter[1];
+        HomeAdapter adapter=new HomeAdapter(app.images,Collections.emptyList(),(item,row)->play(item,row==0?Json.position(item):0),
+            row->show(new Screen("seriesContinueItems",selected.title+" · "+I18n.text(row==0?"Fortsetzen":"Als Nächstes"),row==0?"resume":"next",selected.parent,null),true),
+            (item,row)->{focusedHomeRow=row;shelves.enterRows();},row->holder[0].requestRow(row));holder[0]=adapter;
+        adapter.libraryContinue(()->shelves.enterHeader(controls.get(1)));adapter.onActions(this::itemActions);adapter.onOpenMenu(()->setDrawer(true));
+        boolean restored=adapter.restore(selected.homeState);grid.setAdapter(adapter);body.addView(grid,new LinearLayout.LayoutParams(-1,0,1));
+        shelves.topControls(controls,()->setDrawer(true));
+        if(restored) {focusedHomeRow=selected.homeState.row;adapter.restoreRow(focusedHomeRow);}
+        LibraryContinue source=new LibraryContinue(api,db,app.companion,selected.parent);
+        final boolean[] fresh={false,false},loading={false,false},cached={restored,restored};
+        libraryContinueReload=()-> {
+            if(g!=generation||app.api!=api)return;
+            for(int index=0;index<2;index++) {final int row=index;if(loading[row])continue;loading[row]=true;
+                app.navigationIo.execute(()-> {
+                    if(!cached[row]) {cached[row]=true;try {List<JSONObject> saved=source.cached(row==1,0,18);runOnUiThread(()-> {if(g==generation&&app.api==api&&!fresh[row])adapter.update(row,saved);});}catch(Exception ignored){}}
+                    try {List<JSONObject> data=source.load(row==1,0,18);runOnUiThread(()-> {if(g==generation&&app.api==api){fresh[row]=true;adapter.update(row,data);}});}
+                    catch(Exception error) {runOnUiThread(()-> {if(g==generation&&app.api==api&&adapter.rows.get(row).isEmpty())toast(I18n.text("Server nicht erreichbar. Gespeicherte Bibliothek bleibt verfügbar."));});}
+                    finally {runOnUiThread(()-> {loading[row]=false;if(g==generation&&!drawerOpen&&!loading[0]&&!loading[1])shelves.focusEmptyHeader();});}
+                });
             }
-            db.state(key,items.toString()); return list(items); },status);
+        };
+        libraryContinueReload.run();
+    }
+
+    private void seriesContinueItems() {
+        final Screen selected=screen;final int limit=pageSize(selected);final boolean next="next".equals(selected.type);
+        TextView status=note(I18n.text("Wird geladen …"));MediaAdapter adapter=cards(false);pager();
+        LibraryContinue source=new LibraryContinue(app.api,app.library,app.companion,selected.parent);
+        async(adapter,()->source.cached(next,selected.page*limit,limit+1),null);
+        async(adapter,()->source.load(next,selected.page*limit,limit+1),status);
     }
     private void genres() {
         TextView note=note(I18n.text("Genres werden geladen …")); grid=new RecyclerView(this); grid.setLayoutManager(ScrollMotion.grid(this,3)); grid.setItemAnimator(null);
@@ -913,11 +942,11 @@ public final class MainActivity extends Activity {
         pageControls=new PageControls(this,screen.page,direction->{ if(direction<0&&screen.page==0) return; screen.page+=direction; screen.jumpIndex=-1; screen.scroll=null; generation++; shell(screen.title); renderCurrent(); });
         pageControls.attachGrid(grid); body.addView(pageControls);
     }
-    private void renderCurrent() { if(screen.kind.equals("person")) person(); else if(screen.kind.equals("seriesResume")) seriesResume(); else if(screen.kind.equals("genre")) genreItems(); else if(screen.kind.equals("genres")) genres(); else if(screen.kind.equals("episodes")) episodes(); else if(screen.kind.equals("search")) results(); else browse(); }
+    private void renderCurrent() { if(screen.kind.equals("person")) person(); else if(screen.kind.equals("seriesResume")) seriesResume(); else if(screen.kind.equals("seriesContinueItems")) seriesContinueItems(); else if(screen.kind.equals("genre")) genreItems(); else if(screen.kind.equals("genres")) genres(); else if(screen.kind.equals("episodes")) episodes(); else if(screen.kind.equals("search")) results(); else browse(); }
     private void open(JSONObject item) {
         if(screen!=null) screen.jumpIndex=-1;
         String type=item.optString("Type");
-        if(screen!=null&&screen.kind.equals("seriesResume")&&"Episode".equals(type)) { play(item,Json.position(item)); return; }
+        if(screen!=null&&(screen.kind.equals("seriesResume")||screen.kind.equals("seriesContinueItems"))&&"Episode".equals(type)) { play(item,"next".equals(screen.type)?0:Json.position(item)); return; }
         if(type.equals("Person")) show(new Screen("person",I18n.resource(R.string.person_title),null,item.optString("Id"),item),true);
         else if(type.equals("Series")) show(new Screen("detail",item.optString("Name"),null,item.optString("Id"),item),true);
         else if(type.equals("BoxSet")) show(new Screen("browse",item.optString("Name"),"Movie,Series",item.optString("Id"),item),true);
@@ -1627,7 +1656,8 @@ public final class MainActivity extends Activity {
     @Override public void onBackPressed() {
         if(drawerOpen) { setDrawer(false); return; }
         if(!history.isEmpty()) { Screen prev=history.pop(); if(isSettingsPage(prev.kind)) { Deque<Screen> remaining=new ArrayDeque<>(history); show(prev,false); history.addAll(remaining); return; } screen=prev; generation++; shell(prev.kind.equals("detail")?"Details":prev.title); switch(prev.kind) {
-            case "person": person(); break; case "seriesResume": seriesResume(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "liveGuide": programmeGuide(); break; case "home": home(); break;
+            case "person": person(); break; case "seriesResume": seriesResume(); break;
+            case "seriesContinueItems": seriesContinueItems(); break; case "seasons": seasons(prev.item); break; case "detail": detail(prev.item); break; case "live": live(); break; case "liveGuide": programmeGuide(); break; case "home": home(); break;
             case "recommendations": recommendationItems(); break; case "settings":settings();break; case "ratings":ratingSettings();break; case "recordings":recordings();break; default: renderCurrent();
         } Motion.enter(contentStage,false); } else if(app.account!=null&&screen!=null&&!screen.kind.equals("home")) {
             show(new Screen("home",I18n.text("Deine Bibliothek"),null,null,null),false);

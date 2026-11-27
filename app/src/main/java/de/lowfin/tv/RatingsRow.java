@@ -17,6 +17,10 @@ final class RatingsRow extends ViewGroup {
     private int binding;
     private boolean episodeRequested;
     private boolean stable;
+    private int retainedHeight;
+    private LowfinApp reservedApp;
+    private boolean allowed(LowfinApp app,String id){return app.ratings!=null&&app.ratings.visible(id);}
+    private void visibility(LowfinApp app,TextView chip,String id){chip.setVisibility(allowed(app,id)?VISIBLE:INVISIBLE);}
     private final boolean compact,dense,detail;
     private boolean spread,fitLine;
     private int measuredGap;
@@ -40,14 +44,14 @@ final class RatingsRow extends ViewGroup {
     private final Paint divider=new Paint(Paint.ANTI_ALIAS_FLAG);
     private final java.util.Map<String,TextView> slots=new java.util.LinkedHashMap<>();
     void reserve(LowfinApp app) {
-        stable=true; removeAllViews(); slots.clear();
+        stable=true;reservedApp=app; removeAllViews(); slots.clear();
         for(String id:Ratings.IDS) if(Ratings.enabled(app.settings,id)) {
             TextView chip=chip(id,"—");chip.setLayoutParams(new LayoutParams(-2,-2));
             // Reserve the widest legal value, so neither arrival nor absence moves the overview.
             setText(chip,text(id,Ratings.format(id,id.equals("letterboxd")?5:id.equals("imdb")||id.equals("tmdb")?10:100)));
             chip.measure(MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
             int width=chip.getMeasuredWidth();setText(chip,text(id,"—"));chip.setAlpha(.4f);
-            slots.put(id,chip);addView(chip,new LayoutParams(width,-2));
+            slots.put(id,chip);visibility(app,chip,id);addView(chip,new LayoutParams(width,-2));
         }
         setVisibility(slots.isEmpty()?GONE:VISIBLE);
     }
@@ -76,15 +80,15 @@ final class RatingsRow extends ViewGroup {
     RatingsRow(Context context) { this(context,false); }
     RatingsRow(Context context,boolean compact) {this(context,compact,false);}
     RatingsRow(Context context,boolean compact,boolean dense) {this(context,compact,dense,false);}
-    private RatingsRow(Context context,boolean compact,boolean dense,boolean detail) {super(context);this.compact=compact;this.dense=dense;this.detail=detail;setWillNotDraw(!detail);divider.setColor(0x24ffffff);divider.setStrokeWidth(Ui.dp(context,1));setVisibility(GONE);}
+    private RatingsRow(Context context,boolean compact,boolean dense,boolean detail) {super(context);this.compact=compact;this.dense=dense;this.detail=detail;setWillNotDraw(!detail);divider.setColor(0x24ffffff);divider.setStrokeWidth(Ui.dp(context,1));setVisibility(VISIBLE);TextView prototype=chip("imdb","—");prototype.measure(MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));retainedHeight=prototype.getMeasuredHeight();}
     static RatingsRow details(Context context){return new RatingsRow(context,true,false,true);}
     RatingsRow singleLine(){fitLine=true;requestLayout();return this;}
     RatingsRow spread(){spread=true;requestLayout();return this;}
     void cancelLoad() {binding++;}
-    void clear() { episodeRequested=false;binding++; itemId=""; if(stable) { for(java.util.Map.Entry<String,TextView> slot:slots.entrySet()) { TextView chip=slot.getValue();chip.animate().cancel();String label=label(slot.getKey()),placeholder=text(slot.getKey(),"—");setText(chip,placeholder);chip.setAlpha(.4f);if(!android.text.TextUtils.equals(chip.getContentDescription(),label)) chip.setContentDescription(label); } } else { removeAllViews();setVisibility(GONE); } }
+    void clear() { episodeRequested=false;binding++; itemId=""; if(stable) { for(java.util.Map.Entry<String,TextView> slot:slots.entrySet()) { TextView chip=slot.getValue();chip.animate().cancel();String label=label(slot.getKey()),placeholder=text(slot.getKey(),"—");setText(chip,placeholder);chip.setAlpha(.4f);if(reservedApp!=null)visibility(reservedApp,chip,slot.getKey());if(!android.text.TextUtils.equals(chip.getContentDescription(),label)) chip.setContentDescription(label); } } else { removeAllViews();setVisibility(VISIBLE); } }
     void load(LowfinApp app,JSONObject item) {
         String nextId=item.optString("Id");boolean episode="Episode".equals(item.optString("Type"));if(episode&&episodeRequested&&nextId.equals(itemId)) return;episodeRequested=episode;int version=++binding;
-        if(!stable&&(!itemId.equals(nextId)||app.ratings==null)) { removeAllViews();setVisibility(GONE); }
+        if(!stable&&(!itemId.equals(nextId)||app.ratings==null)) { removeAllViews();setVisibility(VISIBLE); }
         itemId=nextId;
         if(app.ratings==null) return;
         Ratings repository=app.ratings;
@@ -95,7 +99,7 @@ final class RatingsRow extends ViewGroup {
         binding++;
         if(stable) {
             for(java.util.Map.Entry<String,TextView> slot:slots.entrySet()) {
-                String id=slot.getKey();TextView chip=slot.getValue();boolean present=scores.has(id);String value=present?Ratings.format(id,scores.optDouble(id)):"—";
+                String id=slot.getKey();TextView chip=slot.getValue();visibility(app,chip,id);boolean present=scores.has(id);String value=present?Ratings.format(id,scores.optDouble(id)):"—";
                 String text=text(id,value);
                 if(android.text.TextUtils.equals(chip.getText(),text)) { if(!animate) { chip.animate().cancel();chip.setAlpha(present?1:.4f); } continue; }
                 chip.animate().cancel();setText(chip,text);chip.setContentDescription(label(id)+" "+value);
@@ -117,13 +121,13 @@ final class RatingsRow extends ViewGroup {
             String value=Ratings.format(id,scores.optDouble(id));
             TextView badge=reuse?(TextView)getChildAt(index):chip(id,value);
             String text=(icon(id)==0?"▦  ":"")+text(id,value);
-            setText(badge,text);
+            setText(badge,text);visibility(app,badge,id);
             String description=label(id)+" "+value;
             if(!android.text.TextUtils.equals(badge.getContentDescription(),description)) badge.setContentDescription(description);
             if(!reuse) { badge.setTag(id);addView(badge,new LayoutParams(-2,-2)); }
             index++;
         }
-        setVisibility(getChildCount()==0?GONE:VISIBLE);
+        setVisibility(VISIBLE);
     }
     static void fitIcon(android.graphics.drawable.Drawable drawable,Context context,int width,int height) {
         float scale=Math.min(Ui.dp(context,width)/(float)Math.max(1,drawable.getIntrinsicWidth()),Ui.dp(context,height)/(float)Math.max(1,drawable.getIntrinsicHeight()));
@@ -135,7 +139,7 @@ final class RatingsRow extends ViewGroup {
         int limit=MeasureSpec.getSize(widthSpec),x=0,y=0,rowHeight=0,gap=gap();
         for(int i=0;i<getChildCount();i++) { View child=getChildAt(i); child.measure(MeasureSpec.makeMeasureSpec(child.getLayoutParams().width>0?Math.min(limit,child.getLayoutParams().width):limit,child.getLayoutParams().width>0?MeasureSpec.EXACTLY:MeasureSpec.AT_MOST),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));
             if(x>0&&x+child.getMeasuredWidth()>limit) { y+=rowHeight+gap; x=0; rowHeight=0; } x+=child.getMeasuredWidth()+gap; rowHeight=Math.max(rowHeight,child.getMeasuredHeight()); }
-        setMeasuredDimension(resolveSize(limit,widthSpec),resolveSize(y+rowHeight,heightSpec));
+        setMeasuredDimension(resolveSize(limit,widthSpec),resolveSize(retainedHeight=Math.max(retainedHeight,y+rowHeight),heightSpec));
     }
     private void measureLine(int widthSpec,int heightSpec) {
         int count=getChildCount(),natural=Math.max(0,count-1)*gap();
@@ -151,7 +155,7 @@ final class RatingsRow extends ViewGroup {
             TextView child=(TextView)getChildAt(i);originalSizes.get(child).apply(child,scale);int reserved=child.getLayoutParams().width;
             child.measure(MeasureSpec.makeMeasureSpec(reserved>0?Math.max(1,Math.round(reserved*scale)):0,reserved>0?MeasureSpec.EXACTLY:MeasureSpec.UNSPECIFIED),MeasureSpec.makeMeasureSpec(0,MeasureSpec.UNSPECIFIED));height=Math.max(height,child.getMeasuredHeight());
         }
-        setMeasuredDimension(resolveSize(available,widthSpec),resolveSize(height,heightSpec));
+        setMeasuredDimension(resolveSize(available,widthSpec),resolveSize(retainedHeight=Math.max(retainedHeight,height),heightSpec));
     }
     private int gap(){return Ui.dp(getContext(),detail?8:dense?3:compact?4:6);}
     @Override protected void onLayout(boolean changed,int left,int top,int right,int bottom) {
@@ -164,6 +168,6 @@ final class RatingsRow extends ViewGroup {
     }
     @Override protected void onDraw(Canvas canvas){
         super.onDraw(canvas);if(!detail)return;
-        for(int i=1;i<getChildCount();i++){View before=getChildAt(i-1),after=getChildAt(i);if(before.getTop()!=after.getTop())continue;float x=(before.getRight()+after.getLeft())/2f,center=after.getTop()+after.getHeight()/2f,half=Ui.dp(getContext(),9);canvas.drawLine(x,center-half,x,center+half,divider);}
+        for(int i=1;i<getChildCount();i++){View before=getChildAt(i-1),after=getChildAt(i);if(before.getVisibility()!=VISIBLE||after.getVisibility()!=VISIBLE||before.getTop()!=after.getTop())continue;float x=(before.getRight()+after.getLeft())/2f,center=after.getTop()+after.getHeight()/2f,half=Ui.dp(getContext(),9);canvas.drawLine(x,center-half,x,center+half,divider);}
     }
 }
